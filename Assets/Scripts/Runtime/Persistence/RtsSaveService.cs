@@ -18,6 +18,11 @@ namespace QuestCommandRTS
             return game.CaptureSaveData();
         }
 
+        public bool HasSlot(string slotId)
+        {
+            return store.HasSlot(slotId);
+        }
+
         public bool TryWriteSlot(string slotId, out string error)
         {
             error = string.Empty;

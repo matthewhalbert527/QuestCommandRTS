@@ -1,6 +1,9 @@
 #if UNITY_EDITOR
+using System;
+using System.IO;
 using NUnit.Framework;
 using UnityEngine;
+using Object = UnityEngine.Object;
 
 namespace QuestCommandRTS.Editor
 {
@@ -84,6 +87,71 @@ namespace QuestCommandRTS.Editor
             game.Lifecycle.SetInputFocusForTests(true);
             Assert.IsTrue(game.AcceptsPlayerInput);
             Assert.IsFalse(game.Clock.IsPaused);
+        }
+
+        [Test]
+        public void UserPauseKeepsSystemInputWhileBlockingGameplayCommands()
+        {
+            RtsGame game = CreateInitializedGame();
+
+            game.SetUserPaused(true);
+
+            Assert.IsTrue(game.IsUserPaused);
+            Assert.IsTrue(game.AcceptsSystemInput);
+            Assert.IsFalse(game.AcceptsPlayerInput);
+            Assert.IsFalse(game.PlayerCommands.QueueProduction(UnitKind.Rifleman));
+
+            game.SetUserPaused(false);
+
+            Assert.IsFalse(game.IsUserPaused);
+            Assert.IsTrue(game.AcceptsSystemInput);
+            Assert.IsTrue(game.AcceptsPlayerInput);
+        }
+
+        [Test]
+        public void SaveMigrationRejectsFutureVersions()
+        {
+            RtsMatchSaveData data = new RtsMatchSaveData
+            {
+                schemaVersion = RtsSaveSerializer.CurrentSchemaVersion + 10
+            };
+
+            Assert.IsFalse(RtsSaveMigration.TryMigrate(data, out string error));
+            Assert.IsTrue(error.Contains("newer"));
+        }
+
+        [Test]
+        public void SaveServiceWritesAndLoadsManualSlotFromFileStore()
+        {
+            string tempPath = Path.Combine(Path.GetTempPath(), "QuestCommandRTS-" + Guid.NewGuid().ToString("N"));
+            try
+            {
+                RtsGame game = CreateInitializedGame();
+                RtsSaveService service = new RtsSaveService(game, new RtsSaveFileStore(tempPath));
+                RtsEntity entity = FindPlayerEntity(game, typeof(RtsUnit));
+
+                int entityId = entity.PersistentId;
+                int credits = game.Resources.Credits;
+                entity.TakeDamage(22f, null);
+                float damagedHealth = entity.Health;
+
+                Assert.IsTrue(service.TryWriteSlot("manual", out string error), error);
+                Assert.IsTrue(service.HasSlot("manual"));
+
+                game.Resources.TrySpend(250);
+                entity.Repair(999f);
+
+                Assert.IsTrue(service.TryLoadSlot("manual", out error), error);
+                Assert.AreEqual(credits, game.Resources.Credits);
+                Assert.AreEqual(damagedHealth, FindEntityById(game, entityId).Health, 0.001f);
+            }
+            finally
+            {
+                if (Directory.Exists(tempPath))
+                {
+                    Directory.Delete(tempPath, true);
+                }
+            }
         }
 
         [Test]

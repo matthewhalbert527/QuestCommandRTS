@@ -50,6 +50,9 @@ The scene is intentionally empty. `RtsBootstrap` creates the map, units, buildin
 - Q/W/E/R/T: place power plant, barracks, refinery, war factory, and turret.
 - Z: repair the most damaged selected structure.
 - X: sell selected structures for a partial refund.
+- P: pause or resume the match.
+- F5: save the manual slot.
+- F9: load the manual slot.
 - Ctrl + 5-9: assign control group; 5-9: recall control group.
 
 ## Quest Controls
@@ -62,6 +65,7 @@ The scene is intentionally empty. `RtsBootstrap` creates the map, units, buildin
 - A/right primary while placing: confirm the current valid structure placement.
 - B/right secondary while placing: cancel placement.
 - B/right secondary while not placing: clear selection.
+- Command console `System` tab: pause/resume, save, and load.
 
 ## Quest Command Console
 
@@ -70,6 +74,7 @@ The Quest command console has three tabs:
 - `Build`: browse player structures, credit costs, power effects, prerequisites, affordability, and disabled reasons. Pick a structure to start controller-ray placement.
 - `Produce`: select a production building, browse trainable units, queue units, see the active item/progress, inspect queued items, and cancel the last queued item for a full queued-cost refund.
 - `Selected`: inspect selected health/counts, production/rally status, repair eligible player structures, sell selected player structures, and view the rally-point hint.
+- `System`: pause/resume the simulation, save the manual slot, and load the manual slot when one exists.
 
 Building placement follows the existing desktop build rules. The preview snaps to the map, turns green when valid, turns red when invalid, and reports concise invalid reasons such as outside map, outside build radius, blocked footprint, missing prerequisite, or insufficient credits.
 
@@ -81,6 +86,7 @@ The full battlefield remains approximately 224 simulation units wide. The Quest 
 - `RtsSaveService` captures and restores the generated skirmish state through a versioned JSON envelope with checksum validation.
 - Saved state includes resources, health, orders, production queues, harvest state, fog exploration, active placement, and enemy wave timers.
 - `RtsLifecycleCoordinator` pauses simulation on app pause/focus loss, blocks commands while suspended or saving/loading, hides Quest pointer visuals when input focus is gone, and attempts autosave on pause/focus loss.
+- Desktop HUD and Quest command console controls expose manual save/load and user pause.
 
 See `docs/SAVE_SYSTEM.md`, `docs/LIFECYCLE_TEST_MATRIX.md`, and `docs/PERFORMANCE_TESTING.md`.
 

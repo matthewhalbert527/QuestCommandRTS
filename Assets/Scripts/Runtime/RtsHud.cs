@@ -40,7 +40,8 @@ namespace QuestCommandRTS
             }
 
             string powerColor = game.Resources.HasLowPower ? "LOW" : "OK";
-            resourcesText.text = "Credits " + game.Resources.Credits + "    Power " + game.Resources.PowerUsed + "/" + game.Resources.PowerProvided + " " + powerColor + "    Time " + FormatTime(game.MatchTime) + "    " + game.StatusMessage;
+            string status = game.IsUserPaused ? "PAUSED" : game.StatusMessage;
+            resourcesText.text = "Credits " + game.Resources.Credits + "    Power " + game.Resources.PowerUsed + "/" + game.Resources.PowerProvided + " " + powerColor + "    Time " + FormatTime(game.MatchTime) + "    " + status;
             selectionText.text = BuildSelectionText();
 
             for (int i = 0; i < buttons.Count; i++)
@@ -48,7 +49,7 @@ namespace QuestCommandRTS
                 HudButton hudButton = buttons[i];
                 if (hudButton.Button != null && hudButton.IsEnabled != null)
                 {
-                    hudButton.Button.interactable = !game.IsMatchOver && hudButton.IsEnabled();
+                    hudButton.Button.interactable = hudButton.IsEnabled();
                 }
 
                 if (hudButton.Label != null && hudButton.GetText != null)
@@ -119,11 +120,21 @@ namespace QuestCommandRTS
             AddBuildButton(commandPanel, StructureKind.Turret, y);
             y -= 62f;
 
-            AddCommandButton(commandPanel, "Army", y, () => game.SelectCombatUnits(), () => true, () => "Select Army");
+            AddCommandButton(commandPanel, "Army", y, () => game.SelectCombatUnits(), () => game.AcceptsPlayerInput, () => "Select Army");
             y -= 48f;
-            AddCommandButton(commandPanel, "Repair", y, () => game.PlayerCommands.RepairSelectedStructures(), () => game.CanRepairSelectedStructures(), () => "Repair  Z");
+            AddCommandButton(commandPanel, "Repair", y, () => game.PlayerCommands.RepairSelectedStructures(), () => game.AcceptsPlayerInput && game.CanRepairSelectedStructures(), () => "Repair  Z");
             y -= 48f;
-            AddCommandButton(commandPanel, "Sell", y, () => game.PlayerCommands.SellSelectedStructures(), () => game.CanSellSelectedStructures(), () => "Sell  X");
+            AddCommandButton(commandPanel, "Sell", y, () => game.PlayerCommands.SellSelectedStructures(), () => game.AcceptsPlayerInput && game.CanSellSelectedStructures(), () => "Sell  X");
+            y -= 62f;
+
+            CreateText(commandPanel, "System Label", "System", 17, TextAnchor.MiddleLeft, new Vector2(14f, y), new Vector2(198f, 26f));
+            y -= 42f;
+
+            AddCommandButton(commandPanel, "Pause", y, () => game.ToggleUserPause(), () => game.AcceptsSystemInput && !game.IsMatchOver, () => game.IsUserPaused ? "Resume  P" : "Pause  P");
+            y -= 48f;
+            AddCommandButton(commandPanel, "Save", y, () => game.TryManualSave(), () => game.AcceptsSystemInput && !game.IsMatchOver, () => "Save  F5");
+            y -= 48f;
+            AddCommandButton(commandPanel, "Load", y, () => game.TryManualLoad(), () => game.AcceptsSystemInput && game.CanLoadManualSave(), () => "Load  F9");
 
             RectTransform selectionPanel = CreatePanel(canvasObject.transform, "Selection", new Vector2(0f, 0f), new Vector2(0.58f, 0f), new Vector2(0f, 0f), new Vector2(12f, 12f), new Vector2(0f, 118f), new Color(0.02f, 0.024f, 0.026f, 0.8f));
             selectionText = CreateText(selectionPanel, "Selection Text", "", 17, TextAnchor.UpperLeft);

@@ -24,6 +24,11 @@ namespace QuestCommandRTS
             return Path.Combine(rootPath, SanitizeSlot(slotId) + ".json");
         }
 
+        public bool HasSlot(string slotId)
+        {
+            return File.Exists(GetSlotPath(slotId));
+        }
+
         public bool TryWrite(string slotId, string contents, out string error)
         {
             error = string.Empty;

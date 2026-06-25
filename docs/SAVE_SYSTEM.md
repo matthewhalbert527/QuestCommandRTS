@@ -17,4 +17,9 @@ Captured state includes:
 
 Restore is a rebuild pass. The current generated battlefield entities/resources are destroyed, saved resource nodes are recreated, structures are recreated first, units are recreated second, then orders and cross-references are restored by stable ID.
 
+The manual slot is exposed in-game:
+- Desktop: `F5` saves and `F9` loads.
+- Desktop HUD: `System` buttons save, load, and pause/resume.
+- Quest: command console `System` tab saves, loads, and pauses/resumes.
+
 The file format is intentionally human-readable for this prototype. Future versions should add migrations in `RtsSaveMigration` or an equivalent DTO-to-DTO migration layer before changing version `1` fields.

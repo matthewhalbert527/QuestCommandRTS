@@ -9,7 +9,8 @@ namespace QuestCommandRTS
     {
         Build,
         Produce,
-        Selected
+        Selected,
+        System
     }
 
     public sealed class QuestCommandConsole : MonoBehaviour
@@ -86,17 +87,23 @@ namespace QuestCommandRTS
         private RectTransform buildRoot;
         private RectTransform produceRoot;
         private RectTransform selectedRoot;
+        private RectTransform systemRoot;
         private Text headerText;
         private Text placementText;
         private Text selectedText;
+        private Text systemText;
         private ConsoleButton buildTabButton;
         private ConsoleButton produceTabButton;
         private ConsoleButton selectedTabButton;
+        private ConsoleButton systemTabButton;
         private ConsoleButton cancelQueueButton;
         private ConsoleButton selectedCancelQueueButton;
         private ConsoleButton repairButton;
         private ConsoleButton sellButton;
         private ConsoleButton rallyHintButton;
+        private ConsoleButton pauseButton;
+        private ConsoleButton saveButton;
+        private ConsoleButton loadButton;
         private ConsoleButton hoveredButton;
         private Font font;
         private QuestCommandConsoleTab activeTab = QuestCommandConsoleTab.Build;
@@ -210,14 +217,17 @@ namespace QuestCommandRTS
             buildTabButton = CreateButton(panelRect, "Build Tab", "Build", new Vector2(18f, -66f), new Vector2(110f, 38f), () => SetTab(QuestCommandConsoleTab.Build));
             produceTabButton = CreateButton(panelRect, "Produce Tab", "Produce", new Vector2(136f, -66f), new Vector2(128f, 38f), () => SetTab(QuestCommandConsoleTab.Produce));
             selectedTabButton = CreateButton(panelRect, "Selected Tab", "Selected", new Vector2(272f, -66f), new Vector2(132f, 38f), () => SetTab(QuestCommandConsoleTab.Selected));
+            systemTabButton = CreateButton(panelRect, "System Tab", "System", new Vector2(412f, -66f), new Vector2(118f, 38f), () => SetTab(QuestCommandConsoleTab.System));
 
             buildRoot = CreateRoot("Build Content");
             produceRoot = CreateRoot("Produce Content");
             selectedRoot = CreateRoot("Selected Content");
+            systemRoot = CreateRoot("System Content");
 
             BuildBuildTab();
             BuildProduceTab();
             BuildSelectedTab();
+            BuildSystemTab();
             SetTab(QuestCommandConsoleTab.Build);
         }
 
@@ -269,6 +279,14 @@ namespace QuestCommandRTS
             sellButton = CreateButton(selectedRoot, "Sell Button", "Sell", new Vector2(486f, -74f), new Vector2(218f, 44f), () => game.PlayerCommands.SellSelectedStructures());
             selectedCancelQueueButton = CreateButton(selectedRoot, "Cancel Queue Button Selected", "Cancel Last Queue", new Vector2(486f, -128f), new Vector2(218f, 44f), () => game.PlayerCommands.CancelLastQueuedProduction());
             rallyHintButton = CreateButton(selectedRoot, "Rally Hint Button", "Set Rally: A on terrain", new Vector2(486f, -182f), new Vector2(218f, 44f), OnRallyHint);
+        }
+
+        private void BuildSystemTab()
+        {
+            systemText = CreateText(systemRoot, "System Details", "", 18, TextAnchor.UpperLeft, new Vector2(0f, -16f), new Vector2(460f, 230f));
+            pauseButton = CreateButton(systemRoot, "Pause Button", "Pause", new Vector2(486f, -20f), new Vector2(218f, 44f), () => game.ToggleUserPause());
+            saveButton = CreateButton(systemRoot, "Save Button", "Save", new Vector2(486f, -74f), new Vector2(218f, 44f), () => game.TryManualSave());
+            loadButton = CreateButton(systemRoot, "Load Button", "Load", new Vector2(486f, -128f), new Vector2(218f, 44f), () => game.TryManualLoad());
         }
 
         private ConsoleRow CreateRow(RectTransform parent, string name, Vector2 position, Vector2 size, Action clicked)
@@ -350,6 +368,7 @@ namespace QuestCommandRTS
             RefreshBuildTab();
             RefreshProduceTab();
             RefreshSelectedTab();
+            RefreshSystemTab();
             SetButtonStates();
         }
 
@@ -427,6 +446,25 @@ namespace QuestCommandRTS
             rallyHintButton.Interactable = selected.HasProduction;
         }
 
+        private void RefreshSystemTab()
+        {
+            if (systemText == null)
+            {
+                return;
+            }
+
+            systemText.text =
+                "Match " + FormatTime(game.MatchTime) + "\n" +
+                (game.IsUserPaused ? "Paused" : "Running") + "\n" +
+                "Manual save " + (game.CanLoadManualSave() ? "available" : "empty") + "\n\n" +
+                game.StatusMessage;
+
+            pauseButton.Label.text = game.IsUserPaused ? "Resume" : "Pause";
+            pauseButton.Interactable = game.AcceptsSystemInput && !game.IsMatchOver;
+            saveButton.Interactable = game.AcceptsSystemInput && !game.IsMatchOver;
+            loadButton.Interactable = game.AcceptsSystemInput && game.CanLoadManualSave();
+        }
+
         private void SetTab(QuestCommandConsoleTab tab)
         {
             activeTab = tab;
@@ -435,11 +473,13 @@ namespace QuestCommandRTS
                 buildRoot.gameObject.SetActive(tab == QuestCommandConsoleTab.Build);
                 produceRoot.gameObject.SetActive(tab == QuestCommandConsoleTab.Produce);
                 selectedRoot.gameObject.SetActive(tab == QuestCommandConsoleTab.Selected);
+                systemRoot.gameObject.SetActive(tab == QuestCommandConsoleTab.System);
             }
 
             buildTabButton.Selected = tab == QuestCommandConsoleTab.Build;
             produceTabButton.Selected = tab == QuestCommandConsoleTab.Produce;
             selectedTabButton.Selected = tab == QuestCommandConsoleTab.Selected;
+            systemTabButton.Selected = tab == QuestCommandConsoleTab.System;
             Refresh(true);
         }
 
@@ -509,6 +549,14 @@ namespace QuestCommandRTS
             rect.pivot = new Vector2(0f, 1f);
             rect.anchoredPosition = position;
             rect.sizeDelta = size;
+        }
+
+        private static string FormatTime(float seconds)
+        {
+            int wholeSeconds = Mathf.FloorToInt(seconds);
+            int minutes = wholeSeconds / 60;
+            int remainder = wholeSeconds % 60;
+            return minutes + ":" + remainder.ToString("00");
         }
     }
 }

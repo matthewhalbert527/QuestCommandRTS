@@ -54,7 +54,7 @@ namespace QuestCommandRTS
                 return;
             }
 
-            if (!game.AcceptsPlayerInput)
+            if (!game.AcceptsSystemInput)
             {
                 previousRightTrigger = false;
                 previousPrimaryButton = false;
@@ -108,6 +108,11 @@ namespace QuestCommandRTS
             }
 
             bool uiCaptured = commandConsole != null && commandConsole.TryHandlePointer(ray, rightTriggerDown);
+
+            if (!game.AcceptsPlayerInput)
+            {
+                return;
+            }
 
             if (game.IsMatchOver)
             {

@@ -14,6 +14,7 @@ namespace QuestCommandRTS
         private int lastPowerProvided = int.MinValue;
         private int lastPowerUsed = int.MinValue;
         private int lastSelectionCount = int.MinValue;
+        private bool lastPaused;
         private string lastStatusMessage = string.Empty;
 
         public void Initialize(RtsGame owner, Transform rigRoot, QuestTabletopSettings settings)
@@ -80,6 +81,7 @@ namespace QuestCommandRTS
             int powerProvided = game.Resources.PowerProvided;
             int powerUsed = game.Resources.PowerUsed;
             int selectionCount = game.Selection.Count;
+            bool paused = game.IsUserPaused;
             string status = game.StatusMessage;
 
             if (!force &&
@@ -87,6 +89,7 @@ namespace QuestCommandRTS
                 powerProvided == lastPowerProvided &&
                 powerUsed == lastPowerUsed &&
                 selectionCount == lastSelectionCount &&
+                paused == lastPaused &&
                 status == lastStatusMessage)
             {
                 return;
@@ -96,14 +99,17 @@ namespace QuestCommandRTS
             lastPowerProvided = powerProvided;
             lastPowerUsed = powerUsed;
             lastSelectionCount = selectionCount;
+            lastPaused = paused;
             lastStatusMessage = status;
 
             statusText.text =
                 "Credits " + credits +
                 "\nPower " + powerUsed + "/" + powerProvided +
                 "\nSelected " + selectionCount +
+                "\n" + (paused ? "Paused" : status) +
                 "\nTrigger: Select   LT+Trigger: Add" +
-                "\nA: Command   B: Cancel/Clear";
+                "\nA: Command   B: Cancel/Clear" +
+                "\nX: Console/System";
         }
     }
 }

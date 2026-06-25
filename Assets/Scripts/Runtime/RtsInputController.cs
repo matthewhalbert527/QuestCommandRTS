@@ -33,6 +33,15 @@ namespace QuestCommandRTS
                 return;
             }
 
+            if (!game.AcceptsSystemInput)
+            {
+                mouseSelectionActive = false;
+                mouseDragging = false;
+                return;
+            }
+
+            HandleSystemHotkeys();
+
             if (!game.AcceptsPlayerInput)
             {
                 mouseSelectionActive = false;
@@ -229,6 +238,24 @@ namespace QuestCommandRTS
             else if (Input.GetKeyDown(KeyCode.X))
             {
                 game.PlayerCommands.SellSelectedStructures();
+            }
+        }
+
+        private void HandleSystemHotkeys()
+        {
+            if (Input.GetKeyDown(KeyCode.P))
+            {
+                game.ToggleUserPause();
+            }
+
+            if (Input.GetKeyDown(KeyCode.F5))
+            {
+                game.TryManualSave();
+            }
+
+            if (Input.GetKeyDown(KeyCode.F9))
+            {
+                game.TryManualLoad();
             }
         }
 

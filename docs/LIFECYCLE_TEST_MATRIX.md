@@ -5,6 +5,7 @@ Implemented lifecycle behavior:
 - Pause reasons are tracked by `RtsSimulationClock`.
 - Simulation, production, fog, enemy waves, unit orders, turrets, and effects stop while paused.
 - Player commands are blocked while the app is paused, focus is lost, or save/load is active.
+- User pause blocks gameplay commands but keeps system UI available for resume/save/load.
 - Quest pointer visuals are hidden when input is blocked.
 - Active placement previews are suspended during pause/focus loss and restored when focus returns.
 - Autosave is attempted on application pause and focus loss.
@@ -16,4 +17,4 @@ Manual Quest checks still needed on headset:
 - Save during active production and reload to verify queue progress.
 - Save with explored fog and reload to verify explored areas remain known.
 
-Automated coverage currently verifies clock pause behavior, focus-loss command blocking, checksum rejection, stable IDs, and a core save/restore round trip.
+Automated coverage currently verifies clock pause behavior, focus-loss command blocking, user-pause system input, checksum rejection, future-version migration rejection, stable IDs, file-backed manual save/load, and a core save/restore round trip.

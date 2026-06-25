@@ -45,7 +45,9 @@ namespace QuestCommandRTS
         public string StatusMessage { get; private set; } = "Destroy the enemy base.";
         public float MatchTime { get; private set; }
         public bool IsMatchOver => MatchState != RtsMatchState.Running;
-        public bool AcceptsPlayerInput => initialized && Lifecycle != null && Lifecycle.AcceptsInput && Clock != null && !Clock.IsPaused && (SaveService == null || !SaveService.IsBusy);
+        public bool IsUserPaused => Clock != null && (Clock.PauseReasons & RtsPauseReason.User) != 0;
+        public bool AcceptsSystemInput => initialized && Lifecycle != null && Lifecycle.AcceptsInput && (SaveService == null || !SaveService.IsBusy);
+        public bool AcceptsPlayerInput => AcceptsSystemInput && Clock != null && !Clock.IsPaused;
 
         private readonly List<RtsEntity> entities = new List<RtsEntity>();
         private readonly List<RtsEntity> selection = new List<RtsEntity>();
@@ -228,6 +230,78 @@ namespace QuestCommandRTS
                     unit.SetSelected(true);
                 }
             }
+        }
+
+        public void ToggleUserPause()
+        {
+            SetUserPaused(!IsUserPaused);
+        }
+
+        public void SetUserPaused(bool paused)
+        {
+            if (Lifecycle == null || IsMatchOver)
+            {
+                return;
+            }
+
+            Lifecycle.SetUserPaused(paused);
+            if (paused)
+            {
+                StatusMessage = "Paused - resume when ready.";
+                return;
+            }
+
+            EvaluateMatchState();
+        }
+
+        public bool TryManualSave()
+        {
+            return TrySaveSlot("manual");
+        }
+
+        public bool TryManualLoad()
+        {
+            return TryLoadSlot("manual");
+        }
+
+        public bool CanLoadManualSave()
+        {
+            return SaveService != null && SaveService.HasSlot("manual");
+        }
+
+        public bool TrySaveSlot(string slotId)
+        {
+            if (SaveService == null)
+            {
+                StatusMessage = "Save system unavailable.";
+                return false;
+            }
+
+            bool success = SaveService.TryWriteSlot(slotId, out string error);
+            StatusMessage = success ? "Saved slot " + slotId + "." : "Save failed: " + error;
+            SpawnFloatingText(success ? "Saved" : "Save failed", GetPlayerBaseCenter() + Vector3.up * 3f, success ? new Color(0.5f, 0.95f, 1f) : Color.yellow);
+            return success;
+        }
+
+        public bool TryLoadSlot(string slotId)
+        {
+            if (SaveService == null)
+            {
+                StatusMessage = "Save system unavailable.";
+                return false;
+            }
+
+            if (!SaveService.HasSlot(slotId))
+            {
+                StatusMessage = "No save slot " + slotId + ".";
+                SpawnFloatingText("No save found", GetPlayerBaseCenter() + Vector3.up * 3f, Color.yellow);
+                return false;
+            }
+
+            bool success = SaveService.TryLoadSlot(slotId, out string error);
+            StatusMessage = success ? "Loaded slot " + slotId + "." : "Load failed: " + error;
+            SpawnFloatingText(success ? "Loaded" : "Load failed", GetPlayerBaseCenter() + Vector3.up * 3f, success ? new Color(0.55f, 1f, 0.72f) : Color.yellow);
+            return success;
         }
 
         public void SelectPlayerEntitiesInScreenRect(Rect screenRect, bool additive)

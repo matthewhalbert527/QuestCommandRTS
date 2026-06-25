@@ -12,7 +12,7 @@ Runtime profiler markers were added for the systems most likely to matter as the
 Suggested manual profiling pass:
 - Start a desktop match and capture a baseline with the Unity Profiler.
 - Queue production, move a mixed army, and leave fog enabled.
-- Trigger a manual save through `RtsSaveService.TryWriteSlot` from a debug hook or editor script.
+- Trigger a manual save with `F5`, the desktop HUD System button, or the Quest console System tab.
 - Confirm save capture/restore spikes are acceptable and do not add recurring per-frame cost.
 
 Soak scenario still needed:
