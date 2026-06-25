@@ -94,6 +94,8 @@ The full battlefield remains approximately 224 simulation units wide. The Quest 
 - `RtsProfileSettings` stores versioned player preferences separately from match saves and safely clamps Quest tabletop scale, tabletop height, pointer length, UI scale, volume, quality preset, and periodic autosave interval values before use.
 - Desktop HUD and Quest command console controls expose manual save/load and user pause.
 
+`RtsRuntimeDiagnosticsSnapshot` can export a JSON snapshot of a generated match with entity, team, unit, structure, production, resource, fog, save-slot, and tabletop scale counts. Use it before and after large-board or content changes to catch accidental world-generation drift.
+
 ## Skirmish AI
 
 - The enemy commander now has its own credit bank, income ticks, paid unit production, and periodic attack orders.
@@ -114,6 +116,7 @@ See `docs/SAVE_SYSTEM.md`, `docs/LIFECYCLE_TEST_MATRIX.md`, `docs/PERFORMANCE_TE
 
 - `Command RTS > Open Battlefield Scene`
 - `Command RTS > Export Sample Screenshot`
+- `Command RTS > Export Runtime Diagnostics Snapshot`
 - `Command RTS > Validate Generated Desktop Runtime`
 - `Command RTS > Build > Validate Desktop Build Support`
 - `Command RTS > Build > Desktop Development Build`

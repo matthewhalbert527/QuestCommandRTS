@@ -85,6 +85,44 @@ namespace QuestCommandRTS
             return data;
         }
 
+        public RtsFogCoverageSnapshot CaptureCoverageSnapshot()
+        {
+            RtsFogCoverageSnapshot snapshot = new RtsFogCoverageSnapshot
+            {
+                totalCells = GridSize * GridSize
+            };
+
+            if (cells == null)
+            {
+                return snapshot;
+            }
+
+            for (int x = 0; x < GridSize; x++)
+            {
+                for (int z = 0; z < GridSize; z++)
+                {
+                    FogCell cell = cells[x, z];
+                    if (cell.Explored)
+                    {
+                        snapshot.exploredCells++;
+                    }
+
+                    if (cell.Visible)
+                    {
+                        snapshot.visibleCells++;
+                    }
+                }
+            }
+
+            if (snapshot.totalCells > 0)
+            {
+                snapshot.exploredPercent = snapshot.exploredCells / (float)snapshot.totalCells;
+                snapshot.visiblePercent = snapshot.visibleCells / (float)snapshot.totalCells;
+            }
+
+            return snapshot;
+        }
+
         public void RestoreState(RtsFogSaveData data)
         {
             if (data == null || data.explored == null || cells == null || data.gridSize != GridSize)

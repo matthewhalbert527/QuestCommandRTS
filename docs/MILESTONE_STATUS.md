@@ -24,16 +24,18 @@ This document records what has been implemented and what has actually been verif
 - `RtsProfileSettings` stores versioned user preferences separately from match saves and applies safe Quest tabletop scale, height, pointer length, and UI scale during rig creation.
 - `RtsSaveFileStore` and `RtsSaveService` keep a prior `.bak` slot and fall back to it when the newest save is corrupt or unreadable.
 - `RtsLifecycleCoordinator` now performs configurable periodic autosaves during active play while suppressing periodic writes during pause, focus loss, save, and load states.
+- `RtsRuntimeDiagnosticsSnapshot` exports generated-match JSON counts for entities, teams, production, resources, fog, save slots, and tabletop scale to support larger-board profiling.
 
 ## Verification Run
 
 Automated verification last run locally:
 
-- EditMode tests: `55` total, `55` passed, `0` failed.
+- EditMode tests: `57` total, `57` passed, `0` failed.
 - XR setup validator: automated package/project-setting checks pass except for local Android Build Support, which is missing from this Unity install; manual headset and Android OpenXR UI verification remain manual.
 - Generated Quest runtime smoke report: automated object-graph checks pass in EditMode; physical headset behavior remains manual.
 - Generated desktop runtime smoke report: automated object-graph checks pass in EditMode; hands-on desktop control regression remains manual.
 - Screenshot exporter: produced `C:\Users\matth\Documents\Codex\2026-06-24\i-s\outputs\quest-command-rts-sample.png`.
+- Runtime diagnostics exporter: produces `C:\Users\matth\Documents\Codex\2026-06-24\i-s\outputs\quest-command-rts-diagnostics.json`.
 - Desktop build support validator: fails fast on this machine because the Unity 2022.3.62f3 install is missing `WindowsPlayer.exe` under the Windows standalone playback engine template. Repair Unity/Windows Build Support before treating desktop player builds as verified.
 
 ## Acceptance Checklist

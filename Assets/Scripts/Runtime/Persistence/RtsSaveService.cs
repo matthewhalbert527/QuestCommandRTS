@@ -23,6 +23,11 @@ namespace QuestCommandRTS
             return store.HasSlot(slotId);
         }
 
+        public System.Collections.Generic.List<string> ListSlots()
+        {
+            return store.ListSlots();
+        }
+
         public bool TryWriteSlot(string slotId, out string error)
         {
             error = string.Empty;

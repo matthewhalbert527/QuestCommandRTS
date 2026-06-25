@@ -296,6 +296,50 @@ namespace QuestCommandRTS.Editor
         }
 
         [Test]
+        public void RuntimeDiagnosticsSnapshotCountsGeneratedDesktopMatch()
+        {
+            RtsGame game = CreateInitializedGame(RtsRuntimeMode.Desktop);
+            RtsRuntimeDiagnosticsSnapshot snapshot = RtsRuntimeDiagnosticsSnapshot.Capture(game);
+
+            Assert.AreEqual("Desktop", snapshot.runtimeMode);
+            Assert.AreEqual("Running", snapshot.matchState);
+            Assert.IsTrue(snapshot.acceptsPlayerInput);
+            Assert.AreEqual(14, snapshot.entityCount);
+            Assert.AreEqual(14, snapshot.aliveEntityCount);
+            Assert.AreEqual(7, snapshot.playerEntityCount);
+            Assert.AreEqual(7, snapshot.enemyEntityCount);
+            Assert.AreEqual(2, snapshot.selectedEntityCount);
+            Assert.AreEqual(6, snapshot.unitCount);
+            Assert.AreEqual(8, snapshot.structureCount);
+            Assert.AreEqual(61, snapshot.resources.nodeCount);
+            Assert.Greater(snapshot.resources.remainingAmount, 0);
+            Assert.AreEqual(4, snapshot.production.producerCount);
+            Assert.AreEqual(0, snapshot.production.totalQueueItems);
+            Assert.IsFalse(snapshot.buildPlacement.active);
+            Assert.AreEqual(RtsBalance.MapHalfSize * 2f, snapshot.tabletop.simulationWidth, 0.001f);
+            Assert.AreEqual(56 * 56, snapshot.fog.totalCells);
+            Assert.Greater(snapshot.fog.exploredCells, 0);
+            Assert.AreEqual(3, snapshot.unitKinds.Count);
+            Assert.AreEqual(5, snapshot.structureKinds.Count);
+            Assert.AreEqual(7, FindDiagnosticsTeam(snapshot, "Player").aliveEntities);
+            Assert.AreEqual(7, FindDiagnosticsTeam(snapshot, "Enemy").aliveEntities);
+        }
+
+        [Test]
+        public void RuntimeDiagnosticsSnapshotCapturesQuestTabletopScale()
+        {
+            RtsGame game = CreateInitializedGame(RtsRuntimeMode.QuestVr);
+            RtsRuntimeDiagnosticsSnapshot snapshot = RtsRuntimeDiagnosticsSnapshot.Capture(game);
+
+            Assert.AreEqual("QuestVr", snapshot.runtimeMode);
+            Assert.AreEqual(126f, snapshot.tabletop.simulationUnitsPerMeter, 0.001f);
+            Assert.AreEqual(1.78f, snapshot.tabletop.battlefieldWidthMeters, 0.01f);
+            Assert.AreEqual(0.82f, snapshot.tabletop.boardHeightMeters, 0.001f);
+            Assert.IsTrue(snapshot.acceptsSystemInput);
+            Assert.IsTrue(snapshot.acceptsPlayerInput);
+        }
+
+        [Test]
         public void DesktopBuildArtifactValidationRequiresExistingNonEmptyFile()
         {
             string directory = Path.Combine(Path.GetTempPath(), "QuestCommandRTS-BuildValidation");
@@ -1022,6 +1066,20 @@ namespace QuestCommandRTS.Editor
             }
 
             Assert.Fail("Missing " + team + " structure " + kind);
+            return null;
+        }
+
+        private static RtsDiagnosticsTeamSnapshot FindDiagnosticsTeam(RtsRuntimeDiagnosticsSnapshot snapshot, string team)
+        {
+            for (int i = 0; i < snapshot.teams.Count; i++)
+            {
+                if (snapshot.teams[i].team == team)
+                {
+                    return snapshot.teams[i];
+                }
+            }
+
+            Assert.Fail("Missing diagnostics team " + team);
             return null;
         }
 
