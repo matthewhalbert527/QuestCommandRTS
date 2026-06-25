@@ -96,6 +96,7 @@ The full battlefield remains approximately 224 simulation units wide. The Quest 
 - `RtsGame.TryRestartMatch` resets dirty or restored skirmish state, clears match-ended/user pause reasons, rebuilds the generated match, resets fog and enemy AI, and keeps the runtime mode active.
 - `RtsProfileSettings` stores versioned player preferences separately from match saves and safely clamps Quest tabletop scale, tabletop height, pointer length, UI scale, volume, quality preset, and periodic autosave interval values before use.
 - Desktop HUD and Quest command console controls expose manual save/load and user pause.
+- Selected or damaged entities show lightweight world-space health bars; fogged enemy health bars remain hidden.
 
 `RtsRuntimeDiagnosticsSnapshot` can export a JSON snapshot of a generated match with entity, team, unit, structure, production, resource, fog, save-slot, and tabletop scale counts. Use it before and after large-board or content changes to catch accidental world-generation drift.
 

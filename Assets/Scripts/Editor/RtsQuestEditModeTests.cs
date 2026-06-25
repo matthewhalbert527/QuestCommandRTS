@@ -118,6 +118,35 @@ namespace QuestCommandRTS.Editor
         }
 
         [Test]
+        public void EntityHealthBarsTrackSelectionDamageRepairAndFog()
+        {
+            RtsGame game = CreateInitializedGame(RtsRuntimeMode.Desktop);
+            RtsUnit rifle = FindPlayerUnit(game, UnitKind.Rifleman);
+            Transform healthBar = rifle.transform.Find("Health Bar");
+            Transform fill = healthBar != null ? healthBar.Find("Health Fill") : null;
+            Assert.IsNotNull(healthBar);
+            Assert.IsNotNull(fill);
+            Assert.IsTrue(healthBar.gameObject.activeSelf, "Initially selected rifle should show a health bar.");
+
+            game.ClearSelection();
+            Assert.IsFalse(healthBar.gameObject.activeSelf, "Full-health unselected unit should hide its health bar.");
+
+            rifle.TakeDamage(rifle.MaxHealth * 0.5f, null);
+            Assert.IsTrue(healthBar.gameObject.activeSelf, "Damaged unit should show its health bar.");
+            Assert.AreEqual(rifle.HealthPercent, fill.localScale.x, 0.001f);
+
+            rifle.Repair(rifle.MaxHealth);
+            Assert.IsFalse(healthBar.gameObject.activeSelf, "Fully repaired unselected unit should hide its health bar.");
+
+            RtsUnit enemy = FindEnemyUnit(game, UnitKind.Tank);
+            Transform enemyHealthBar = enemy.transform.Find("Health Bar");
+            Assert.IsNotNull(enemyHealthBar);
+            Assert.IsFalse(game.IsEntityVisible(enemy));
+            enemy.TakeDamage(1f, null);
+            Assert.IsFalse(enemyHealthBar.gameObject.activeSelf, "Fogged enemy health bars should stay hidden.");
+        }
+
+        [Test]
         public void ForcedQuestInitializationMakesHeadCameraMainAndDisablesSceneCameras()
         {
             GameObject sceneCameraObject = new GameObject("Scene Main Camera");
@@ -1074,6 +1103,21 @@ namespace QuestCommandRTS.Editor
             }
 
             Assert.Fail("Missing player unit " + kind);
+            return null;
+        }
+
+        private static RtsUnit FindEnemyUnit(RtsGame game, UnitKind kind)
+        {
+            for (int i = 0; i < game.Entities.Count; i++)
+            {
+                RtsUnit unit = game.Entities[i] as RtsUnit;
+                if (unit != null && unit.Team == RtsTeam.Enemy && unit.UnitKind == kind)
+                {
+                    return unit;
+                }
+            }
+
+            Assert.Fail("Missing enemy unit " + kind);
             return null;
         }
 

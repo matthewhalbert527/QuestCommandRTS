@@ -21,6 +21,9 @@ namespace QuestCommandRTS
         public event Action<RtsEntity> Destroyed;
 
         private LineRenderer selectionRing;
+        private Transform healthBarRoot;
+        private Transform healthBarFill;
+        private Material healthBarFillMaterial;
         private MaterialPropertyBlock propertyBlock;
 
         protected virtual void Awake()
@@ -29,6 +32,7 @@ namespace QuestCommandRTS
             propertyBlock = new MaterialPropertyBlock();
             EnsureCollider();
             EnsureSelectionRing();
+            EnsureHealthBar();
         }
 
         protected virtual void Start()
@@ -47,6 +51,8 @@ namespace QuestCommandRTS
             {
                 selectionRing.transform.position = GroundPosition + Vector3.up * 0.03f;
             }
+
+            UpdateHealthBarPose();
         }
 
         protected virtual void OnDestroy()
@@ -70,13 +76,20 @@ namespace QuestCommandRTS
                 EnsureSelectionRing();
             }
 
+            if (healthBarRoot == null)
+            {
+                EnsureHealthBar();
+            }
+
             Team = team;
             DisplayName = displayName;
             MaxHealth = maxHealth;
             Health = maxHealth;
             SelectionRadius = selectionRadius;
             DrawSelectionRing();
+            LayoutHealthBar();
             ApplyTeamTint();
+            UpdateHealthBarVisual();
         }
 
         public void AssignPersistentId(int persistentId)
@@ -87,6 +100,7 @@ namespace QuestCommandRTS
         public void SetHealthForRestore(float health)
         {
             Health = Mathf.Clamp(health, 0f, MaxHealth);
+            UpdateHealthBarVisual();
         }
 
         public void SetSelected(bool selected)
@@ -97,6 +111,8 @@ namespace QuestCommandRTS
             {
                 selectionRing.enabled = selected;
             }
+
+            UpdateHealthBarVisual();
         }
 
         public virtual void TakeDamage(float amount, RtsEntity attacker)
@@ -107,6 +123,7 @@ namespace QuestCommandRTS
             }
 
             Health = Mathf.Max(0f, Health - amount);
+            UpdateHealthBarVisual();
 
             if (Health <= 0f)
             {
@@ -122,6 +139,7 @@ namespace QuestCommandRTS
             }
 
             Health = Mathf.Min(MaxHealth, Health + amount);
+            UpdateHealthBarVisual();
         }
 
         protected virtual void Die(RtsEntity attacker)
@@ -166,6 +184,36 @@ namespace QuestCommandRTS
             DrawSelectionRing();
         }
 
+        private void EnsureHealthBar()
+        {
+            GameObject barObject = new GameObject("Health Bar");
+            healthBarRoot = barObject.transform;
+            healthBarRoot.SetParent(transform, false);
+
+            Material backgroundMaterial = RtsGame.CreateMaterial(new Color(0.02f, 0.025f, 0.028f, 0.92f));
+            healthBarFillMaterial = RtsGame.CreateMaterial(new Color(0.35f, 1f, 0.45f, 0.96f));
+
+            GameObject background = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            background.name = "Health Background";
+            background.transform.SetParent(healthBarRoot, false);
+            background.transform.localPosition = Vector3.zero;
+            background.transform.localScale = new Vector3(1.08f, 0.1f, 0.035f);
+            background.GetComponent<Renderer>().sharedMaterial = backgroundMaterial;
+            RemovePrimitiveCollider(background);
+
+            GameObject fill = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            fill.name = "Health Fill";
+            healthBarFill = fill.transform;
+            healthBarFill.SetParent(healthBarRoot, false);
+            healthBarFill.localPosition = new Vector3(-0.02f, 0.011f, -0.022f);
+            healthBarFill.localScale = new Vector3(1f, 0.075f, 0.04f);
+            fill.GetComponent<Renderer>().sharedMaterial = healthBarFillMaterial;
+            RemovePrimitiveCollider(fill);
+
+            LayoutHealthBar();
+            UpdateHealthBarVisual();
+        }
+
         private void DrawSelectionRing()
         {
             if (selectionRing == null)
@@ -184,6 +232,71 @@ namespace QuestCommandRTS
             selectionRing.endColor = Color.white;
         }
 
+        private void LayoutHealthBar()
+        {
+            if (healthBarRoot == null)
+            {
+                return;
+            }
+
+            float width = Mathf.Clamp(SelectionRadius * 1.55f, 1.1f, 6.2f);
+            float height = Mathf.Clamp(SelectionRadius * 0.9f + 1.25f, 1.6f, 5.5f);
+            healthBarRoot.localPosition = Vector3.up * height;
+            healthBarRoot.localScale = new Vector3(width, 1f, 1f);
+        }
+
+        private void UpdateHealthBarPose()
+        {
+            if (healthBarRoot == null || !healthBarRoot.gameObject.activeSelf)
+            {
+                return;
+            }
+
+            LayoutHealthBar();
+            Transform viewCamera = RtsGame.HasInstance ? RtsGame.Instance.GetViewCameraTransform() : null;
+            if (viewCamera == null && Camera.main != null)
+            {
+                viewCamera = Camera.main.transform;
+            }
+
+            if (viewCamera != null)
+            {
+                healthBarRoot.rotation = Quaternion.LookRotation(healthBarRoot.position - viewCamera.position, Vector3.up);
+            }
+        }
+
+        private void UpdateHealthBarVisual()
+        {
+            if (healthBarRoot == null || healthBarFill == null)
+            {
+                return;
+            }
+
+            float percent = HealthPercent;
+            bool visible = IsAlive && (IsSelected || percent < 0.999f);
+            if (visible && Team == RtsTeam.Enemy && RtsGame.HasInstance)
+            {
+                visible = RtsGame.Instance.IsEntityVisible(this);
+            }
+
+            healthBarRoot.gameObject.SetActive(visible);
+            if (!visible)
+            {
+                return;
+            }
+
+            float fillWidth = Mathf.Max(0.02f, percent);
+            healthBarFill.localScale = new Vector3(fillWidth, 0.075f, 0.04f);
+            healthBarFill.localPosition = new Vector3(-0.52f + fillWidth * 0.5f, 0.011f, -0.022f);
+
+            Color color = percent > 0.55f ? new Color(0.35f, 1f, 0.45f, 0.96f) :
+                percent > 0.25f ? new Color(1f, 0.82f, 0.28f, 0.96f) :
+                new Color(1f, 0.28f, 0.2f, 0.96f);
+            healthBarFillMaterial.color = color;
+            healthBarFillMaterial.SetColor("_Color", color);
+            healthBarFillMaterial.SetColor("_BaseColor", color);
+        }
+
         protected void ApplyTeamTint()
         {
             Renderer[] renderers = GetComponentsInChildren<Renderer>();
@@ -192,6 +305,11 @@ namespace QuestCommandRTS
             foreach (Renderer renderer in renderers)
             {
                 if (renderer == selectionRing)
+                {
+                    continue;
+                }
+
+                if (healthBarRoot != null && renderer.transform.IsChildOf(healthBarRoot))
                 {
                     continue;
                 }
@@ -223,6 +341,24 @@ namespace QuestCommandRTS
             }
 
             Destroy(marker, 12f);
+        }
+
+        private static void RemovePrimitiveCollider(GameObject primitive)
+        {
+            Collider collider = primitive.GetComponent<Collider>();
+            if (collider == null)
+            {
+                return;
+            }
+
+            if (Application.isPlaying)
+            {
+                Destroy(collider);
+            }
+            else
+            {
+                DestroyImmediate(collider);
+            }
         }
     }
 }
