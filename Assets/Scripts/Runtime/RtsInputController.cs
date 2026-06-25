@@ -229,7 +229,15 @@ namespace QuestCommandRTS
             }
             else if (Input.GetKeyDown(KeyCode.Alpha3))
             {
-                game.PlayerCommands.QueueProduction(UnitKind.Tank);
+                game.PlayerCommands.QueueProduction(UnitKind.LightTank);
+            }
+            else if (Input.GetKeyDown(KeyCode.Alpha4))
+            {
+                game.PlayerCommands.QueueProduction(UnitKind.MediumTank);
+            }
+            else if (Input.GetKeyDown(KeyCode.Alpha5))
+            {
+                game.PlayerCommands.QueueProduction(UnitKind.HeavyTank);
             }
             else if (Input.GetKeyDown(KeyCode.Q))
             {
@@ -283,7 +291,7 @@ namespace QuestCommandRTS
         {
             for (int i = 0; i < controlGroups.Length; i++)
             {
-                KeyCode key = (KeyCode)((int)KeyCode.Alpha5 + i);
+                KeyCode key = (KeyCode)((int)KeyCode.Alpha6 + i);
                 if (!Input.GetKeyDown(key))
                 {
                     continue;

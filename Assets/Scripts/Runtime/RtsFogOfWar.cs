@@ -419,7 +419,11 @@ namespace QuestCommandRTS
                     case UnitKind.Harvester:
                         return 17f;
                     case UnitKind.Tank:
+                    case UnitKind.LightTank:
+                    case UnitKind.MediumTank:
                         return 20f;
+                    case UnitKind.HeavyTank:
+                        return 23f;
                     default:
                         return 16f;
                 }

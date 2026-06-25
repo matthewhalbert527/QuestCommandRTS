@@ -722,6 +722,7 @@ namespace QuestCommandRTS
 
         public RtsUnit CreateUnit(RtsTeam team, UnitKind kind, Vector3 position)
         {
+            kind = RtsBalance.NormalizeUnitKind(kind);
             UnitStats stats = RtsBalance.GetUnit(kind);
             GameObject root = new GameObject(team + " " + stats.Name);
             root.transform.SetParent(unitsRoot, true);
@@ -729,7 +730,20 @@ namespace QuestCommandRTS
             root.transform.rotation = Quaternion.Euler(0f, team == RtsTeam.Enemy ? 210f : 35f, 0f);
 
             AddUnitCollider(root, kind);
-            RtsUnit unit = kind == UnitKind.Harvester ? root.AddComponent<HarvesterUnit>() : root.AddComponent<RtsUnit>();
+            RtsUnit unit;
+            if (kind == UnitKind.Harvester)
+            {
+                unit = root.AddComponent<HarvesterUnit>();
+            }
+            else if (kind == UnitKind.MediumTank)
+            {
+                unit = root.AddComponent<MediumTankUnit>();
+            }
+            else
+            {
+                unit = root.AddComponent<RtsUnit>();
+            }
+
             BuildUnitVisual(root.transform, kind, team);
             unit.Initialize(team, kind);
             RegisterEntity(unit);
@@ -1241,6 +1255,12 @@ namespace QuestCommandRTS
                     {
                         harvester.RestoreHarvesterState(entityData.harvester, resourceById, entityById);
                     }
+
+                    MediumTankUnit mediumTank = unit as MediumTankUnit;
+                    if (mediumTank != null)
+                    {
+                        mediumTank.RestoreLoadedRiflemen(entityData.carriedRiflemen);
+                    }
                 }
 
                 nextEntityId = Mathf.Max(nextEntityId, data.nextEntityId);
@@ -1300,6 +1320,12 @@ namespace QuestCommandRTS
                 if (harvester != null)
                 {
                     data.harvester = harvester.CaptureHarvesterState();
+                }
+
+                MediumTankUnit mediumTank = unit as MediumTankUnit;
+                if (mediumTank != null)
+                {
+                    data.carriedRiflemen = mediumTank.LoadedRiflemen;
                 }
 
                 return data;
@@ -1749,7 +1775,7 @@ namespace QuestCommandRTS
             CreateStructure(RtsTeam.Enemy, StructureKind.Turret, new Vector3(66f, 0f, 84f));
             CreateUnit(RtsTeam.Enemy, UnitKind.Rifleman, new Vector3(66f, 0f, 62f));
             CreateUnit(RtsTeam.Enemy, UnitKind.Rifleman, new Vector3(70f, 0f, 66f));
-            CreateUnit(RtsTeam.Enemy, UnitKind.Tank, new Vector3(84f, 0f, 58f));
+            CreateUnit(RtsTeam.Enemy, UnitKind.HeavyTank, new Vector3(84f, 0f, 58f));
 
             SelectEntity(command, false);
             SelectEntity(rifleOne, true);
@@ -1773,11 +1799,12 @@ namespace QuestCommandRTS
 
         private void AddUnitCollider(GameObject root, UnitKind kind)
         {
-            if (kind == UnitKind.Tank || kind == UnitKind.Harvester)
+            UnitKind normalized = RtsBalance.NormalizeUnitKind(kind);
+            if (RtsBalance.IsTank(normalized) || normalized == UnitKind.Harvester)
             {
                 BoxCollider box = root.AddComponent<BoxCollider>();
-                box.center = new Vector3(0f, 0.55f, 0f);
-                box.size = kind == UnitKind.Tank ? new Vector3(1.7f, 1.1f, 2.1f) : new Vector3(1.5f, 1.2f, 2.0f);
+                box.center = normalized == UnitKind.Harvester ? new Vector3(0f, 0.55f, 0f) : GetTankColliderCenter(normalized);
+                box.size = normalized == UnitKind.Harvester ? new Vector3(1.5f, 1.2f, 2.0f) : GetTankColliderSize(normalized);
             }
             else
             {
@@ -1815,13 +1842,17 @@ namespace QuestCommandRTS
 
         private void BuildUnitVisual(Transform root, UnitKind kind, RtsTeam team)
         {
+            kind = RtsBalance.NormalizeUnitKind(kind);
             Material teamMaterial = GetTeamMaterial(team);
 
-            if (kind == UnitKind.Tank)
+            if (RtsBalance.IsTank(kind))
             {
-                CreatePrimitive(PrimitiveType.Cube, root, "Hull", new Vector3(0f, 0.45f, 0f), new Vector3(1.7f, 0.55f, 2.1f), teamMaterial);
-                CreatePrimitive(PrimitiveType.Cube, root, "Turret", new Vector3(0f, 0.88f, 0.1f), new Vector3(1f, 0.36f, 0.9f), teamMaterial);
-                CreatePrimitive(PrimitiveType.Cylinder, root, "Barrel", new Vector3(0f, 0.9f, 0.85f), new Vector3(0.16f, 0.65f, 0.16f), darkMaterial).transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
+                if (TryBuildImportedTankVisual(root, kind, teamMaterial))
+                {
+                    return;
+                }
+
+                BuildFallbackTankVisual(root, kind, teamMaterial);
                 return;
             }
 
@@ -1836,6 +1867,132 @@ namespace QuestCommandRTS
             CreatePrimitive(PrimitiveType.Capsule, root, "Body", new Vector3(0f, 0.8f, 0f), new Vector3(0.58f, 0.78f, 0.58f), teamMaterial);
             CreatePrimitive(PrimitiveType.Sphere, root, "Helmet", new Vector3(0f, 1.55f, 0.03f), new Vector3(0.46f, 0.36f, 0.46f), teamMaterial);
             CreatePrimitive(PrimitiveType.Cube, root, "Rifle", new Vector3(0.35f, 1.05f, 0.38f), new Vector3(0.12f, 0.12f, 0.95f), darkMaterial);
+        }
+
+        private bool TryBuildImportedTankVisual(Transform root, UnitKind kind, Material teamMaterial)
+        {
+            string modelPath = GetTankModelResourcePath(kind);
+            if (string.IsNullOrEmpty(modelPath))
+            {
+                return false;
+            }
+
+            GameObject modelPrefab = UnityEngine.Resources.Load<GameObject>(modelPath);
+            if (modelPrefab == null)
+            {
+                return false;
+            }
+
+            GameObject model = Instantiate(modelPrefab, root);
+            model.name = RtsBalance.GetUnit(kind).Name + " Model";
+            model.transform.localPosition = Vector3.zero;
+            model.transform.localRotation = Quaternion.identity;
+            model.transform.localScale = Vector3.one * GetTankModelScale(kind);
+
+            foreach (Collider collider in model.GetComponentsInChildren<Collider>())
+            {
+                DestroyRuntimeObject(collider);
+            }
+
+            foreach (Renderer renderer in model.GetComponentsInChildren<Renderer>())
+            {
+                renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+                renderer.receiveShadows = false;
+            }
+
+            CreatePrimitive(PrimitiveType.Cube, root, "Team Recognition Strip", new Vector3(0f, 0.82f, -0.55f), GetTankRecognitionStripSize(kind), teamMaterial);
+            return true;
+        }
+
+        private void BuildFallbackTankVisual(Transform root, UnitKind kind, Material teamMaterial)
+        {
+            switch (kind)
+            {
+                case UnitKind.LightTank:
+                    CreatePrimitive(PrimitiveType.Cube, root, "Light Hull", new Vector3(0f, 0.38f, 0f), new Vector3(1.45f, 0.46f, 1.85f), teamMaterial);
+                    CreatePrimitive(PrimitiveType.Cube, root, "Light Turret", new Vector3(0f, 0.78f, 0.08f), new Vector3(0.8f, 0.28f, 0.72f), teamMaterial);
+                    CreatePrimitive(PrimitiveType.Cylinder, root, "Light Barrel", new Vector3(0f, 0.78f, 0.75f), new Vector3(0.12f, 0.58f, 0.12f), darkMaterial).transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
+                    break;
+                case UnitKind.HeavyTank:
+                    CreatePrimitive(PrimitiveType.Cube, root, "Heavy Hull", new Vector3(0f, 0.52f, 0f), new Vector3(2.2f, 0.72f, 2.95f), teamMaterial);
+                    CreatePrimitive(PrimitiveType.Cube, root, "Heavy Turret", new Vector3(0f, 1.08f, 0.16f), new Vector3(1.35f, 0.46f, 1.15f), teamMaterial);
+                    CreatePrimitive(PrimitiveType.Cylinder, root, "Heavy Cannon A", new Vector3(-0.24f, 1.08f, 1.08f), new Vector3(0.15f, 0.86f, 0.15f), darkMaterial).transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
+                    CreatePrimitive(PrimitiveType.Cylinder, root, "Heavy Cannon B", new Vector3(0.24f, 1.08f, 1.08f), new Vector3(0.15f, 0.86f, 0.15f), darkMaterial).transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
+                    break;
+                default:
+                    CreatePrimitive(PrimitiveType.Cube, root, "Medium Hull", new Vector3(0f, 0.45f, 0f), new Vector3(1.75f, 0.55f, 2.25f), teamMaterial);
+                    CreatePrimitive(PrimitiveType.Cube, root, "Medium Turret", new Vector3(0f, 0.88f, 0.1f), new Vector3(1f, 0.36f, 0.9f), teamMaterial);
+                    CreatePrimitive(PrimitiveType.Cylinder, root, "Medium Barrel", new Vector3(0f, 0.9f, 0.9f), new Vector3(0.16f, 0.68f, 0.16f), darkMaterial).transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
+                    CreatePrimitive(PrimitiveType.Cube, root, "Passenger Platform", new Vector3(0.62f, 0.72f, -0.28f), new Vector3(0.38f, 0.08f, 0.48f), darkMaterial);
+                    break;
+            }
+        }
+
+        private static string GetTankModelResourcePath(UnitKind kind)
+        {
+            switch (kind)
+            {
+                case UnitKind.LightTank:
+                    return "UnitModels/BastionLightTank/Meshes/Bastion_Tank_Static";
+                case UnitKind.MediumTank:
+                    return "UnitModels/BastionMediumTank/Meshes/Bastion_MT12_Static";
+                case UnitKind.HeavyTank:
+                    return "UnitModels/BastionHeavyTank/Meshes/Bastion_HT77_Static";
+                default:
+                    return string.Empty;
+            }
+        }
+
+        private static float GetTankModelScale(UnitKind kind)
+        {
+            switch (kind)
+            {
+                case UnitKind.LightTank:
+                    return 0.31f;
+                case UnitKind.HeavyTank:
+                    return 0.32f;
+                default:
+                    return 0.315f;
+            }
+        }
+
+        private static Vector3 GetTankColliderCenter(UnitKind kind)
+        {
+            switch (kind)
+            {
+                case UnitKind.LightTank:
+                    return new Vector3(0f, 0.48f, 0f);
+                case UnitKind.HeavyTank:
+                    return new Vector3(0f, 0.72f, 0f);
+                default:
+                    return new Vector3(0f, 0.6f, 0f);
+            }
+        }
+
+        private static Vector3 GetTankColliderSize(UnitKind kind)
+        {
+            switch (kind)
+            {
+                case UnitKind.LightTank:
+                    return new Vector3(1.45f, 0.95f, 2.1f);
+                case UnitKind.HeavyTank:
+                    return new Vector3(2.25f, 1.4f, 3.35f);
+                default:
+                    return new Vector3(1.75f, 1.2f, 2.55f);
+            }
+        }
+
+        private static Vector3 GetTankRecognitionStripSize(UnitKind kind)
+        {
+            switch (kind)
+            {
+                case UnitKind.LightTank:
+                    return new Vector3(0.9f, 0.08f, 0.16f);
+                case UnitKind.HeavyTank:
+                    return new Vector3(1.35f, 0.1f, 0.22f);
+                default:
+                    return new Vector3(1.05f, 0.09f, 0.18f);
+            }
         }
 
         private Transform BuildStructureVisual(Transform root, StructureKind kind, RtsTeam team)

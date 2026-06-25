@@ -1,0 +1,5 @@
+Bastion TX-9R asset notice
+
+This package contains original geometry, textures, and source code generated for the recipient. No third-party logos, trademarked faction marks, or copied game assets are included. Use, modify, and integrate the package subject to the terms that govern your use of the AI service through which it was generated.
+
+No warranty is provided. Test performance, collision behavior, shader compatibility, and platform compliance in your own Unity project before shipping.

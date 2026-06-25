@@ -81,6 +81,7 @@ namespace QuestCommandRTS
         public float rotationY;
         public float health;
         public float maxHealth;
+        public int carriedRiflemen;
         public RtsUnitOrderSaveData order;
         public RtsHarvesterSaveData harvester;
         public RtsProductionSaveData production;

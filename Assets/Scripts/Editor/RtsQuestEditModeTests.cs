@@ -332,8 +332,58 @@ namespace QuestCommandRTS.Editor
 
             Image rifleIcon = AssertPanelImage("Produce Row 0 Icon", 0.6f);
             Image harvesterIcon = AssertPanelImage("Produce Row 1 Icon", 0.6f);
+            Image heavyTankIcon = AssertPanelImage("Produce Row 4 Icon", 0.6f);
             Assert.AreNotEqual(rifleIcon.color, harvesterIcon.color);
+            Assert.AreNotEqual(harvesterIcon.color, heavyTankIcon.color);
             AssertPanelImage("Production Queue Backplate", 0.7f);
+        }
+
+        [Test]
+        public void TankVariantsUseImportedBastionModelPayloads()
+        {
+            RtsGame game = CreateInitializedGame(RtsRuntimeMode.Desktop);
+
+            RtsUnit light = game.CreateUnit(RtsTeam.Player, UnitKind.LightTank, new Vector3(-52f, 0f, -44f));
+            RtsUnit medium = game.CreateUnit(RtsTeam.Player, UnitKind.MediumTank, new Vector3(-48f, 0f, -44f));
+            RtsUnit heavy = game.CreateUnit(RtsTeam.Player, UnitKind.HeavyTank, new Vector3(-44f, 0f, -44f));
+
+            Assert.AreEqual(UnitKind.LightTank, light.UnitKind);
+            Assert.AreEqual(UnitKind.MediumTank, medium.UnitKind);
+            Assert.AreEqual(UnitKind.HeavyTank, heavy.UnitKind);
+            Assert.IsNotNull(light.transform.Find("Light Tank Model"));
+            Assert.IsNotNull(medium.transform.Find("Medium Tank Model"));
+            Assert.IsNotNull(heavy.transform.Find("Heavy Tank Model"));
+        }
+
+        [Test]
+        public void MediumTankBoardsRiflemanAndFiresPassengerWeapon()
+        {
+            RtsGame game = CreateInitializedGame(RtsRuntimeMode.Desktop);
+            MediumTankUnit medium = game.CreateUnit(RtsTeam.Player, UnitKind.MediumTank, new Vector3(-52f, 0f, -42f)) as MediumTankUnit;
+            RtsUnit rifleman = game.CreateUnit(RtsTeam.Player, UnitKind.Rifleman, medium.transform.position + new Vector3(3.2f, 0f, 0f));
+            Assert.IsNotNull(medium);
+
+            game.ClearSelection();
+            game.SelectEntity(rifleman, false);
+            Assert.AreEqual(RtsContextCommandKind.Board, game.CommandDispatcher.ResolveContextCommand(medium, null, medium.transform.position));
+
+            rifleman.IssueBoardMediumTank(medium);
+            for (int i = 0; i < 80 && medium.LoadedRiflemen == 0; i++)
+            {
+                rifleman.TickOrdersForTests(0.1f);
+            }
+
+            Assert.AreEqual(1, medium.LoadedRiflemen);
+            Assert.IsFalse(HasEntity(game, rifleman), "Boarded rifleman should leave the active entity list.");
+
+            RtsUnit enemy = game.CreateUnit(RtsTeam.Enemy, UnitKind.Rifleman, medium.transform.position + new Vector3(5.5f, 0f, 0f));
+            float expectedDamage = medium.Damage + RtsBalance.GetUnit(UnitKind.Rifleman).Damage;
+            float healthBefore = enemy.Health;
+
+            medium.IssueAttack(enemy);
+            medium.TickOrdersForTests(0.1f);
+
+            Assert.AreEqual(healthBefore - expectedDamage, enemy.Health, 0.001f);
         }
 
         [Test]
@@ -357,7 +407,7 @@ namespace QuestCommandRTS.Editor
             rifle.Repair(rifle.MaxHealth);
             Assert.IsFalse(healthBar.gameObject.activeSelf, "Fully repaired unselected unit should hide its health bar.");
 
-            RtsUnit enemy = FindEnemyUnit(game, UnitKind.Tank);
+            RtsUnit enemy = FindEnemyUnit(game, UnitKind.HeavyTank);
             Transform enemyHealthBar = enemy.transform.Find("Health Bar");
             Assert.IsNotNull(enemyHealthBar);
             Assert.IsFalse(game.IsEntityVisible(enemy));
@@ -774,7 +824,10 @@ namespace QuestCommandRTS.Editor
             Assert.IsTrue(snapshot.buildPlacement.valid);
             Assert.GreaterOrEqual(FindDiagnosticsUnitKind(snapshot, "Rifleman").total, 34);
             Assert.GreaterOrEqual(FindDiagnosticsUnitKind(snapshot, "Harvester").player, 5);
-            Assert.GreaterOrEqual(FindDiagnosticsUnitKind(snapshot, "Tank").total, 21);
+            int armorTotal = FindDiagnosticsUnitKind(snapshot, "LightTank").total +
+                FindDiagnosticsUnitKind(snapshot, "MediumTank").total +
+                FindDiagnosticsUnitKind(snapshot, "HeavyTank").total;
+            Assert.GreaterOrEqual(armorTotal, 21);
             Assert.GreaterOrEqual(FindDiagnosticsStructureKind(snapshot, "WarFactory").player, 1);
             Assert.Less(FindDiagnosticsTeam(snapshot, "Player").idleUnits, 8);
         }
@@ -2044,6 +2097,19 @@ namespace QuestCommandRTS.Editor
 
             Assert.Fail("Missing player unit " + kind);
             return null;
+        }
+
+        private static bool HasEntity(RtsGame game, RtsEntity expected)
+        {
+            for (int i = 0; i < game.Entities.Count; i++)
+            {
+                if (game.Entities[i] == expected)
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         private static RtsUnit FindSecondPlayerUnit(RtsGame game, UnitKind kind, RtsUnit first)

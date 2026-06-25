@@ -48,7 +48,7 @@ The scene is intentionally empty. `RtsBootstrap` creates the map, units, buildin
 - Mouse wheel: zoom camera.
 - A: attack-move selected units toward the cursor.
 - S: stop selected units.
-- Number keys 1-3: train rifleman, harvester, and tank.
+- Number keys 1-5: train rifleman, harvester, light tank, medium tank, and heavy tank.
 - Q/W/E/R/T: place power plant, barracks, refinery, war factory, and turret.
 - Z: repair the most damaged selected structure.
 - X: sell selected structures for a partial refund.
@@ -56,7 +56,7 @@ The scene is intentionally empty. `RtsBootstrap` creates the map, units, buildin
 - F5: save the manual slot.
 - F9: load the manual slot.
 - New Match HUD button: reset the current skirmish without reloading the scene.
-- Ctrl + 5-9: assign control group; 5-9: recall control group.
+- Ctrl + 6-0: assign control group; 6-0: recall control group.
 
 ## Quest Controls
 

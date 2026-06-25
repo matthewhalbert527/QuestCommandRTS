@@ -329,6 +329,8 @@ namespace QuestCommandRTS
                     return attackColor;
                 case RtsContextCommandKind.Harvest:
                     return harvestColor;
+                case RtsContextCommandKind.Board:
+                    return new Color(0.55f, 0.95f, 1f, 0.96f);
                 case RtsContextCommandKind.Rally:
                     return rallyColor;
                 case RtsContextCommandKind.Move:

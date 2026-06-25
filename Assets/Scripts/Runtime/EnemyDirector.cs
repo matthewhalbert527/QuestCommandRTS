@@ -162,9 +162,9 @@ namespace QuestCommandRTS
                 spawned++;
             }
 
-            if (nextWaveIndex % 2 == 0 && HasLivingEnemyStructure(StructureKind.WarFactory) && TrySpendEnemyCredits(RtsBalance.GetUnit(UnitKind.Tank).Cost))
+            if (nextWaveIndex % 2 == 0 && HasLivingEnemyStructure(StructureKind.WarFactory) && TrySpendEnemyCredits(RtsBalance.GetUnit(UnitKind.MediumTank).Cost))
             {
-                RtsUnit tank = game.CreateUnit(RtsTeam.Enemy, UnitKind.Tank, enemyBase + new Vector3(Random.Range(-7f, 7f), 0f, Random.Range(-7f, 7f)));
+                RtsUnit tank = game.CreateUnit(RtsTeam.Enemy, UnitKind.MediumTank, enemyBase + new Vector3(Random.Range(-7f, 7f), 0f, Random.Range(-7f, 7f)));
                 tank.IssueAttack(target);
                 spawned++;
             }
@@ -307,10 +307,20 @@ namespace QuestCommandRTS
 
         private UnitKind ChooseUnitToProduce()
         {
-            bool canBuildTank = HasLivingEnemyStructure(StructureKind.WarFactory) && enemyCredits >= RtsBalance.GetUnit(UnitKind.Tank).Cost;
-            if (canBuildTank && CountLivingEnemyUnits(UnitKind.Tank) < 4)
+            bool hasWarFactory = HasLivingEnemyStructure(StructureKind.WarFactory);
+            if (hasWarFactory && enemyCredits >= RtsBalance.GetUnit(UnitKind.HeavyTank).Cost && CountLivingEnemyUnits(UnitKind.HeavyTank) < 2)
             {
-                return UnitKind.Tank;
+                return UnitKind.HeavyTank;
+            }
+
+            if (hasWarFactory && enemyCredits >= RtsBalance.GetUnit(UnitKind.MediumTank).Cost && CountLivingEnemyUnits(UnitKind.MediumTank) < 4)
+            {
+                return UnitKind.MediumTank;
+            }
+
+            if (hasWarFactory && enemyCredits >= RtsBalance.GetUnit(UnitKind.LightTank).Cost && CountLivingEnemyUnits(UnitKind.LightTank) < 5)
+            {
+                return UnitKind.LightTank;
             }
 
             return UnitKind.Rifleman;

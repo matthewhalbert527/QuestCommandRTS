@@ -14,6 +14,7 @@ namespace QuestCommandRTS
         AttackIssued,
         HarvestIssued,
         RallyPointSet,
+        BoardIssued,
         PlacementUpdated,
         PlacementConfirmed,
         PlacementCanceled
@@ -24,6 +25,7 @@ namespace QuestCommandRTS
         None,
         Attack,
         Harvest,
+        Board,
         Rally,
         Move
     }
@@ -209,6 +211,11 @@ namespace QuestCommandRTS
                 return RtsContextCommandKind.Harvest;
             }
 
+            if (CanBoardMediumTank(entity))
+            {
+                return RtsContextCommandKind.Board;
+            }
+
             if (CanSetRallyPoint(point))
             {
                 return RtsContextCommandKind.Rally;
@@ -288,6 +295,8 @@ namespace QuestCommandRTS
                 case RtsContextCommandKind.Harvest:
                     IssueHarvest(hit.collider.GetComponentInParent<ResourceNode>());
                     return RtsCommandResult.HarvestIssued;
+                case RtsContextCommandKind.Board:
+                    return IssueBoard(hit.collider.GetComponentInParent<MediumTankUnit>());
                 case RtsContextCommandKind.Rally:
                     return game.PlayerCommands != null && game.PlayerCommands.SetSelectedRallyPoint(GetGroundPoint(hit)) ? RtsCommandResult.RallyPointSet : RtsCommandResult.None;
                 case RtsContextCommandKind.Move:
@@ -357,6 +366,35 @@ namespace QuestCommandRTS
             }
         }
 
+        private RtsCommandResult IssueBoard(MediumTankUnit target)
+        {
+            if (target == null)
+            {
+                return RtsCommandResult.None;
+            }
+
+            GatherSelectedControllableUnits(commandUnits);
+
+            int assigned = 0;
+            for (int i = 0; i < commandUnits.Count; i++)
+            {
+                RtsUnit unit = commandUnits[i];
+                if (unit.CanBoardMediumTank(target))
+                {
+                    unit.IssueBoardMediumTank(target);
+                    assigned++;
+                }
+            }
+
+            if (assigned <= 0)
+            {
+                return RtsCommandResult.None;
+            }
+
+            game.SpawnFloatingText("Board medium tank", target.GroundPosition + Vector3.up * 2.2f, new Color(0.55f, 0.95f, 1f));
+            return RtsCommandResult.BoardIssued;
+        }
+
         private void IssueMove(Vector3 point)
         {
             GatherSelectedControllableUnits(commandUnits);
@@ -392,6 +430,26 @@ namespace QuestCommandRTS
             }
 
             return hasProducer;
+        }
+
+        private bool CanBoardMediumTank(RtsEntity entity)
+        {
+            MediumTankUnit mediumTank = entity as MediumTankUnit;
+            if (mediumTank == null || mediumTank.Team != RtsTeam.Player || !mediumTank.IsAlive)
+            {
+                return false;
+            }
+
+            for (int i = 0; i < game.Selection.Count; i++)
+            {
+                RtsUnit unit = game.Selection[i] as RtsUnit;
+                if (unit != null && unit.Team == RtsTeam.Player && unit.IsAlive && unit.CanBoardMediumTank(mediumTank))
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         private static Vector3 GetGroundPoint(RaycastHit hit)

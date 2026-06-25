@@ -114,6 +114,9 @@ namespace QuestCommandRTS
                 case UnitKind.Harvester:
                     return StructureKind == StructureKind.Refinery || StructureKind == StructureKind.WarFactory || StructureKind == StructureKind.CommandCenter;
                 case UnitKind.Tank:
+                case UnitKind.LightTank:
+                case UnitKind.MediumTank:
+                case UnitKind.HeavyTank:
                     return StructureKind == StructureKind.WarFactory;
                 default:
                     return false;

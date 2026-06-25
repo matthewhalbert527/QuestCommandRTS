@@ -103,7 +103,11 @@ namespace QuestCommandRTS
             y -= 48f;
             AddCommandButton(commandPanel, "Harvester", y, () => game.PlayerCommands.QueueProduction(UnitKind.Harvester), () => CanQueue(UnitKind.Harvester), () => "Harvester  " + RtsBalance.GetUnit(UnitKind.Harvester).Cost);
             y -= 48f;
-            AddCommandButton(commandPanel, "Tank", y, () => game.PlayerCommands.QueueProduction(UnitKind.Tank), () => CanQueue(UnitKind.Tank), () => "Tank  " + RtsBalance.GetUnit(UnitKind.Tank).Cost);
+            AddCommandButton(commandPanel, "Light Tank", y, () => game.PlayerCommands.QueueProduction(UnitKind.LightTank), () => CanQueue(UnitKind.LightTank), () => "Light Tank  " + RtsBalance.GetUnit(UnitKind.LightTank).Cost);
+            y -= 48f;
+            AddCommandButton(commandPanel, "Medium Tank", y, () => game.PlayerCommands.QueueProduction(UnitKind.MediumTank), () => CanQueue(UnitKind.MediumTank), () => "Medium Tank  " + RtsBalance.GetUnit(UnitKind.MediumTank).Cost);
+            y -= 48f;
+            AddCommandButton(commandPanel, "Heavy Tank", y, () => game.PlayerCommands.QueueProduction(UnitKind.HeavyTank), () => CanQueue(UnitKind.HeavyTank), () => "Heavy Tank  " + RtsBalance.GetUnit(UnitKind.HeavyTank).Cost);
             y -= 62f;
 
             CreateText(commandPanel, "Build Label", "Build", 17, TextAnchor.MiddleLeft, new Vector2(14f, y), new Vector2(198f, 26f));

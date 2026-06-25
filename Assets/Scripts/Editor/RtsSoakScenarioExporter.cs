@@ -121,7 +121,8 @@ namespace QuestCommandRTS.Editor
 
             for (int i = 0; i < 8; i++)
             {
-                game.CreateUnit(RtsTeam.Player, UnitKind.Tank, FormationPoint(new Vector3(-36f, 0f, -36f), i, 4, 3.4f));
+                UnitKind kind = i % 3 == 0 ? UnitKind.HeavyTank : i % 3 == 1 ? UnitKind.MediumTank : UnitKind.LightTank;
+                game.CreateUnit(RtsTeam.Player, kind, FormationPoint(new Vector3(-36f, 0f, -36f), i, 4, 3.4f));
             }
 
             for (int i = 0; i < 4; i++)
@@ -136,7 +137,8 @@ namespace QuestCommandRTS.Editor
 
             for (int i = 0; i < 12; i++)
             {
-                game.CreateUnit(RtsTeam.Enemy, UnitKind.Tank, FormationPoint(new Vector3(66f, 0f, 42f), i, 4, 3.5f));
+                UnitKind kind = i % 3 == 0 ? UnitKind.HeavyTank : i % 3 == 1 ? UnitKind.MediumTank : UnitKind.LightTank;
+                game.CreateUnit(RtsTeam.Enemy, kind, FormationPoint(new Vector3(66f, 0f, 42f), i, 4, 3.5f));
             }
         }
 
@@ -157,7 +159,9 @@ namespace QuestCommandRTS.Editor
                 ProductionStructure producer = producers[i];
                 QueueIfAvailable(producer, UnitKind.Rifleman);
                 QueueIfAvailable(producer, UnitKind.Harvester);
-                QueueIfAvailable(producer, UnitKind.Tank);
+                QueueIfAvailable(producer, UnitKind.LightTank);
+                QueueIfAvailable(producer, UnitKind.MediumTank);
+                QueueIfAvailable(producer, UnitKind.HeavyTank);
                 producer.StartNextProductionForTests();
             }
         }

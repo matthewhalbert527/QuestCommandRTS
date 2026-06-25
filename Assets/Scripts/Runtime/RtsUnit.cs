@@ -18,6 +18,7 @@ namespace QuestCommandRTS
         protected bool hasDestination;
         protected bool hasAttackMoveDestination;
         protected RtsEntity attackTarget;
+        protected MediumTankUnit boardingTarget;
 
         private float nextAttackTime;
 
@@ -39,19 +40,20 @@ namespace QuestCommandRTS
 
         public virtual void Initialize(RtsTeam team, UnitKind kind)
         {
-            UnitKind = kind;
+            UnitKind = RtsBalance.NormalizeUnitKind(kind);
             UnitStats stats = RtsBalance.GetUnit(kind);
             MoveSpeed = stats.MoveSpeed;
             AttackRange = stats.AttackRange;
             Damage = stats.Damage;
             AttackCooldown = stats.AttackCooldown;
 
-            float radius = kind == UnitKind.Tank ? 1.1f : 0.72f;
+            float radius = GetSelectionRadius(UnitKind);
             Initialize(team, stats.Name, stats.Health, radius);
         }
 
         public virtual void IssueMove(Vector3 worldPosition)
         {
+            boardingTarget = null;
             attackTarget = null;
             hasDestination = true;
             hasAttackMoveDestination = false;
@@ -65,6 +67,7 @@ namespace QuestCommandRTS
                 return;
             }
 
+            boardingTarget = null;
             attackTarget = target;
             hasDestination = false;
             hasAttackMoveDestination = false;
@@ -72,14 +75,34 @@ namespace QuestCommandRTS
 
         public virtual void IssueAttackMove(Vector3 worldPosition)
         {
+            boardingTarget = null;
             attackTarget = null;
             hasDestination = false;
             hasAttackMoveDestination = true;
             attackMoveDestination = ClampToMap(worldPosition);
         }
 
+        public virtual bool CanBoardMediumTank(MediumTankUnit target)
+        {
+            return UnitKind == UnitKind.Rifleman && target != null && target.Team == Team && target.CanLoadPassenger(this);
+        }
+
+        public virtual void IssueBoardMediumTank(MediumTankUnit target)
+        {
+            if (!CanBoardMediumTank(target))
+            {
+                return;
+            }
+
+            boardingTarget = target;
+            attackTarget = null;
+            hasDestination = false;
+            hasAttackMoveDestination = false;
+        }
+
         public virtual void IssueStop()
         {
+            boardingTarget = null;
             attackTarget = null;
             hasDestination = false;
             hasAttackMoveDestination = false;
@@ -114,6 +137,14 @@ namespace QuestCommandRTS
                 return data;
             }
 
+            if (boardingTarget != null && boardingTarget.IsAlive)
+            {
+                data.orderType = "Board";
+                data.targetEntityId = boardingTarget.PersistentId;
+                data.destination = new Vector3Data(boardingTarget.transform.position);
+                return data;
+            }
+
             if (hasDestination)
             {
                 data.orderType = "Move";
@@ -131,6 +162,7 @@ namespace QuestCommandRTS
         public void RestoreOrderState(RtsUnitOrderSaveData data, Dictionary<int, RtsEntity> entityById)
         {
             attackTarget = null;
+            boardingTarget = null;
             hasDestination = false;
             hasAttackMoveDestination = false;
 
@@ -158,6 +190,17 @@ namespace QuestCommandRTS
                 return;
             }
 
+            if (data.orderType == "Board" && entityById != null && entityById.TryGetValue(data.targetEntityId, out RtsEntity boardTarget))
+            {
+                MediumTankUnit mediumTank = boardTarget as MediumTankUnit;
+                if (mediumTank != null)
+                {
+                    IssueBoardMediumTank(mediumTank);
+                }
+
+                return;
+            }
+
             if (data.orderType == "Attack" && entityById != null && entityById.TryGetValue(data.targetEntityId, out RtsEntity target))
             {
                 IssueAttack(target);
@@ -169,6 +212,12 @@ namespace QuestCommandRTS
             if (attackTarget != null && (!attackTarget.IsAlive || attackTarget.Team == Team))
             {
                 attackTarget = null;
+            }
+
+            if (boardingTarget != null)
+            {
+                TickBoardOrder(deltaTime);
+                return;
             }
 
             if (attackTarget != null)
@@ -202,6 +251,26 @@ namespace QuestCommandRTS
                     hasDestination = false;
                 }
             }
+        }
+
+        private void TickBoardOrder(float deltaTime)
+        {
+            if (boardingTarget == null || !boardingTarget.IsAlive || !CanBoardMediumTank(boardingTarget))
+            {
+                boardingTarget = null;
+                return;
+            }
+
+            float distance = PlanarDistance(transform.position, boardingTarget.transform.position);
+            if (distance > 1.35f)
+            {
+                MoveToward(boardingTarget.transform.position, deltaTime, 1.1f);
+                return;
+            }
+
+            MediumTankUnit target = boardingTarget;
+            boardingTarget = null;
+            target.TryLoadPassenger(this);
         }
 
         protected bool MoveToward(Vector3 targetPosition, float deltaTime, float stoppingDistance)
@@ -244,7 +313,12 @@ namespace QuestCommandRTS
                 nextAttackTime = currentTime + Mathf.Max(0.15f, AttackCooldown);
                 attackTarget.TakeDamage(Damage, this);
                 RtsGame.Instance.SpawnTracer(GroundPosition + Vector3.up * 0.8f, attackTarget.GroundPosition + Vector3.up * 0.8f, Team);
+                OnPrimaryAttackFired(attackTarget);
             }
+        }
+
+        protected virtual void OnPrimaryAttackFired(RtsEntity target)
+        {
         }
 
         protected void FacePoint(Vector3 point, float deltaTime)
@@ -280,6 +354,139 @@ namespace QuestCommandRTS
         protected static float GetSimulationTime()
         {
             return RtsGame.HasInstance ? RtsGame.Instance.Clock.SimulationTime : Time.time;
+        }
+
+        private static float GetSelectionRadius(UnitKind kind)
+        {
+            switch (RtsBalance.NormalizeUnitKind(kind))
+            {
+                case UnitKind.LightTank:
+                    return 1.0f;
+                case UnitKind.MediumTank:
+                    return 1.15f;
+                case UnitKind.HeavyTank:
+                    return 1.45f;
+                default:
+                    return 0.72f;
+            }
+        }
+    }
+
+    public sealed class MediumTankUnit : RtsUnit
+    {
+        public const int PassengerCapacity = 1;
+        public int LoadedRiflemen { get; private set; }
+        public bool HasPassenger => LoadedRiflemen > 0;
+
+        private Transform passengerIndicator;
+
+        public bool CanLoadPassenger(RtsUnit passenger)
+        {
+            return passenger != null &&
+                passenger.IsAlive &&
+                passenger.Team == Team &&
+                passenger.UnitKind == UnitKind.Rifleman &&
+                LoadedRiflemen < PassengerCapacity;
+        }
+
+        public bool TryLoadPassenger(RtsUnit passenger)
+        {
+            if (!CanLoadPassenger(passenger))
+            {
+                return false;
+            }
+
+            LoadedRiflemen++;
+            RefreshPassengerIndicator();
+
+            if (RtsGame.HasInstance)
+            {
+                RtsGame.Instance.SpawnFloatingText("Rifleman loaded", GroundPosition + Vector3.up * 2.2f, new Color(0.55f, 0.95f, 1f));
+                RtsGame.Instance.UnregisterEntity(passenger);
+            }
+
+            if (Application.isPlaying)
+            {
+                Destroy(passenger.gameObject);
+            }
+            else
+            {
+                DestroyImmediate(passenger.gameObject);
+            }
+
+            return true;
+        }
+
+        public void RestoreLoadedRiflemen(int count)
+        {
+            LoadedRiflemen = Mathf.Clamp(count, 0, PassengerCapacity);
+            RefreshPassengerIndicator();
+        }
+
+        protected override void OnPrimaryAttackFired(RtsEntity target)
+        {
+            if (LoadedRiflemen <= 0 || target == null || !target.IsAlive)
+            {
+                return;
+            }
+
+            float passengerDamage = RtsBalance.GetUnit(UnitKind.Rifleman).Damage * LoadedRiflemen;
+            target.TakeDamage(passengerDamage, this);
+
+            if (RtsGame.HasInstance)
+            {
+                Vector3 muzzle = GroundPosition + transform.TransformDirection(new Vector3(0.62f, 1.15f, 0.35f));
+                RtsGame.Instance.SpawnTracer(muzzle, target.GroundPosition + Vector3.up * 0.75f, Team);
+            }
+        }
+
+        private void RefreshPassengerIndicator()
+        {
+            if (LoadedRiflemen <= 0)
+            {
+                if (passengerIndicator != null)
+                {
+                    if (Application.isPlaying)
+                    {
+                        Destroy(passengerIndicator.gameObject);
+                    }
+                    else
+                    {
+                        DestroyImmediate(passengerIndicator.gameObject);
+                    }
+
+                    passengerIndicator = null;
+                }
+
+                return;
+            }
+
+            if (passengerIndicator != null)
+            {
+                return;
+            }
+
+            GameObject indicator = GameObject.CreatePrimitive(PrimitiveType.Capsule);
+            indicator.name = "Loaded Rifleman Indicator";
+            indicator.transform.SetParent(transform, false);
+            indicator.transform.localPosition = new Vector3(0.62f, 1.24f, -0.18f);
+            indicator.transform.localScale = new Vector3(0.18f, 0.34f, 0.18f);
+            indicator.GetComponent<Renderer>().sharedMaterial = RtsGame.CreateMaterial(new Color(0.62f, 0.95f, 1f));
+
+            Collider collider = indicator.GetComponent<Collider>();
+            if (collider != null)
+            {
+                if (Application.isPlaying)
+                {
+                    Destroy(collider);
+                }
+                else
+                {
+                    DestroyImmediate(collider);
+                }
+            }
+
+            passengerIndicator = indicator.transform;
         }
     }
 

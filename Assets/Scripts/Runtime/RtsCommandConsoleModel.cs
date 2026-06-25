@@ -65,7 +65,9 @@ namespace QuestCommandRTS
         {
             UnitKind.Rifleman,
             UnitKind.Harvester,
-            UnitKind.Tank
+            UnitKind.LightTank,
+            UnitKind.MediumTank,
+            UnitKind.HeavyTank
         };
 
         private RtsGame game;
@@ -211,6 +213,12 @@ namespace QuestCommandRTS
                 view.RallyText = producer.HasRallyPoint ? "Rally set" : "No rally set";
                 view.QueueSummary = producer.GetQueueSummary();
                 view.CanCancelQueue = producer.CanCancelProduction;
+            }
+
+            MediumTankUnit mediumTank = entity as MediumTankUnit;
+            if (mediumTank != null)
+            {
+                view.QueueSummary = mediumTank.HasPassenger ? "Passenger gunner loaded" : "No passenger gunner";
             }
 
             return view;

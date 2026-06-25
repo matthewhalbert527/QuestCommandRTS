@@ -335,6 +335,9 @@ namespace QuestCommandRTS
                     case UnitKind.Harvester:
                         return selectedProducer.CanTrain(kind) ? string.Empty : "Select Refinery, War Factory, or Command Center";
                     case UnitKind.Tank:
+                    case UnitKind.LightTank:
+                    case UnitKind.MediumTank:
+                    case UnitKind.HeavyTank:
                         return selectedProducer.CanTrain(kind) ? string.Empty : "Select War Factory";
                 }
             }
@@ -342,6 +345,9 @@ namespace QuestCommandRTS
             switch (kind)
             {
                 case UnitKind.Tank:
+                case UnitKind.LightTank:
+                case UnitKind.MediumTank:
+                case UnitKind.HeavyTank:
                     return HasAnyPlayerProducerFor(kind) ? "Select War Factory" : "Needs War Factory";
                 case UnitKind.Harvester:
                     return HasAnyPlayerProducerFor(kind) ? "Select producer" : "Needs Refinery or War Factory";

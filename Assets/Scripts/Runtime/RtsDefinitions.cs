@@ -20,7 +20,10 @@ namespace QuestCommandRTS
     {
         Rifleman,
         Harvester,
-        Tank
+        Tank,
+        LightTank,
+        MediumTank,
+        HeavyTank
     }
 
     public enum StructureKind
@@ -135,11 +138,27 @@ namespace QuestCommandRTS
             {
                 case UnitKind.Harvester:
                     return new UnitStats("Harvester", 900, 9f, 180f, 3.4f, 0f, 0f, 1f);
+                case UnitKind.LightTank:
+                    return new UnitStats("Light Tank", 620, 6.2f, 170f, 3.75f, 8.4f, 22f, 0.85f);
+                case UnitKind.MediumTank:
                 case UnitKind.Tank:
-                    return new UnitStats("Battle Tank", 800, 7.5f, 230f, 3.0f, 9f, 32f, 1.1f);
+                    return new UnitStats("Medium Tank", 860, 7.8f, 235f, 3.05f, 9.2f, 31f, 1.05f);
+                case UnitKind.HeavyTank:
+                    return new UnitStats("Heavy Tank", 1250, 10.5f, 360f, 2.35f, 10.5f, 48f, 1.35f);
                 default:
                     return new UnitStats("Rifleman", 120, 2.2f, 65f, 4.6f, 7f, 9f, 0.7f);
             }
+        }
+
+        public static UnitKind NormalizeUnitKind(UnitKind kind)
+        {
+            return kind == UnitKind.Tank ? UnitKind.MediumTank : kind;
+        }
+
+        public static bool IsTank(UnitKind kind)
+        {
+            UnitKind normalized = NormalizeUnitKind(kind);
+            return normalized == UnitKind.LightTank || normalized == UnitKind.MediumTank || normalized == UnitKind.HeavyTank;
         }
 
         public static StructureStats GetStructure(StructureKind kind)
