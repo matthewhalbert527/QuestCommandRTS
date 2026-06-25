@@ -52,6 +52,8 @@ namespace QuestCommandRTS
             string tacticalMapDetail;
             Add(results, "Quest tactical map non-interactive", HasNonInteractiveTacticalMap(out tacticalMapDetail), tacticalMapDetail);
             Add(results, "Quest command console present", console != null && console.PanelRect != null, "Quest command console should exist under the tabletop rig.");
+            string consoleDetail;
+            Add(results, "Quest command console panel ray", HasCommandConsolePanelRay(console, out consoleDetail), consoleDetail);
             Add(results, "View camera uses XR head", rig != null && rig.HeadCamera != null && game.GetViewCameraTransform() == rig.HeadCamera.transform, "Game view camera should resolve to the Quest head camera.");
 
             if (settings != null)
@@ -161,6 +163,37 @@ namespace QuestCommandRTS
                 ", raycastTargets=" + raycastTargets +
                 ", graphics=" + graphics.Length;
             return raycasterDisabled && raycastTargets == 0;
+        }
+
+        private static bool HasCommandConsolePanelRay(QuestCommandConsole console, out string detail)
+        {
+            if (console == null || console.PanelRect == null)
+            {
+                detail = "Quest command console or panel rect is missing.";
+                return false;
+            }
+
+            bool wasOpen = console.IsOpen;
+            try
+            {
+                console.SetOpen(true);
+                Rect panelRect = console.PanelRect.rect;
+                Vector3 panelCenter = console.PanelRect.TransformPoint(new Vector3(panelRect.center.x, panelRect.center.y, 0f));
+                Ray panelRay = new Ray(panelCenter - console.PanelRect.forward * 8f, console.PanelRect.forward);
+                bool hit = console.TryGetPanelHit(panelRay, out Vector3 hitPoint);
+                bool captured = console.TryHandlePointer(panelRay, false);
+                bool centerHit = hit && Vector3.Distance(hitPoint, panelCenter) <= 0.001f;
+
+                detail = "initialOpen=" + wasOpen +
+                    ", panelHit=" + hit +
+                    ", centerHit=" + centerHit +
+                    ", hoverCaptured=" + captured;
+                return centerHit && captured;
+            }
+            finally
+            {
+                console.SetOpen(wasOpen);
+            }
         }
 
         private static bool HasPointerVisuals(QuestTabletopRig rig, QuestTabletopSettings settings, out string detail)

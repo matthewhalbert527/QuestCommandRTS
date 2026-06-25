@@ -579,6 +579,7 @@ namespace QuestCommandRTS.Editor
             AssertSmokePassed(report, "Quest tactical map present");
             AssertSmokePassed(report, "Quest tactical map non-interactive");
             AssertSmokePassed(report, "Quest command console present");
+            AssertSmokePassed(report, "Quest command console panel ray");
             AssertSmokePassed(report, "View camera uses XR head");
             AssertSmokePassed(report, "Tabletop scale");
             AssertSmokePassed(report, "Board physical width");
