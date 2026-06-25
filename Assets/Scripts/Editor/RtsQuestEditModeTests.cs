@@ -228,6 +228,21 @@ namespace QuestCommandRTS.Editor
         }
 
         [Test]
+        public void FogOfWarUsesSingleTextureOverlayMappedToWorldCells()
+        {
+            RtsGame game = CreateInitializedGame(RtsRuntimeMode.QuestVr);
+            Assert.IsNotNull(game.FogOfWar);
+            Assert.IsTrue(game.FogOfWar.HasFogTextureForTests);
+            Assert.AreEqual(1, game.FogOfWar.FogRendererCountForTests);
+
+            Color playerBaseFog = game.FogOfWar.GetFogTextureColorForTests(game.GetPlayerBaseCenter());
+            Assert.Less(playerBaseFog.a, 0.05f, "Player base cells should be fully visible in the fog overlay texture.");
+
+            Color enemyBaseFog = game.FogOfWar.GetFogTextureColorForTests(game.GetEnemyBaseCenter());
+            Assert.Greater(enemyBaseFog.a, 0.7f, "Enemy base cells should remain unexplored at match start.");
+        }
+
+        [Test]
         public void ForcedQuestInitializationMakesHeadCameraMainAndDisablesSceneCameras()
         {
             GameObject sceneCameraObject = new GameObject("Scene Main Camera");
@@ -399,6 +414,47 @@ namespace QuestCommandRTS.Editor
             AssertSmokePassed(report, "Right controller node");
             AssertSmokePassed(report, "Pointer visuals");
             AssertSmokeManual(report, "Physical headset verification");
+        }
+
+        [Test]
+        public void QuestSceneBudgetReportCoversGeneratedRuntimeFootprint()
+        {
+            RtsGame game = CreateInitializedGame(RtsRuntimeMode.QuestVr);
+            RtsSceneBudgetSnapshot snapshot = RtsSceneBudgetSnapshot.Capture(game);
+            var report = RtsSceneBudgetReport.BuildQuestBudget(game);
+
+            Assert.AreEqual("QuestVr", snapshot.runtimeMode);
+            Assert.AreEqual(14, snapshot.entityCount);
+            Assert.AreEqual(61, snapshot.resourceNodeCount);
+            Assert.Greater(snapshot.totalGameObjects, 0);
+            Assert.Greater(snapshot.rendererCount, 0);
+            Assert.Greater(snapshot.uniqueSharedMaterialCount, 0);
+            Assert.AreEqual(1, snapshot.enabledCameraCount);
+            Assert.AreEqual(1, snapshot.enabledLightCount);
+            Assert.GreaterOrEqual(snapshot.worldSpaceCanvasCount, 2);
+            Assert.AreEqual(0, snapshot.screenSpaceOverlayCanvasCount);
+            Assert.Greater(snapshot.visualSetDressingObjectCount, 0);
+            Assert.AreEqual(0, snapshot.visualSetDressingColliderCount);
+
+            AssertBudgetPassed(report, "Runtime mode");
+            AssertBudgetPassed(report, "GameObject budget");
+            AssertBudgetPassed(report, "Renderer budget");
+            AssertBudgetPassed(report, "Shared material budget");
+            AssertBudgetPassed(report, "Collider budget");
+            AssertBudgetPassed(report, "Light budget");
+            AssertBudgetPassed(report, "Camera budget");
+            AssertBudgetPassed(report, "World-space Quest UI");
+            AssertBudgetPassed(report, "Visual set dressing colliders");
+        }
+
+        [Test]
+        public void QuestSceneBudgetValidatorBuildsGeneratedQuestReport()
+        {
+            var report = QuestSceneBudgetValidator.BuildGeneratedQuestSceneBudgetReport();
+
+            AssertBudgetPassed(report, "Runtime mode");
+            AssertBudgetPassed(report, "World-space Quest UI");
+            AssertBudgetPassed(report, "Visual set dressing colliders");
         }
 
         [Test]
@@ -1850,6 +1906,26 @@ namespace QuestCommandRTS.Editor
             }
 
             Assert.Fail("Missing desktop smoke item " + label);
+            return default;
+        }
+
+        private static void AssertBudgetPassed(System.Collections.Generic.List<RtsSceneBudgetItem> report, string label)
+        {
+            RtsSceneBudgetItem item = FindBudgetItem(report, label);
+            Assert.IsTrue(item.Passed, label + " should pass. Detail: " + item.Detail);
+        }
+
+        private static RtsSceneBudgetItem FindBudgetItem(System.Collections.Generic.List<RtsSceneBudgetItem> report, string label)
+        {
+            for (int i = 0; i < report.Count; i++)
+            {
+                if (report[i].Label == label)
+                {
+                    return report[i];
+                }
+            }
+
+            Assert.Fail("Missing scene budget item " + label);
             return default;
         }
     }

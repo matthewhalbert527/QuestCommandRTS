@@ -102,6 +102,8 @@ The generated battlefield uses original primitive placeholder art with sandy ter
 
 `RtsRuntimeDiagnosticsSnapshot` can export a JSON snapshot of a generated match with entity, team, unit, structure, production, resource, fog, save-slot, and tabletop scale counts. Use it before and after large-board or content changes to catch accidental world-generation drift.
 
+`RtsSceneBudgetSnapshot` can export the generated Quest scene footprint with object, renderer, material, collider, light, camera, and world-space UI counts. Fog of war uses one texture-backed overlay instead of thousands of per-cell renderers so the tabletop scene stays inside the local Quest budget gates before hardware profiling.
+
 `Command RTS > Export Soak Diagnostics Snapshot` creates a populated desktop baseline with additional units, active production queues, mixed attack-move orders, and an active placement preview, then exports the same diagnostics shape for profiler/device comparisons.
 
 ## Skirmish AI
@@ -127,6 +129,7 @@ See `docs/SAVE_SYSTEM.md`, `docs/LIFECYCLE_TEST_MATRIX.md`, `docs/PERFORMANCE_TE
 - `Command RTS > Export Quest Sample Screenshot`
 - `Command RTS > Export Room-Sized Quest Sample Screenshot`
 - `Command RTS > Export Runtime Diagnostics Snapshot`
+- `Command RTS > Export Quest Scene Budget Snapshot`
 - `Command RTS > Export Soak Diagnostics Snapshot`
 - `Command RTS > Validate Generated Desktop Runtime`
 - `Command RTS > Build > Validate Desktop Build Support`
@@ -136,6 +139,7 @@ See `docs/SAVE_SYSTEM.md`, `docs/LIFECYCLE_TEST_MATRIX.md`, `docs/PERFORMANCE_TE
 - `Tools > Quest RTS > Apply Recommended Quest Settings`
 - `Tools > Quest RTS > Validate XR Setup`
 - `Tools > Quest RTS > Validate Generated Quest Runtime`
+- `Tools > Quest RTS > Validate Quest Scene Budget`
 
 The desktop build command targets `StandaloneWindows64` and requires Windows Build Support for Unity 2022.3.62f3. If the command reports that `StandaloneWindows64` is not supported or that the `WindowsPlayer.exe` template is missing, repair the editor install in Unity Hub and add the Windows build module before treating desktop player builds as verified.
 

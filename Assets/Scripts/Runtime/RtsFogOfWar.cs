@@ -14,14 +14,19 @@ namespace QuestCommandRTS
         private float cellSize;
         private float nextUpdateTime;
         private Transform fogRoot;
+        private Renderer fogRenderer;
+        private Texture2D fogTexture;
+        private Color[] fogPixels;
+        private Material fogMaterial;
+        private bool fogTextureDirty;
 
         private sealed class FogCell
         {
+            public int X;
+            public int Z;
             public Vector3 Center;
             public bool Explored;
             public bool Visible;
-            public Renderer Renderer;
-            public Material Material;
         }
 
         public void Initialize(RtsGame owner)
@@ -32,6 +37,12 @@ namespace QuestCommandRTS
             fogRoot.SetParent(transform, false);
             BuildGrid();
             RefreshFog(true);
+        }
+
+        private void OnDestroy()
+        {
+            DestroyRuntimeObject(fogTexture);
+            DestroyRuntimeObject(fogMaterial);
         }
 
         private void Update()
@@ -165,6 +176,7 @@ namespace QuestCommandRTS
                 }
             }
 
+            ApplyFogTextureIfNeeded();
             RefreshFog(true);
         }
 
@@ -173,46 +185,67 @@ namespace QuestCommandRTS
         {
             RefreshFog(true);
         }
+
+        public int FogRendererCountForTests => fogRoot != null ? fogRoot.GetComponentsInChildren<Renderer>(true).Length : 0;
+        public bool HasFogTextureForTests => fogTexture != null;
+
+        public Color GetFogTextureColorForTests(Vector3 point)
+        {
+            FogCell cell = GetCell(point);
+            if (cell == null || fogTexture == null)
+            {
+                return Color.clear;
+            }
+
+            GetTextureCoordinates(cell, out int textureX, out int textureY);
+            return fogTexture.GetPixel(textureX, textureY);
+        }
 #endif
 
         private void BuildGrid()
         {
             cells = new FogCell[GridSize, GridSize];
+            fogPixels = new Color[GridSize * GridSize];
             float start = -RtsBalance.MapHalfSize + cellSize * 0.5f;
+
+            fogTexture = new Texture2D(GridSize, GridSize, TextureFormat.RGBA32, false);
+            fogTexture.name = "Fog Alpha Texture";
+            fogTexture.filterMode = FilterMode.Point;
+            fogTexture.wrapMode = TextureWrapMode.Clamp;
+
+            GameObject overlay = GameObject.CreatePrimitive(PrimitiveType.Plane);
+            overlay.name = "Fog Overlay";
+            overlay.transform.SetParent(fogRoot, false);
+            overlay.transform.position = new Vector3(0f, 0.08f, 0f);
+            overlay.transform.localScale = Vector3.one * (RtsBalance.MapHalfSize * 2f / 10f);
+
+            Collider overlayCollider = overlay.GetComponent<Collider>();
+            if (overlayCollider != null)
+            {
+                if (Application.isPlaying)
+                {
+                    Destroy(overlayCollider);
+                }
+                else
+                {
+                    DestroyImmediate(overlayCollider);
+                }
+            }
+
+            fogRenderer = overlay.GetComponent<Renderer>();
+            fogMaterial = CreateFogMaterial(fogTexture);
+            fogRenderer.sharedMaterial = fogMaterial;
 
             for (int x = 0; x < GridSize; x++)
             {
                 for (int z = 0; z < GridSize; z++)
                 {
                     Vector3 center = new Vector3(start + x * cellSize, 0.08f, start + z * cellSize);
-                    GameObject tile = GameObject.CreatePrimitive(PrimitiveType.Cube);
-                    tile.name = "Fog Cell";
-                    tile.transform.SetParent(fogRoot, false);
-                    tile.transform.position = center;
-                    tile.transform.localScale = new Vector3(cellSize * 1.02f, 0.025f, cellSize * 1.02f);
-
-                    Collider collider = tile.GetComponent<Collider>();
-                    if (collider != null)
-                    {
-                        if (Application.isPlaying)
-                        {
-                            Destroy(collider);
-                        }
-                        else
-                        {
-                            DestroyImmediate(collider);
-                        }
-                    }
-
-                    Renderer renderer = tile.GetComponent<Renderer>();
-                    Material material = CreateFogMaterial(0.78f);
-                    renderer.sharedMaterial = material;
-
                     cells[x, z] = new FogCell
                     {
-                        Center = center,
-                        Renderer = renderer,
-                        Material = material
+                        X = x,
+                        Z = z,
+                        Center = center
                     };
                 }
             }
@@ -254,6 +287,7 @@ namespace QuestCommandRTS
                 }
             }
 
+            ApplyFogTextureIfNeeded();
             ApplyEnemyVisibility();
         }
 
@@ -277,23 +311,50 @@ namespace QuestCommandRTS
 
         private void ApplyCellVisual(FogCell cell)
         {
-            if (cell.Renderer == null)
+            if (cell == null || fogPixels == null)
             {
                 return;
             }
 
-            if (cell.Visible)
+            float alpha = cell.Visible ? 0f : cell.Explored ? 0.34f : 0.78f;
+            GetTextureCoordinates(cell, out int textureX, out int textureY);
+            fogPixels[textureY * GridSize + textureX] = new Color(0.005f, 0.006f, 0.008f, alpha);
+            fogTextureDirty = true;
+        }
+
+        private static void GetTextureCoordinates(FogCell cell, out int textureX, out int textureY)
+        {
+            textureX = GridSize - 1 - cell.X;
+            textureY = GridSize - 1 - cell.Z;
+        }
+
+        private void ApplyFogTextureIfNeeded()
+        {
+            if (!fogTextureDirty || fogTexture == null || fogPixels == null)
             {
-                cell.Renderer.enabled = false;
                 return;
             }
 
-            cell.Renderer.enabled = true;
-            float alpha = cell.Explored ? 0.34f : 0.78f;
-            Color color = new Color(0.005f, 0.006f, 0.008f, alpha);
-            cell.Material.color = color;
-            cell.Material.SetColor("_Color", color);
-            cell.Material.SetColor("_BaseColor", color);
+            fogTexture.SetPixels(fogPixels);
+            fogTexture.Apply(false);
+            fogTextureDirty = false;
+        }
+
+        private static void DestroyRuntimeObject(UnityEngine.Object target)
+        {
+            if (target == null)
+            {
+                return;
+            }
+
+            if (Application.isPlaying)
+            {
+                Destroy(target);
+            }
+            else
+            {
+                DestroyImmediate(target);
+            }
         }
 
         private void ApplyEnemyVisibility()
@@ -367,9 +428,24 @@ namespace QuestCommandRTS
             return 8f;
         }
 
-        private static Material CreateFogMaterial(float alpha)
+        private static Material CreateFogMaterial(Texture2D texture)
         {
-            Material material = RtsGame.CreateMaterial(new Color(0.005f, 0.006f, 0.008f, alpha));
+            Shader shader = Shader.Find("Sprites/Default");
+            if (shader == null)
+            {
+                shader = Shader.Find("Unlit/Transparent");
+            }
+
+            if (shader == null)
+            {
+                shader = Shader.Find("Universal Render Pipeline/Unlit");
+            }
+
+            Material material = shader != null ? new Material(shader) : RtsGame.CreateMaterial(Color.white);
+            material.color = Color.white;
+            material.mainTexture = texture;
+            material.SetTexture("_MainTex", texture);
+            material.SetTexture("_BaseMap", texture);
             material.SetFloat("_Mode", 3f);
             material.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.SrcAlpha);
             material.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
