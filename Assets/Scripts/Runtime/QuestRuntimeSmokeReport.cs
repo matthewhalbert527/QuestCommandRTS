@@ -78,7 +78,8 @@ namespace QuestCommandRTS
                 Add(results, "Head tracking node", HasTrackedPose(rig.Head), "XR Head should have QuestTrackedNodePose.");
                 Add(results, "Left controller node", HasTrackedPose(rig.LeftController), "Left Controller should have QuestTrackedNodePose.");
                 Add(results, "Right controller node", HasTrackedPose(rig.RightController), "Right Controller should have QuestTrackedNodePose.");
-                Add(results, "Pointer visuals", HasDescendant(rig.RigRoot, "Right Controller RTS Ray") && HasDescendant(rig.RigRoot, "RTS Pointer Reticle"), "Right controller ray and reticle objects should be created once.");
+                string pointerDetail;
+                Add(results, "Pointer visuals", HasPointerVisuals(rig, settings, out pointerDetail), pointerDetail);
             }
 
             AddManual(results, "Physical headset verification", "HMD pose, controller tracking, ray alignment, comfort, and performance still require Quest Link or device testing.");
@@ -132,11 +133,43 @@ namespace QuestCommandRTS
             return false;
         }
 
-        private static bool HasDescendant(Transform root, string objectName)
+        private static bool HasPointerVisuals(QuestTabletopRig rig, QuestTabletopSettings settings, out string detail)
+        {
+            if (rig == null || rig.RigRoot == null || settings == null)
+            {
+                detail = "Quest rig, rig root, and settings are required before pointer visuals can be checked.";
+                return false;
+            }
+
+            Transform lineTransform = FindDescendant(rig.RigRoot, "Right Controller RTS Ray");
+            Transform reticleTransform = FindDescendant(rig.RigRoot, "RTS Pointer Reticle");
+            LineRenderer line = lineTransform != null ? lineTransform.GetComponent<LineRenderer>() : null;
+            Renderer reticleRenderer = reticleTransform != null ? reticleTransform.GetComponent<Renderer>() : null;
+            Collider reticleCollider = reticleTransform != null ? reticleTransform.GetComponent<Collider>() : null;
+
+            bool lineValid = line != null &&
+                line.useWorldSpace &&
+                line.positionCount == 2 &&
+                line.sharedMaterial != null &&
+                Mathf.Abs(line.widthMultiplier - settings.RayWidthSimulationUnits) <= 0.001f;
+            bool reticleValid = reticleTransform != null &&
+                reticleRenderer != null &&
+                reticleRenderer.sharedMaterial != null &&
+                reticleCollider == null &&
+                Vector3.Distance(reticleTransform.localScale, Vector3.one * settings.ReticleSizeMeters) <= 0.001f;
+
+            detail = "line=" + (lineValid ? "ok" : "invalid") +
+                ", reticle=" + (reticleValid ? "ok" : "invalid") +
+                ", expectedWidth=" + settings.RayWidthSimulationUnits.ToString("0.###") +
+                ", expectedReticleMeters=" + settings.ReticleSizeMeters.ToString("0.###");
+            return lineValid && reticleValid;
+        }
+
+        private static Transform FindDescendant(Transform root, string objectName)
         {
             if (root == null)
             {
-                return false;
+                return null;
             }
 
             Transform[] children = root.GetComponentsInChildren<Transform>(true);
@@ -144,11 +177,11 @@ namespace QuestCommandRTS
             {
                 if (children[i] != null && children[i].name == objectName)
                 {
-                    return true;
+                    return children[i];
                 }
             }
 
-            return false;
+            return null;
         }
 
         private static void Add(List<QuestRuntimeSmokeItem> results, string label, bool passed, string detail)
