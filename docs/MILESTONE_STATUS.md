@@ -23,6 +23,7 @@ This document records what has been implemented and what has actually been verif
 - `QuestXrProjectValidator` validates package and project settings, and separates automated checks from manual headset/setup checks.
 - `QuestRuntimeSmokeReport` validates the generated Quest runtime object graph locally while keeping physical headset behavior marked manual.
 - `DesktopRuntimeSmokeReport` validates the generated desktop runtime object graph locally while keeping hands-on desktop controls marked manual.
+- Generated desktop, Quest, and scene-budget validators have EditMode cleanup coverage so their temporary runtime roots and generated camera/light/UI event-system objects do not pollute the editor scene.
 - `RtsProfileSettings` stores versioned user preferences separately from match saves and applies safe Quest tabletop scale, height, pointer length, and UI scale during rig creation, including a room-sized tabletop profile preset.
 - `RtsSaveFileStore` and `RtsSaveService` keep a prior `.bak` slot and fall back to it when the newest save is corrupt or unreadable.
 - Save metadata is checksum-validated before display, includes app/config/map/time/state/count fields, and can fall back to backup metadata when the primary slot is corrupt.
@@ -36,7 +37,7 @@ This document records what has been implemented and what has actually been verif
 
 Automated verification last run locally:
 
-- EditMode tests: `84` total, `84` passed, `0` failed.
+- EditMode tests: `85` total, `85` passed, `0` failed.
 - XR setup validator: automated package/project-setting checks pass except for local Android Build Support, which is missing from this Unity install; manual headset and Android OpenXR UI verification remain manual.
 - Generated Quest runtime smoke report: automated object-graph checks pass in EditMode; physical headset behavior remains manual.
 - Generated desktop runtime smoke report: automated object-graph checks pass in EditMode; hands-on desktop control regression remains manual.

@@ -498,6 +498,19 @@ namespace QuestCommandRTS.Editor
         }
 
         [Test]
+        public void GeneratedRuntimeValidatorsCleanUpTemporaryObjects()
+        {
+            DesktopRuntimeSmokeValidator.BuildGeneratedDesktopRuntimeReport();
+            AssertNoGeneratedObjects("Desktop Runtime Smoke Test", "Command Camera", "Sun", "EventSystem");
+
+            QuestRuntimeSmokeValidator.BuildGeneratedQuestRuntimeReport();
+            AssertNoGeneratedObjects("Quest Runtime Smoke Test", "Sun");
+
+            QuestSceneBudgetValidator.BuildGeneratedQuestSceneBudgetReport();
+            AssertNoGeneratedObjects("Quest Scene Budget Runtime", "Sun");
+        }
+
+        [Test]
         public void DesktopRuntimeSmokeReportCoversGeneratedDesktopObjects()
         {
             RtsGame game = CreateInitializedGame(RtsRuntimeMode.Desktop);
@@ -1947,6 +1960,14 @@ namespace QuestCommandRTS.Editor
 
             Assert.Fail("Missing desktop smoke item " + label);
             return default;
+        }
+
+        private static void AssertNoGeneratedObjects(params string[] names)
+        {
+            for (int i = 0; i < names.Length; i++)
+            {
+                Assert.IsNull(GameObject.Find(names[i]), names[i] + " should be removed with the generated validation runtime.");
+            }
         }
 
         private static void AssertBudgetPassed(System.Collections.Generic.List<RtsSceneBudgetItem> report, string label)
