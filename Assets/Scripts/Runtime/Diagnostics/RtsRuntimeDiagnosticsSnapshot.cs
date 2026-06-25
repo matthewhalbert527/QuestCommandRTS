@@ -8,6 +8,7 @@ namespace QuestCommandRTS
     public sealed class RtsRuntimeDiagnosticsSnapshot
     {
         public string capturedAtUtc = string.Empty;
+        public string scenarioName = string.Empty;
         public string runtimeMode = string.Empty;
         public string matchState = string.Empty;
         public string statusMessage = string.Empty;

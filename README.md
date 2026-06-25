@@ -96,6 +96,8 @@ The full battlefield remains approximately 224 simulation units wide. The Quest 
 
 `RtsRuntimeDiagnosticsSnapshot` can export a JSON snapshot of a generated match with entity, team, unit, structure, production, resource, fog, save-slot, and tabletop scale counts. Use it before and after large-board or content changes to catch accidental world-generation drift.
 
+`Command RTS > Export Soak Diagnostics Snapshot` creates a populated desktop baseline with additional units, active production queues, mixed attack-move orders, and an active placement preview, then exports the same diagnostics shape for profiler/device comparisons.
+
 ## Skirmish AI
 
 - The enemy commander now has its own credit bank, income ticks, paid unit production, and periodic attack orders.
@@ -117,6 +119,7 @@ See `docs/SAVE_SYSTEM.md`, `docs/LIFECYCLE_TEST_MATRIX.md`, `docs/PERFORMANCE_TE
 - `Command RTS > Open Battlefield Scene`
 - `Command RTS > Export Sample Screenshot`
 - `Command RTS > Export Runtime Diagnostics Snapshot`
+- `Command RTS > Export Soak Diagnostics Snapshot`
 - `Command RTS > Validate Generated Desktop Runtime`
 - `Command RTS > Build > Validate Desktop Build Support`
 - `Command RTS > Build > Desktop Development Build`

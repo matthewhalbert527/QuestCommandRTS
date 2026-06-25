@@ -340,6 +340,30 @@ namespace QuestCommandRTS.Editor
         }
 
         [Test]
+        public void SoakScenarioExporterCreatesPopulatedDiagnosticsBaseline()
+        {
+            RtsGame game = CreateInitializedGame(RtsRuntimeMode.Desktop);
+            RtsSoakScenarioExporter.PopulateGeneratedMatchForSoak(game);
+            RtsRuntimeDiagnosticsSnapshot snapshot = RtsRuntimeDiagnosticsSnapshot.Capture(game);
+
+            Assert.GreaterOrEqual(snapshot.entityCount, 69);
+            Assert.GreaterOrEqual(snapshot.playerEntityCount, 32);
+            Assert.GreaterOrEqual(snapshot.enemyEntityCount, 37);
+            Assert.GreaterOrEqual(snapshot.selectedEntityCount, 22);
+            Assert.GreaterOrEqual(snapshot.production.producerCount, 5);
+            Assert.GreaterOrEqual(snapshot.production.activeProducerCount, 4);
+            Assert.GreaterOrEqual(snapshot.production.totalQueueItems, 6);
+            Assert.IsTrue(snapshot.buildPlacement.active);
+            Assert.IsTrue(snapshot.buildPlacement.hasPoint);
+            Assert.IsTrue(snapshot.buildPlacement.valid);
+            Assert.GreaterOrEqual(FindDiagnosticsUnitKind(snapshot, "Rifleman").total, 34);
+            Assert.GreaterOrEqual(FindDiagnosticsUnitKind(snapshot, "Harvester").player, 5);
+            Assert.GreaterOrEqual(FindDiagnosticsUnitKind(snapshot, "Tank").total, 21);
+            Assert.GreaterOrEqual(FindDiagnosticsStructureKind(snapshot, "WarFactory").player, 1);
+            Assert.Less(FindDiagnosticsTeam(snapshot, "Player").idleUnits, 8);
+        }
+
+        [Test]
         public void DesktopBuildArtifactValidationRequiresExistingNonEmptyFile()
         {
             string directory = Path.Combine(Path.GetTempPath(), "QuestCommandRTS-BuildValidation");
@@ -1080,6 +1104,34 @@ namespace QuestCommandRTS.Editor
             }
 
             Assert.Fail("Missing diagnostics team " + team);
+            return null;
+        }
+
+        private static RtsDiagnosticsUnitKindSnapshot FindDiagnosticsUnitKind(RtsRuntimeDiagnosticsSnapshot snapshot, string kind)
+        {
+            for (int i = 0; i < snapshot.unitKinds.Count; i++)
+            {
+                if (snapshot.unitKinds[i].kind == kind)
+                {
+                    return snapshot.unitKinds[i];
+                }
+            }
+
+            Assert.Fail("Missing diagnostics unit kind " + kind);
+            return null;
+        }
+
+        private static RtsDiagnosticsStructureKindSnapshot FindDiagnosticsStructureKind(RtsRuntimeDiagnosticsSnapshot snapshot, string kind)
+        {
+            for (int i = 0; i < snapshot.structureKinds.Count; i++)
+            {
+                if (snapshot.structureKinds[i].kind == kind)
+                {
+                    return snapshot.structureKinds[i];
+                }
+            }
+
+            Assert.Fail("Missing diagnostics structure kind " + kind);
             return null;
         }
 

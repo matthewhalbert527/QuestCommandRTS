@@ -171,6 +171,16 @@ namespace QuestCommandRTS
             return false;
         }
 
+#if UNITY_EDITOR
+        public void StartNextProductionForTests()
+        {
+            if (activeKind == null)
+            {
+                StartNextItem();
+            }
+        }
+#endif
+
         public RtsProductionSaveData CaptureProductionState()
         {
             RtsProductionSaveData data = new RtsProductionSaveData
