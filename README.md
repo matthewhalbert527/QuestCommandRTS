@@ -74,7 +74,7 @@ The scene is intentionally empty. `RtsBootstrap` creates the map, units, buildin
 
 ## Quest Command Console
 
-The Quest command console has three tabs:
+The Quest command console has four tabs:
 
 - `Build`: browse player structures, credit costs, power effects, prerequisites, affordability, and disabled reasons. Pick a structure to start controller-ray placement.
 - `Produce`: select a production building, browse trainable units, queue units, see the active item/progress, inspect queued items, and cancel the last queued item for a full queued-cost refund.
@@ -102,7 +102,7 @@ The generated battlefield uses original primitive placeholder art with sandy ter
 
 `RtsRuntimeDiagnosticsSnapshot` can export a JSON snapshot of a generated match with entity, team, unit, structure, production, resource, fog, save-slot, and tabletop scale counts. Use it before and after large-board or content changes to catch accidental world-generation drift.
 
-`RtsSceneBudgetSnapshot` can export the generated Quest scene footprint with object, renderer, material, collider, light, camera, and world-space UI counts. Fog of war uses one texture-backed overlay instead of thousands of per-cell renderers so the tabletop scene stays inside the local Quest budget gates before hardware profiling.
+`RtsSceneBudgetSnapshot` can export the generated Quest scene footprint with object, renderer, material, collider, light, camera, world-space UI, and fog-overlay counts. Fog of war uses one texture-backed overlay instead of thousands of per-cell renderers so the tabletop scene stays inside the local Quest budget gates before hardware profiling.
 
 `Command RTS > Export Soak Diagnostics Snapshot` creates a populated desktop baseline with additional units, active production queues, mixed attack-move orders, and an active placement preview, then exports the same diagnostics shape for profiler/device comparisons.
 
@@ -118,7 +118,7 @@ See `docs/SAVE_SYSTEM.md`, `docs/LIFECYCLE_TEST_MATRIX.md`, `docs/PERFORMANCE_TE
 
 - No radial menus, lasso selection, hand tracking, passthrough, spatial anchors, locomotion, or board grabbing.
 - Production queue cancellation applies to the last queued item, not the active item already in progress.
-- The VR console is still placeholder UI, but now uses a layered holographic-style world panel with text-first controls.
+- The VR console is still placeholder UI, but now uses a layered holographic-style world panel with color-coded row icon tiles and text labels.
 - Quest Link and device behavior still require manual headset verification.
 - Primitive placeholder art remains intentionally lightweight.
 

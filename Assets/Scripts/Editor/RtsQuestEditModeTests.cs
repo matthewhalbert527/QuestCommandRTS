@@ -208,6 +208,26 @@ namespace QuestCommandRTS.Editor
         }
 
         [Test]
+        public void QuestCommandConsoleRowsUseIconTilesForBuildAndProduction()
+        {
+            RtsGame game = CreateInitializedGame(RtsRuntimeMode.QuestVr);
+            QuestCommandConsole console = game.GetComponent<QuestCommandConsole>();
+            Assert.IsNotNull(console);
+
+            console.SetOpen(true);
+
+            Image commandCenterIcon = AssertPanelImage("Build Row 0 Icon", 0.6f);
+            Image powerIcon = AssertPanelImage("Build Row 1 Icon", 0.6f);
+            Assert.AreNotEqual(commandCenterIcon.color, powerIcon.color);
+
+            ClickConsoleButton(console, "Produce Tab");
+
+            Image rifleIcon = AssertPanelImage("Produce Row 0 Icon", 0.6f);
+            Image harvesterIcon = AssertPanelImage("Produce Row 1 Icon", 0.6f);
+            Assert.AreNotEqual(rifleIcon.color, harvesterIcon.color);
+        }
+
+        [Test]
         public void EntityHealthBarsTrackSelectionDamageRepairAndFog()
         {
             RtsGame game = CreateInitializedGame(RtsRuntimeMode.Desktop);
@@ -1604,11 +1624,12 @@ namespace QuestCommandRTS.Editor
             Assert.IsNull(sceneObject.GetComponent<Collider>(), objectName + " should be visual-only and should not block selection or command raycasts.");
         }
 
-        private static void AssertPanelImage(string objectName, float minimumAlpha)
+        private static Image AssertPanelImage(string objectName, float minimumAlpha)
         {
             Image image = FindRectTransform(objectName).GetComponent<Image>();
             Assert.IsNotNull(image, objectName + " should have an Image component.");
             Assert.GreaterOrEqual(image.color.a, minimumAlpha, objectName + " should be visible in the world-space console frame.");
+            return image;
         }
 
         private static void AssertVectorNear(Vector3 expected, Vector3 actual)

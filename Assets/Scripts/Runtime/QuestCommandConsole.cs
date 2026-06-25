@@ -66,6 +66,7 @@ namespace QuestCommandRTS
         private sealed class ConsoleRow
         {
             public ConsoleButton Button;
+            public Image Icon;
             public Text Title;
             public Text Detail;
             public Image StateStrip;
@@ -316,7 +317,8 @@ namespace QuestCommandRTS
         {
             ConsoleButton button = CreateButton(parent, name, "", position, size, clicked);
 
-            Text title = CreateText(button.Rect, name + " Title", "", 17, TextAnchor.MiddleLeft, new Vector2(14f, -4f), new Vector2(size.x - 220f, 22f));
+            Image icon = CreatePanelImage(button.Rect, name + " Icon", new Color(0.2f, 0.75f, 0.9f, 0.95f), new Vector2(14f, -8f), new Vector2(32f, 32f));
+            Text title = CreateText(button.Rect, name + " Title", "", 17, TextAnchor.MiddleLeft, new Vector2(56f, -4f), new Vector2(size.x - 262f, 22f));
             Text detail = CreateText(button.Rect, name + " Detail", "", 14, TextAnchor.MiddleRight, new Vector2(size.x - 228f, -4f), new Vector2(208f, 22f));
 
             GameObject stripObject = new GameObject(name + " State");
@@ -328,6 +330,7 @@ namespace QuestCommandRTS
             return new ConsoleRow
             {
                 Button = button,
+                Icon = icon,
                 Title = title,
                 Detail = detail,
                 StateStrip = strip
@@ -422,6 +425,7 @@ namespace QuestCommandRTS
 
                 row.Detail.text = option.PowerText + "   " + state;
                 row.Button.Interactable = option.IsAvailable;
+                SetIconColor(row.Icon, GetStructureIconColor(option.Kind), option.IsAvailable);
                 row.StateStrip.color = option.IsAvailable ? new Color(0.25f, 0.95f, 0.55f) : new Color(0.95f, 0.35f, 0.25f);
             }
         }
@@ -435,6 +439,7 @@ namespace QuestCommandRTS
                 row.Title.text = option.Name + "  $" + option.Cost;
                 row.Detail.text = option.BuildTime.ToString("0.0") + "s   " + (option.IsAvailable ? "Queue" : option.DisabledReason);
                 row.Button.Interactable = option.IsAvailable;
+                SetIconColor(row.Icon, GetUnitIconColor(option.Kind), option.IsAvailable);
                 row.StateStrip.color = option.IsAvailable ? new Color(0.25f, 0.8f, 1f) : new Color(0.95f, 0.35f, 0.25f);
             }
 
@@ -554,6 +559,48 @@ namespace QuestCommandRTS
             {
                 ConsoleButton button = buttons[i];
                 button.SetVisual(button == hoveredButton);
+            }
+        }
+
+        private static void SetIconColor(Image icon, Color color, bool enabled)
+        {
+            if (icon == null)
+            {
+                return;
+            }
+
+            icon.color = enabled ? color : new Color(color.r * 0.42f, color.g * 0.42f, color.b * 0.42f, 0.72f);
+        }
+
+        private static Color GetStructureIconColor(StructureKind kind)
+        {
+            switch (kind)
+            {
+                case StructureKind.PowerPlant:
+                    return new Color(0.95f, 0.84f, 0.28f, 0.98f);
+                case StructureKind.Barracks:
+                    return new Color(0.35f, 0.72f, 1f, 0.98f);
+                case StructureKind.Refinery:
+                    return new Color(0.22f, 0.95f, 0.58f, 0.98f);
+                case StructureKind.WarFactory:
+                    return new Color(0.95f, 0.52f, 0.24f, 0.98f);
+                case StructureKind.Turret:
+                    return new Color(1f, 0.35f, 0.32f, 0.98f);
+                default:
+                    return new Color(0.65f, 0.86f, 0.95f, 0.98f);
+            }
+        }
+
+        private static Color GetUnitIconColor(UnitKind kind)
+        {
+            switch (kind)
+            {
+                case UnitKind.Harvester:
+                    return new Color(0.24f, 0.96f, 0.62f, 0.98f);
+                case UnitKind.Tank:
+                    return new Color(0.92f, 0.72f, 0.34f, 0.98f);
+                default:
+                    return new Color(0.45f, 0.88f, 1f, 0.98f);
             }
         }
 
