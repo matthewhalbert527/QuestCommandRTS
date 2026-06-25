@@ -49,6 +49,8 @@ namespace QuestCommandRTS
             Add(results, "Quest world HUD present", worldHud != null && HasWorldSpaceCanvas("Quest World Status"), "Quest mode should expose a world-space status panel.");
             Add(results, "Quest world HUD control hints", HasWorldHudControlHints(), "World-space status panel should show trigger, A/B, and X command-console hints.");
             Add(results, "Quest tactical map present", tacticalMap != null && HasWorldSpaceCanvas("Quest Tactical Map"), "Quest mode should expose the battle map as world-space headset UI.");
+            string tacticalMapDetail;
+            Add(results, "Quest tactical map non-interactive", HasNonInteractiveTacticalMap(out tacticalMapDetail), tacticalMapDetail);
             Add(results, "Quest command console present", console != null && console.PanelRect != null, "Quest command console should exist under the tabletop rig.");
             Add(results, "View camera uses XR head", rig != null && rig.HeadCamera != null && game.GetViewCameraTransform() == rig.HeadCamera.transform, "Game view camera should resolve to the Quest head camera.");
 
@@ -131,6 +133,34 @@ namespace QuestCommandRTS
             }
 
             return false;
+        }
+
+        private static bool HasNonInteractiveTacticalMap(out string detail)
+        {
+            GameObject canvasObject = GameObject.Find("Quest Tactical Map");
+            if (canvasObject == null)
+            {
+                detail = "Quest Tactical Map object is missing.";
+                return false;
+            }
+
+            GraphicRaycaster raycaster = canvasObject.GetComponent<GraphicRaycaster>();
+            Graphic[] graphics = canvasObject.GetComponentsInChildren<Graphic>(true);
+            int raycastTargets = 0;
+            for (int i = 0; i < graphics.Length; i++)
+            {
+                Graphic graphic = graphics[i];
+                if (graphic != null && graphic.raycastTarget)
+                {
+                    raycastTargets++;
+                }
+            }
+
+            bool raycasterDisabled = raycaster != null && !raycaster.enabled;
+            detail = "raycaster=" + (raycasterDisabled ? "disabled" : "enabled-or-missing") +
+                ", raycastTargets=" + raycastTargets +
+                ", graphics=" + graphics.Length;
+            return raycasterDisabled && raycastTargets == 0;
         }
 
         private static bool HasPointerVisuals(QuestTabletopRig rig, QuestTabletopSettings settings, out string detail)
