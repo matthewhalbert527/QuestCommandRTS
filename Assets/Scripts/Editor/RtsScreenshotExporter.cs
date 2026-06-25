@@ -12,6 +12,7 @@ namespace QuestCommandRTS.Editor
         private const string DefaultOutputPath = "C:/Users/matth/Documents/Codex/2026-06-24/i-s/outputs/quest-command-rts-sample.png";
         private const string DefaultQuestOutputPath = "C:/Users/matth/Documents/Codex/2026-06-24/i-s/outputs/quest-command-rts-quest-sample.png";
         private const string DefaultQuestRoomOutputPath = "C:/Users/matth/Documents/Codex/2026-06-24/i-s/outputs/quest-command-rts-quest-room-sample.png";
+        private const string DefaultGroundTextureOutputPath = "C:/Users/matth/Documents/Codex/2026-06-24/i-s/outputs/quest-command-rts-ground-texture-sample.png";
 
         [MenuItem("Command RTS/Export Sample Screenshot")]
         public static void ExportMenuScreenshot()
@@ -31,6 +32,12 @@ namespace QuestCommandRTS.Editor
             Export(DefaultQuestRoomOutputPath, RtsRuntimeMode.QuestVr, CreateRoomSizedScreenshotProfile());
         }
 
+        [MenuItem("Command RTS/Export Ground Texture Sample Screenshot")]
+        public static void ExportMenuGroundTextureScreenshot()
+        {
+            ExportGroundTextureForCodex();
+        }
+
         public static void ExportForCodex()
         {
             Export(DefaultOutputPath, RtsRuntimeMode.Desktop);
@@ -46,12 +53,22 @@ namespace QuestCommandRTS.Editor
             Export(DefaultQuestRoomOutputPath, RtsRuntimeMode.QuestVr, CreateRoomSizedScreenshotProfile());
         }
 
+        public static void ExportGroundTextureForCodex()
+        {
+            Export(DefaultGroundTextureOutputPath, RtsRuntimeMode.Desktop, null, true, true);
+        }
+
         private static void Export(string outputPath, RtsRuntimeMode mode)
         {
             Export(outputPath, mode, null);
         }
 
         private static void Export(string outputPath, RtsRuntimeMode mode, RtsProfileSettings profileSettings)
+        {
+            Export(outputPath, mode, profileSettings, false, false);
+        }
+
+        private static void Export(string outputPath, RtsRuntimeMode mode, RtsProfileSettings profileSettings, bool revealTerrain, bool useGroundTextureCamera)
         {
             EditorSceneManager.OpenScene(ScenePath);
 
@@ -68,6 +85,11 @@ namespace QuestCommandRTS.Editor
                 game.Initialize();
                 Physics.SyncTransforms();
                 RtsSoakScenarioExporter.PopulateGeneratedMatchForSoak(game);
+                if (revealTerrain)
+                {
+                    DisableFogForScreenshot();
+                }
+
                 if (mode == RtsRuntimeMode.QuestVr && game.QuestRig != null && game.QuestRig.CommandConsole != null)
                 {
                     game.QuestRig.CommandConsole.SetOpen(true);
@@ -81,7 +103,7 @@ namespace QuestCommandRTS.Editor
                 RtsRuntimeModeResolver.ForceModeForTests(null);
             }
 
-            Camera camera = ConfigureCamera(game, mode);
+            Camera camera = useGroundTextureCamera ? ConfigureGroundTextureCamera(game, mode) : ConfigureCamera(game, mode);
 
             const int width = 1440;
             const int height = 900;
@@ -135,6 +157,26 @@ namespace QuestCommandRTS.Editor
             camera.transform.rotation = Quaternion.Euler(59f, 0f, 0f);
             camera.fieldOfView = 66f;
             return camera;
+        }
+
+        private static Camera ConfigureGroundTextureCamera(RtsGame game, RtsRuntimeMode mode)
+        {
+            Camera camera = mode == RtsRuntimeMode.QuestVr && game.QuestRig != null && game.QuestRig.HeadCamera != null
+                ? game.QuestRig.HeadCamera
+                : game.CommandCamera;
+            camera.transform.position = new Vector3(-112f, 32f, -96f);
+            camera.transform.rotation = Quaternion.LookRotation(new Vector3(-42f, 0f, -32f) - camera.transform.position, Vector3.up);
+            camera.fieldOfView = 54f;
+            return camera;
+        }
+
+        private static void DisableFogForScreenshot()
+        {
+            GameObject fog = GameObject.Find("Fog of War");
+            if (fog != null)
+            {
+                fog.SetActive(false);
+            }
         }
 
         private static void ConfigureQuestScreenshotUi(RtsGame game)

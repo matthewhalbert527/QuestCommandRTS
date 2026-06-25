@@ -392,6 +392,18 @@ namespace QuestCommandRTS.Editor
         }
 
         [Test]
+        public void GeneratedBattlefieldUsesProceduralGroundTextures()
+        {
+            CreateInitializedGame(RtsRuntimeMode.Desktop);
+
+            AssertSceneObjectUsesTexture("Battlefield", "Sand Ground");
+            AssertSceneObjectUsesTexture("West Dune Shelf", "Dune Accent");
+            AssertSceneObjectUsesTexture("Projected Water Channel A", "Water Ripple");
+            AssertSceneObjectUsesTexture("West Mesa Ridge", "Ridge Rock");
+            AssertSceneObjectUsesTexture("Southwest Blast Scorch", "Scorch");
+        }
+
+        [Test]
         public void FogOfWarUsesSingleTextureOverlayMappedToWorldCells()
         {
             RtsGame game = CreateInitializedGame(RtsRuntimeMode.QuestVr);
@@ -1916,6 +1928,18 @@ namespace QuestCommandRTS.Editor
             GameObject sceneObject = GameObject.Find(objectName);
             Assert.IsNotNull(sceneObject, "Missing generated scene object " + objectName);
             Assert.IsNull(sceneObject.GetComponent<Collider>(), objectName + " should be visual-only and should not block selection or command raycasts.");
+        }
+
+        private static void AssertSceneObjectUsesTexture(string objectName, string expectedTextureName)
+        {
+            GameObject sceneObject = GameObject.Find(objectName);
+            Assert.IsNotNull(sceneObject, "Missing generated scene object " + objectName);
+            Renderer renderer = sceneObject.GetComponent<Renderer>();
+            Assert.IsNotNull(renderer, objectName + " should have a renderer.");
+            Assert.IsNotNull(renderer.sharedMaterial, objectName + " should have a shared material.");
+            Texture texture = renderer.sharedMaterial.mainTexture;
+            Assert.IsNotNull(texture, objectName + " should use a procedural terrain texture.");
+            StringAssert.Contains(expectedTextureName, texture.name);
         }
 
         private static Image AssertPanelImage(string objectName, float minimumAlpha)

@@ -142,6 +142,103 @@ namespace QuestCommandRTS
             return material;
         }
 
+        private static Material CreateTexturedMaterial(Color color, Texture2D texture, Vector2 tiling)
+        {
+            Material material = CreateMaterial(color);
+            ApplyTexture(material, texture, tiling);
+            return material;
+        }
+
+        private static Material CreateTexturedTransparentMaterial(Color color, Texture2D texture, Vector2 tiling)
+        {
+            Material material = CreateTransparentMaterial(color);
+            ApplyTexture(material, texture, tiling);
+            return material;
+        }
+
+        private static void ApplyTexture(Material material, Texture2D texture, Vector2 tiling)
+        {
+            if (material == null || texture == null)
+            {
+                return;
+            }
+
+            texture.wrapMode = TextureWrapMode.Repeat;
+            texture.filterMode = FilterMode.Bilinear;
+            texture.anisoLevel = 2;
+            material.mainTexture = texture;
+            material.mainTextureScale = tiling;
+
+            if (material.HasProperty("_MainTex"))
+            {
+                material.SetTexture("_MainTex", texture);
+                material.SetTextureScale("_MainTex", tiling);
+            }
+
+            if (material.HasProperty("_BaseMap"))
+            {
+                material.SetTexture("_BaseMap", texture);
+                material.SetTextureScale("_BaseMap", tiling);
+            }
+        }
+
+        private static Texture2D CreateTerrainTexture(string name, Color baseColor, Color lowColor, Color highColor, Color lineColor, int seed, float grainStrength, float crackStrength, float stripeStrength)
+        {
+            const int size = 128;
+            Texture2D texture = new Texture2D(size, size, TextureFormat.RGBA32, false);
+            texture.name = name;
+            texture.hideFlags = HideFlags.DontSave;
+
+            Color[] pixels = new Color[size * size];
+            for (int y = 0; y < size; y++)
+            {
+                for (int x = 0; x < size; x++)
+                {
+                    float u = x / (float)(size - 1);
+                    float v = y / (float)(size - 1);
+                    float largeNoise = Mathf.PerlinNoise((x + seed * 13) * 0.028f, (y - seed * 7) * 0.028f);
+                    float fineNoise = Mathf.PerlinNoise((x - seed * 5) * 0.19f, (y + seed * 11) * 0.19f);
+                    float grain = (Hash01(x, y, seed) - 0.5f) * grainStrength;
+                    float shade = Mathf.Clamp01(largeNoise * 0.72f + fineNoise * 0.28f + grain);
+                    Color color = Color.Lerp(lowColor, highColor, shade);
+                    color = Color.Lerp(color, baseColor, 0.42f);
+
+                    if (stripeStrength > 0f)
+                    {
+                        float stripeNoise = Mathf.PerlinNoise((x + seed) * 0.045f, (y - seed) * 0.045f);
+                        float stripe = Mathf.Sin((u * 18f + v * 5.5f + stripeNoise * 2f) * Mathf.PI * 2f);
+                        float stripeMask = Mathf.SmoothStep(0.42f, 0.96f, Mathf.Abs(stripe));
+                        color = Color.Lerp(color, lineColor, stripeMask * stripeStrength);
+                    }
+
+                    if (crackStrength > 0f)
+                    {
+                        float crackNoise = Mathf.PerlinNoise((x + seed * 3) * 0.115f, (y - seed * 2) * 0.115f);
+                        float crackGuide = Mathf.PerlinNoise((x - seed) * 0.035f, (y + seed) * 0.035f);
+                        float crack = Mathf.SmoothStep(0.72f, 0.9f, crackNoise) * Mathf.SmoothStep(0.42f, 0.88f, crackGuide);
+                        color = Color.Lerp(color, lineColor, crack * crackStrength);
+                    }
+
+                    color.a = baseColor.a;
+                    pixels[y * size + x] = color;
+                }
+            }
+
+            texture.SetPixels(pixels);
+            texture.Apply(false, false);
+            return texture;
+        }
+
+        private static float Hash01(int x, int y, int seed)
+        {
+            unchecked
+            {
+                uint h = (uint)x * 374761393u + (uint)y * 668265263u + (uint)seed * 2246822519u;
+                h = (h ^ (h >> 13)) * 1274126177u;
+                return (h ^ (h >> 16)) / 4294967295f;
+            }
+        }
+
         public Transform GetViewCameraTransform()
         {
             if (RuntimeMode == RtsRuntimeMode.QuestVr && QuestRig != null && QuestRig.HeadCamera != null)
@@ -1391,11 +1488,78 @@ namespace QuestCommandRTS
             playerMaterial = CreateMaterial(RtsBalance.TeamColor(RtsTeam.Player));
             enemyMaterial = CreateMaterial(RtsBalance.TeamColor(RtsTeam.Enemy));
             neutralMaterial = CreateMaterial(new Color(0.42f, 0.4f, 0.34f));
-            groundMaterial = CreateMaterial(new Color(0.54f, 0.43f, 0.27f));
-            terrainAccentMaterial = CreateMaterial(new Color(0.34f, 0.27f, 0.19f));
-            waterMaterial = CreateTransparentMaterial(new Color(0.08f, 0.42f, 0.54f, 0.72f));
-            ridgeMaterial = CreateMaterial(new Color(0.44f, 0.36f, 0.27f));
-            craterMaterial = CreateTransparentMaterial(new Color(0.055f, 0.047f, 0.04f, 0.58f));
+
+            Texture2D sandGroundTexture = CreateTerrainTexture(
+                "Command RTS Sand Ground Texture",
+                new Color(0.54f, 0.43f, 0.27f),
+                new Color(0.37f, 0.29f, 0.18f),
+                new Color(0.74f, 0.61f, 0.39f),
+                new Color(0.18f, 0.14f, 0.1f),
+                17,
+                0.16f,
+                0.74f,
+                0.08f);
+            Texture2D duneAccentTexture = CreateTerrainTexture(
+                "Command RTS Dune Accent Texture",
+                new Color(0.34f, 0.27f, 0.19f),
+                new Color(0.24f, 0.18f, 0.12f),
+                new Color(0.58f, 0.46f, 0.29f),
+                new Color(0.2f, 0.15f, 0.09f),
+                31,
+                0.18f,
+                0.34f,
+                0.28f);
+            Texture2D waterRippleTexture = CreateTerrainTexture(
+                "Command RTS Water Ripple Texture",
+                new Color(0.08f, 0.42f, 0.54f, 0.72f),
+                new Color(0.035f, 0.2f, 0.32f, 0.72f),
+                new Color(0.18f, 0.62f, 0.72f, 0.72f),
+                new Color(0.6f, 0.95f, 1f, 0.72f),
+                47,
+                0.06f,
+                0f,
+                0.48f);
+            Texture2D ridgeRockTexture = CreateTerrainTexture(
+                "Command RTS Ridge Rock Texture",
+                new Color(0.44f, 0.36f, 0.27f),
+                new Color(0.25f, 0.21f, 0.17f),
+                new Color(0.61f, 0.52f, 0.41f),
+                new Color(0.16f, 0.13f, 0.11f),
+                59,
+                0.22f,
+                0.52f,
+                0.18f);
+            Texture2D scorchTexture = CreateTerrainTexture(
+                "Command RTS Scorch Texture",
+                new Color(0.055f, 0.047f, 0.04f, 0.58f),
+                new Color(0.018f, 0.016f, 0.014f, 0.58f),
+                new Color(0.19f, 0.14f, 0.09f, 0.58f),
+                new Color(0.01f, 0.009f, 0.008f, 0.58f),
+                73,
+                0.2f,
+                0.85f,
+                0.12f);
+
+            groundMaterial = CreateTexturedMaterial(
+                new Color(0.54f, 0.43f, 0.27f),
+                sandGroundTexture,
+                new Vector2(13f, 13f));
+            terrainAccentMaterial = CreateTexturedMaterial(
+                new Color(0.34f, 0.27f, 0.19f),
+                duneAccentTexture,
+                new Vector2(4f, 4f));
+            waterMaterial = CreateTexturedTransparentMaterial(
+                new Color(0.08f, 0.42f, 0.54f, 0.72f),
+                waterRippleTexture,
+                new Vector2(3f, 2f));
+            ridgeMaterial = CreateTexturedMaterial(
+                new Color(0.44f, 0.36f, 0.27f),
+                ridgeRockTexture,
+                new Vector2(2.4f, 2.4f));
+            craterMaterial = CreateTexturedTransparentMaterial(
+                new Color(0.055f, 0.047f, 0.04f, 0.58f),
+                scorchTexture,
+                new Vector2(1.6f, 1.6f));
             resourceMaterial = CreateMaterial(new Color(0.2f, 0.95f, 0.62f));
             depletedResourceMaterial = CreateMaterial(new Color(0.11f, 0.18f, 0.14f));
             darkMaterial = CreateMaterial(new Color(0.075f, 0.08f, 0.09f));
