@@ -32,19 +32,15 @@ namespace QuestCommandRTS
                 return forcedMode.Value;
             }
 
-            RtsRuntimeMode commandLineMode;
-            if (TryGetCommandLineMode(out commandLineMode))
-            {
-                return commandLineMode;
-            }
-
-            RtsRuntimeMode environmentMode;
-            if (TryParseMode(Environment.GetEnvironmentVariable(ForceModeEnvironmentVariable), out environmentMode))
-            {
-                return environmentMode;
-            }
-
-            return IsXrRuntimeActive() ? RtsRuntimeMode.QuestVr : RtsRuntimeMode.Desktop;
+            XRGeneralSettings settings = XRGeneralSettings.Instance;
+            bool hasActiveLoader = settings != null && settings.Manager != null && settings.Manager.activeLoader != null;
+            return ResolveFromState(
+                Environment.GetCommandLineArgs(),
+                Environment.GetEnvironmentVariable(ForceModeEnvironmentVariable),
+                XRSettings.enabled,
+                XRSettings.isDeviceActive,
+                hasActiveLoader,
+                Application.platform);
         }
 
         public static bool IsXrRuntimeActive()
@@ -74,11 +70,38 @@ namespace QuestCommandRTS
         {
             return IsXrRuntimeActiveForState(xrSettingsEnabled, xrDeviceActive, hasActiveLoader, platform);
         }
+
+        public static RtsRuntimeMode ResolveFromStateForTests(string[] arguments, string environmentMode, bool xrSettingsEnabled, bool xrDeviceActive, bool hasActiveLoader, RuntimePlatform platform)
+        {
+            return ResolveFromState(arguments, environmentMode, xrSettingsEnabled, xrDeviceActive, hasActiveLoader, platform);
+        }
 #endif
 
-        private static bool TryGetCommandLineMode(out RtsRuntimeMode mode)
+        private static RtsRuntimeMode ResolveFromState(string[] arguments, string environmentValue, bool xrSettingsEnabled, bool xrDeviceActive, bool hasActiveLoader, RuntimePlatform platform)
         {
-            string[] arguments = Environment.GetCommandLineArgs();
+            RtsRuntimeMode commandLineMode;
+            if (TryGetCommandLineMode(arguments, out commandLineMode))
+            {
+                return commandLineMode;
+            }
+
+            RtsRuntimeMode environmentMode;
+            if (TryParseMode(environmentValue, out environmentMode))
+            {
+                return environmentMode;
+            }
+
+            return IsXrRuntimeActiveForState(xrSettingsEnabled, xrDeviceActive, hasActiveLoader, platform) ? RtsRuntimeMode.QuestVr : RtsRuntimeMode.Desktop;
+        }
+
+        private static bool TryGetCommandLineMode(string[] arguments, out RtsRuntimeMode mode)
+        {
+            if (arguments == null)
+            {
+                mode = RtsRuntimeMode.Desktop;
+                return false;
+            }
+
             for (int i = 0; i < arguments.Length - 1; i++)
             {
                 if (string.Equals(arguments[i], ForceModeCommandLineArgument, StringComparison.OrdinalIgnoreCase) &&

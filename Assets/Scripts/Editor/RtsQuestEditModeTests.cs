@@ -46,6 +46,50 @@ namespace QuestCommandRTS.Editor
         }
 
         [Test]
+        public void RuntimeModeResolverHonorsOverridesBeforeAutomaticXrState()
+        {
+            Assert.AreEqual(
+                RtsRuntimeMode.QuestVr,
+                RtsRuntimeModeResolver.ResolveFromStateForTests(
+                    new[] { "QuestCommandRTS.exe", "-questRtsMode", "QuestVr" },
+                    "Desktop",
+                    false,
+                    false,
+                    false,
+                    RuntimePlatform.WindowsPlayer));
+
+            Assert.AreEqual(
+                RtsRuntimeMode.Desktop,
+                RtsRuntimeModeResolver.ResolveFromStateForTests(
+                    new[] { "QuestCommandRTS.exe" },
+                    "Desktop",
+                    true,
+                    true,
+                    true,
+                    RuntimePlatform.Android));
+
+            Assert.AreEqual(
+                RtsRuntimeMode.QuestVr,
+                RtsRuntimeModeResolver.ResolveFromStateForTests(
+                    new[] { "QuestCommandRTS.exe" },
+                    "VR",
+                    false,
+                    false,
+                    false,
+                    RuntimePlatform.WindowsEditor));
+
+            Assert.AreEqual(
+                RtsRuntimeMode.QuestVr,
+                RtsRuntimeModeResolver.ResolveFromStateForTests(
+                    new[] { "QuestCommandRTS.exe", "-questRtsMode", "DefinitelyNotAMode" },
+                    "DefinitelyNotAMode",
+                    true,
+                    false,
+                    true,
+                    RuntimePlatform.Android));
+        }
+
+        [Test]
         public void QuestDevicePollingBacksOffWhenDevicesAreMissing()
         {
             Assert.AreEqual(0.5f, QuestTrackedNodePose.DeviceRefreshIntervalSeconds, 0.001f);

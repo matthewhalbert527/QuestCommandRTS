@@ -15,7 +15,7 @@ This document records what has been implemented and what has actually been verif
 
 ## Architecture
 
-- `RtsRuntimeModeResolver` chooses `Desktop` or `QuestVr` from forced test settings, command-line/environment overrides, active XR device state, or an initialized Android OpenXR loader for Quest builds.
+- `RtsRuntimeModeResolver` chooses `Desktop` or `QuestVr` from forced test settings, command-line/environment overrides, active XR device state, or an initialized Android OpenXR loader for Quest builds. EditMode tests cover override precedence and fallback to automatic XR state.
 - `RtsGame` owns runtime bootstrap and installs only the components for the resolved mode. Runtime-created camera, light, and desktop UI event-system objects are parented under the generated root so editor exporters can cleanly remove the generated runtime.
 - `RtsCommandDispatcher` centralizes ray/hit based RTS command semantics shared by desktop and Quest input. EditMode source checks guard it from directly reading mouse, keyboard, screen, or XR device APIs.
 - `RtsInputController` keeps desktop-only input, camera movement, drag selection, hotkeys, and control groups. Source checks guard it from duplicating context-command target resolution that belongs in `RtsCommandDispatcher`.
@@ -37,7 +37,7 @@ This document records what has been implemented and what has actually been verif
 
 Automated verification last run locally:
 
-- EditMode tests: `92` total, `92` passed, `0` failed.
+- EditMode tests: `93` total, `93` passed, `0` failed.
 - XR setup validator: automated package/project-setting checks pass, including forbidden Meta XR package absence, except for local Android Build Support, which is missing from this Unity install; manual headset and Android OpenXR UI verification remain manual.
 - Generated Quest runtime smoke report: automated object-graph checks pass in EditMode; physical headset behavior remains manual.
 - Generated desktop runtime smoke report: automated object-graph checks pass in EditMode; hands-on desktop control regression remains manual.
