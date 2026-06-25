@@ -44,6 +44,7 @@ namespace QuestCommandRTS
             Add(results, "Desktop event system present", HasDesktopEventSystem(), "Desktop HUD should create an EventSystem for UI interaction.");
             Add(results, "Quest rig absent", game.QuestRig == null && game.GetComponent<QuestRtsInputController>() == null, "Desktop mode should not install the Quest rig or Quest input controller.");
             Add(results, "Quest world HUD absent", game.GetComponent<QuestWorldHud>() == null, "Desktop mode should not install QuestWorldHud.");
+            Add(results, "Quest tactical map absent", game.GetComponent<QuestTacticalMap>() == null, "Desktop mode should not install QuestTacticalMap.");
             Add(results, "Quest command console absent", game.GetComponent<QuestCommandConsole>() == null, "Desktop mode should not install QuestCommandConsole.");
             Add(results, "Command dispatcher present", game.CommandDispatcher != null, "Both runtime modes should have the shared command dispatcher.");
             Add(results, "Build manager present", game.BuildManager != null, "Desktop build and placement controls require BuildManager.");

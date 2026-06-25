@@ -600,6 +600,7 @@ namespace QuestCommandRTS.Editor
             AssertDesktopSmokePassed(report, "Desktop event system present");
             AssertDesktopSmokePassed(report, "Quest rig absent");
             AssertDesktopSmokePassed(report, "Quest world HUD absent");
+            AssertDesktopSmokePassed(report, "Quest tactical map absent");
             AssertDesktopSmokePassed(report, "Quest command console absent");
             AssertDesktopSmokePassed(report, "Command dispatcher present");
             AssertDesktopSmokePassed(report, "Build manager present");
