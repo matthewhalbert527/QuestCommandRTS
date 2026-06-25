@@ -32,6 +32,9 @@ namespace QuestCommandRTS.Editor
             try
             {
                 game.Initialize();
+                Physics.SyncTransforms();
+                RtsSoakScenarioExporter.PopulateGeneratedMatchForSoak(game);
+                Physics.SyncTransforms();
             }
             finally
             {
@@ -39,9 +42,9 @@ namespace QuestCommandRTS.Editor
             }
 
             Camera camera = game.CommandCamera;
-            camera.transform.position = new Vector3(-18f, 96f, -132f);
-            camera.transform.rotation = Quaternion.Euler(58f, 0f, 0f);
-            camera.fieldOfView = 62f;
+            camera.transform.position = new Vector3(-14f, 112f, -146f);
+            camera.transform.rotation = Quaternion.Euler(59f, 0f, 0f);
+            camera.fieldOfView = 66f;
 
             const int width = 1440;
             const int height = 900;
