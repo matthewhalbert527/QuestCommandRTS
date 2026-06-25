@@ -122,6 +122,8 @@ See `docs/SAVE_SYSTEM.md`, `docs/LIFECYCLE_TEST_MATRIX.md`, `docs/PERFORMANCE_TE
 
 - `Command RTS > Open Battlefield Scene`
 - `Command RTS > Export Sample Screenshot`
+- `Command RTS > Export Quest Sample Screenshot`
+- `Command RTS > Export Room-Sized Quest Sample Screenshot`
 - `Command RTS > Export Runtime Diagnostics Snapshot`
 - `Command RTS > Export Soak Diagnostics Snapshot`
 - `Command RTS > Validate Generated Desktop Runtime`

@@ -381,6 +381,11 @@ namespace QuestCommandRTS
         }
 
 #if UNITY_EDITOR
+        public void SetProfileSettingsForTests(RtsProfileSettings settings)
+        {
+            ProfileSettings = settings;
+        }
+
         public void SetSaveServiceForTests(RtsSaveService service)
         {
             SaveService = service;
@@ -888,11 +893,18 @@ namespace QuestCommandRTS
 
             initialized = true;
             Clock = new RtsSimulationClock();
-            ProfileSettings = RtsProfileSettings.CreateDefault();
-            ProfileSettings.TryLoad(out string profileError);
-            if (!string.IsNullOrEmpty(profileError))
+            if (ProfileSettings == null)
             {
-                Debug.LogWarning("Profile settings load failed: " + profileError);
+                ProfileSettings = RtsProfileSettings.CreateDefault();
+                ProfileSettings.TryLoad(out string profileError);
+                if (!string.IsNullOrEmpty(profileError))
+                {
+                    Debug.LogWarning("Profile settings load failed: " + profileError);
+                }
+            }
+            else
+            {
+                ProfileSettings.Data.Normalize();
             }
 
             SaveService = new RtsSaveService(this, RtsSaveFileStore.CreateDefault());

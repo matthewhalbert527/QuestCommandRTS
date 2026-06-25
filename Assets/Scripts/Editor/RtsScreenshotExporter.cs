@@ -11,6 +11,7 @@ namespace QuestCommandRTS.Editor
         private const string ScenePath = "Assets/Scenes/Battlefield.unity";
         private const string DefaultOutputPath = "C:/Users/matth/Documents/Codex/2026-06-24/i-s/outputs/quest-command-rts-sample.png";
         private const string DefaultQuestOutputPath = "C:/Users/matth/Documents/Codex/2026-06-24/i-s/outputs/quest-command-rts-quest-sample.png";
+        private const string DefaultQuestRoomOutputPath = "C:/Users/matth/Documents/Codex/2026-06-24/i-s/outputs/quest-command-rts-quest-room-sample.png";
 
         [MenuItem("Command RTS/Export Sample Screenshot")]
         public static void ExportMenuScreenshot()
@@ -24,6 +25,12 @@ namespace QuestCommandRTS.Editor
             Export(DefaultQuestOutputPath, RtsRuntimeMode.QuestVr);
         }
 
+        [MenuItem("Command RTS/Export Room-Sized Quest Sample Screenshot")]
+        public static void ExportMenuQuestRoomScreenshot()
+        {
+            Export(DefaultQuestRoomOutputPath, RtsRuntimeMode.QuestVr, CreateRoomSizedScreenshotProfile());
+        }
+
         public static void ExportForCodex()
         {
             Export(DefaultOutputPath, RtsRuntimeMode.Desktop);
@@ -34,7 +41,17 @@ namespace QuestCommandRTS.Editor
             Export(DefaultQuestOutputPath, RtsRuntimeMode.QuestVr);
         }
 
+        public static void ExportQuestRoomForCodex()
+        {
+            Export(DefaultQuestRoomOutputPath, RtsRuntimeMode.QuestVr, CreateRoomSizedScreenshotProfile());
+        }
+
         private static void Export(string outputPath, RtsRuntimeMode mode)
+        {
+            Export(outputPath, mode, null);
+        }
+
+        private static void Export(string outputPath, RtsRuntimeMode mode, RtsProfileSettings profileSettings)
         {
             EditorSceneManager.OpenScene(ScenePath);
 
@@ -43,6 +60,11 @@ namespace QuestCommandRTS.Editor
             RtsGame game = root.AddComponent<RtsGame>();
             try
             {
+                if (profileSettings != null)
+                {
+                    game.SetProfileSettingsForTests(profileSettings);
+                }
+
                 game.Initialize();
                 Physics.SyncTransforms();
                 RtsSoakScenarioExporter.PopulateGeneratedMatchForSoak(game);
@@ -86,6 +108,15 @@ namespace QuestCommandRTS.Editor
 
             AssetDatabase.Refresh();
             Debug.Log("Command RTS screenshot exported to " + outputPath);
+        }
+
+        private static RtsProfileSettings CreateRoomSizedScreenshotProfile()
+        {
+            RtsProfileSettings settings = new RtsProfileSettings(Path.Combine(Path.GetTempPath(), "QuestCommandRTS-ScreenshotProfile.json"));
+            settings.Data.tabletopScale = RtsProfileSettingsData.RoomSizedTabletopScale;
+            settings.Data.pointerLength = RtsProfileSettingsData.RoomSizedPointerLength;
+            settings.Data.Normalize();
+            return settings;
         }
 
         private static Camera ConfigureCamera(RtsGame game, RtsRuntimeMode mode)

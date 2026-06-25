@@ -200,6 +200,24 @@ namespace QuestCommandRTS.Editor
         }
 
         [Test]
+        public void QuestInitializationAppliesInjectedRoomSizedProfileBeforeRigCreation()
+        {
+            RtsProfileSettings profile = CreateProfileSettingsForTests(RtsProfileSettingsData.RoomSizedTabletopScale, RtsProfileSettingsData.RoomSizedPointerLength);
+            RtsGame game = CreateInitializedGame(RtsRuntimeMode.QuestVr, profile);
+            QuestTabletopSettings settings = game.GetComponent<QuestTabletopSettings>();
+
+            Assert.AreSame(profile, game.ProfileSettings);
+            Assert.IsNotNull(settings);
+            Assert.AreEqual(126f / RtsProfileSettingsData.RoomSizedTabletopScale, settings.SimulationUnitsPerMeter, 0.001f);
+            Assert.AreEqual(4f, settings.BattlefieldWidthMeters, 0.01f);
+            Assert.AreEqual(RtsProfileSettingsData.RoomSizedPointerLength, settings.RayLengthMeters, 0.001f);
+            Assert.AreEqual(RtsProfileSettingsData.RoomSizedPointerLength * settings.SimulationUnitsPerMeter, settings.RayLengthSimulationUnits, 0.001f);
+            AssertVectorNear(Vector3.one * settings.SimulationUnitsPerMeter, game.QuestRig.RigRoot.localScale);
+            Assert.AreEqual(settings.GetRigRootPosition(), game.QuestRig.RigRoot.position);
+            Assert.Greater(game.QuestRig.HeadCamera.farClipPlane, RtsBalance.MapHalfSize * 2f);
+        }
+
+        [Test]
         public void QuestInitializationSeedsFallbackTrackedPoses()
         {
             RtsGame game = CreateInitializedGame(RtsRuntimeMode.QuestVr);
@@ -1130,12 +1148,31 @@ namespace QuestCommandRTS.Editor
 
         private static RtsGame CreateInitializedGame(RtsRuntimeMode mode)
         {
+            return CreateInitializedGame(mode, null);
+        }
+
+        private static RtsGame CreateInitializedGame(RtsRuntimeMode mode, RtsProfileSettings profileSettings)
+        {
             RtsRuntimeModeResolver.ForceModeForTests(mode);
             GameObject root = new GameObject("Test RTS Game");
             RtsGame game = root.AddComponent<RtsGame>();
+            if (profileSettings != null)
+            {
+                game.SetProfileSettingsForTests(profileSettings);
+            }
+
             game.Initialize();
             Physics.SyncTransforms();
             return game;
+        }
+
+        private static RtsProfileSettings CreateProfileSettingsForTests(float tabletopScale, float pointerLength)
+        {
+            RtsProfileSettings settings = new RtsProfileSettings(Path.Combine(Path.GetTempPath(), "QuestCommandRTS-TestProfile.json"));
+            settings.Data.tabletopScale = tabletopScale;
+            settings.Data.pointerLength = pointerLength;
+            settings.Data.Normalize();
+            return settings;
         }
 
         private static Ray RayAt(RtsEntity entity)
