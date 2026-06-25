@@ -1,6 +1,7 @@
 #if UNITY_EDITOR
 using NUnit.Framework;
 using UnityEngine;
+using UnityEngine.UI;
 
 namespace QuestCommandRTS.Editor
 {
@@ -67,6 +68,33 @@ namespace QuestCommandRTS.Editor
             Assert.IsNotNull(game.GetComponent<QuestCommandConsole>());
             Assert.IsNotNull(game.QuestRig);
             Assert.AreSame(game.QuestRig.HeadCamera.transform, game.GetViewCameraTransform());
+        }
+
+        [Test]
+        public void QuestWorldStatusPanelUsesWorldSpaceAndRequiredHints()
+        {
+            CreateInitializedGame(RtsRuntimeMode.QuestVr);
+
+            GameObject statusObject = GameObject.Find("Quest World Status");
+            Assert.IsNotNull(statusObject);
+
+            Canvas canvas = statusObject.GetComponent<Canvas>();
+            Assert.IsNotNull(canvas);
+            Assert.AreEqual(RenderMode.WorldSpace, canvas.renderMode);
+
+            GraphicRaycaster raycaster = statusObject.GetComponent<GraphicRaycaster>();
+            Assert.IsNotNull(raycaster);
+            Assert.IsFalse(raycaster.enabled);
+
+            Text text = statusObject.GetComponentInChildren<Text>();
+            Assert.IsNotNull(text);
+            StringAssert.Contains("Credits ", text.text);
+            StringAssert.Contains("Power ", text.text);
+            StringAssert.Contains("Selected ", text.text);
+            StringAssert.Contains("Trigger: Select", text.text);
+            StringAssert.Contains("Left Trigger + Trigger: Add", text.text);
+            StringAssert.Contains("A: Command", text.text);
+            StringAssert.Contains("B: Cancel/Clear", text.text);
         }
 
         [Test]

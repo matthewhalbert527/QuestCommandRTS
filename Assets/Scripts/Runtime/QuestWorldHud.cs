@@ -53,7 +53,7 @@ namespace QuestCommandRTS
 
             statusText = textObject.AddComponent<Text>();
             statusText.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
-            statusText.fontSize = 24;
+            statusText.fontSize = 22;
             statusText.alignment = TextAnchor.MiddleLeft;
             statusText.horizontalOverflow = HorizontalWrapMode.Wrap;
             statusText.verticalOverflow = VerticalWrapMode.Truncate;
@@ -104,13 +104,12 @@ namespace QuestCommandRTS
 
             statusText.text =
                 "Credits " + credits +
-                "\nPower " + powerUsed + "/" + powerProvided +
-                "\nSelected " + selectionCount +
+                "   Power " + powerUsed + "/" + powerProvided +
+                "   Selected " + selectionCount +
                 "\n" + (paused ? "Paused" : status) +
-                "\nTrigger: Select   LT+Trigger: Add" +
-                "\nA: Command   LT+A: Attack-move" +
-                "\nB: Cancel/Clear   LT+B: Stop" +
-                "\nX: Console/System";
+                "\nTrigger: Select" +
+                "\nLeft Trigger + Trigger: Add" +
+                "\nA: Command   B: Cancel/Clear";
         }
     }
 }
