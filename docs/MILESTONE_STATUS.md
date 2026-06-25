@@ -38,7 +38,7 @@ This document records what has been implemented and what has actually been verif
 Automated verification last run locally:
 
 - EditMode tests: `96` total, `96` passed, `0` failed.
-- XR setup validator: automated package/project-setting checks pass, including forbidden Meta XR package absence, except for local Android Build Support, which is missing from this Unity install; manual headset and Android OpenXR UI verification remain manual.
+- XR setup validator: automated manifest pin, resolved Package Manager version, and project-setting checks pass, including forbidden Meta XR package absence, except for local Android Build Support, which is missing from this Unity install; manual headset and Android OpenXR UI verification remain manual.
 - Generated Quest runtime smoke report: automated object-graph, desktop overlay/event-system absence, XR node binding, pointer-geometry, world-UI rig anchoring, command-console panel-ray, non-interactive world-HUD/tactical-map, and world-HUD hint checks pass in EditMode; physical headset behavior remains manual.
 - Generated desktop runtime smoke report: automated object-graph checks pass in EditMode; hands-on desktop control regression remains manual.
 - Screenshot exporter: produces a populated desktop-board showcase at `C:\Users\matth\Documents\Codex\2026-06-24\i-s\outputs\quest-command-rts-sample.png`, a Quest-view world-space UI showcase at `C:\Users\matth\Documents\Codex\2026-06-24\i-s\outputs\quest-command-rts-quest-sample.png`, and a room-sized Quest profile showcase at `C:\Users\matth\Documents\Codex\2026-06-24\i-s\outputs\quest-command-rts-quest-room-sample.png`.

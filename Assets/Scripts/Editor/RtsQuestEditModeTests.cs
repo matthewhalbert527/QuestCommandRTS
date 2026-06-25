@@ -508,6 +508,10 @@ namespace QuestCommandRTS.Editor
             AssertValidationPassed(report, "OpenXR package");
             AssertValidationPassed(report, "XR Interaction Toolkit package");
             AssertValidationPassed(report, "Input System package");
+            AssertValidationPassed(report, "Resolved XR Management package");
+            AssertValidationPassed(report, "Resolved OpenXR package");
+            AssertValidationPassed(report, "Resolved XR Interaction Toolkit package");
+            AssertValidationPassed(report, "Resolved Input System package");
             AssertValidationPassed(report, "Forbidden XR packages absent");
             AssertValidationExists(report, "Android Build Support");
             AssertValidationPassed(report, "Android min API");

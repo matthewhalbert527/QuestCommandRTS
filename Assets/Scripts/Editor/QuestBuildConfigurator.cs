@@ -103,6 +103,10 @@ namespace QuestCommandRTS.Editor
             Add(results, "OpenXR package", manifest.Contains("\"com.unity.xr.openxr\": \"1.15.1\""), "manifest should include com.unity.xr.openxr 1.15.1");
             Add(results, "XR Interaction Toolkit package", manifest.Contains("\"com.unity.xr.interaction.toolkit\": \"3.2.2\""), "manifest should include com.unity.xr.interaction.toolkit 3.2.2");
             Add(results, "Input System package", manifest.Contains("\"com.unity.inputsystem\": \"1.18.0\""), "manifest should include com.unity.inputsystem 1.18.0");
+            results.Add(CreateResolvedPackageValidationItem("Resolved XR Management package", "com.unity.xr.management", "4.5.4"));
+            results.Add(CreateResolvedPackageValidationItem("Resolved OpenXR package", "com.unity.xr.openxr", "1.15.1"));
+            results.Add(CreateResolvedPackageValidationItem("Resolved XR Interaction Toolkit package", "com.unity.xr.interaction.toolkit", "3.2.2"));
+            results.Add(CreateResolvedPackageValidationItem("Resolved Input System package", "com.unity.inputsystem", "1.18.0"));
             results.Add(CreateForbiddenXrPackagesValidationItem(manifest));
             results.Add(CreateAndroidBuildSupportValidationItem(IsAndroidBuildTargetSupported()));
             Add(results, "Android min API", PlayerSettings.Android.minSdkVersion == AndroidSdkVersions.AndroidApiLevel29, PlayerSettings.Android.minSdkVersion.ToString());
@@ -158,6 +162,17 @@ namespace QuestCommandRTS.Editor
                 hasForbiddenPackage
                     ? "Remove Meta XR SDK/All-in-One, Meta Avatars, passthrough/hand-tracking packages, or com.unity.xr.meta-openxr packages for this milestone."
                     : "Manifest uses Unity XR Management, OpenXR, XR Interaction Toolkit, and Input System without forbidden Meta XR SDK packages.");
+        }
+
+        internal static ValidationItem CreateResolvedPackageValidationItem(string label, string packageName, string expectedVersion)
+        {
+            UnityEditor.PackageManager.PackageInfo info = UnityEditor.PackageManager.PackageInfo.FindForPackageName(packageName);
+            string resolvedVersion = info != null ? info.version : "missing";
+            return new ValidationItem(
+                label,
+                info != null && resolvedVersion == expectedVersion,
+                false,
+                packageName + " resolved version " + resolvedVersion + ", expected " + expectedVersion + ".");
         }
 
         private static bool IsAndroidBuildTargetSupported()
