@@ -245,6 +245,46 @@ namespace QuestCommandRTS.Editor
         }
 
         [Test]
+        public void SaveServiceFallsBackToBackupWhenPrimarySlotIsCorrupt()
+        {
+            string tempPath = Path.Combine(Path.GetTempPath(), "QuestCommandRTS-" + Guid.NewGuid().ToString("N"));
+            try
+            {
+                RtsGame game = CreateInitializedGame();
+                RtsSaveFileStore store = new RtsSaveFileStore(tempPath);
+                RtsSaveService service = new RtsSaveService(game, store);
+                RtsEntity entity = FindPlayerEntity(game, typeof(RtsUnit));
+
+                int entityId = entity.PersistentId;
+                int backupCredits = game.Resources.Credits;
+                entity.TakeDamage(35f, null);
+                float backupHealth = entity.Health;
+
+                Assert.IsTrue(service.TryWriteSlot("manual", out string error), error);
+
+                game.Resources.TrySpend(500);
+                entity.Repair(999f);
+                Assert.IsTrue(service.TryWriteSlot("manual", out error), error);
+                Assert.IsTrue(File.Exists(store.GetBackupSlotPath("manual")));
+
+                File.WriteAllText(store.GetSlotPath("manual"), "{ corrupt primary save");
+                game.Resources.TrySpend(100);
+                entity.TakeDamage(12f, null);
+
+                Assert.IsTrue(service.TryLoadSlot("manual", out error), error);
+                Assert.AreEqual(backupCredits, game.Resources.Credits);
+                Assert.AreEqual(backupHealth, FindEntityById(game, entityId).Health, 0.001f);
+            }
+            finally
+            {
+                if (Directory.Exists(tempPath))
+                {
+                    Directory.Delete(tempPath, true);
+                }
+            }
+        }
+
+        [Test]
         public void DispatcherIssuesAttackMoveAndStopOrders()
         {
             RtsGame game = CreateInitializedGame();

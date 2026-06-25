@@ -2,6 +2,8 @@
 
 QuestCommandRTS now has a versioned JSON save envelope with a SHA-256 payload checksum. Saves are written through `RtsSaveService`, serialized by `RtsSaveSerializer`, and stored by `RtsSaveFileStore` under Unity's `Application.persistentDataPath`.
 
+Each write stages the newest contents to a temporary file before replacing the primary slot. When a primary slot already exists, the prior valid file is copied to a `.bak` backup. Loads try the primary slot first and then fall back to the backup if the primary file is missing, corrupt, or fails checksum/schema validation.
+
 Current schema version: `1`.
 
 Captured state includes:

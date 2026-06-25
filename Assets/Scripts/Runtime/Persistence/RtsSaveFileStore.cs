@@ -24,9 +24,14 @@ namespace QuestCommandRTS
             return Path.Combine(rootPath, SanitizeSlot(slotId) + ".json");
         }
 
+        public string GetBackupSlotPath(string slotId)
+        {
+            return GetSlotPath(slotId) + ".bak";
+        }
+
         public bool HasSlot(string slotId)
         {
-            return File.Exists(GetSlotPath(slotId));
+            return File.Exists(GetSlotPath(slotId)) || File.Exists(GetBackupSlotPath(slotId));
         }
 
         public bool TryWrite(string slotId, string contents, out string error)
@@ -38,7 +43,7 @@ namespace QuestCommandRTS
                 Directory.CreateDirectory(rootPath);
                 string path = GetSlotPath(slotId);
                 string tempPath = path + ".tmp";
-                string backupPath = path + ".bak";
+                string backupPath = GetBackupSlotPath(slotId);
 
                 File.WriteAllText(tempPath, contents);
                 if (File.Exists(path))
@@ -59,15 +64,24 @@ namespace QuestCommandRTS
 
         public bool TryRead(string slotId, out string contents, out string error)
         {
+            return TryReadPath(GetSlotPath(slotId), "Save slot does not exist: " + slotId, out contents, out error);
+        }
+
+        public bool TryReadBackup(string slotId, out string contents, out string error)
+        {
+            return TryReadPath(GetBackupSlotPath(slotId), "Save backup does not exist: " + slotId, out contents, out error);
+        }
+
+        private static bool TryReadPath(string path, string missingError, out string contents, out string error)
+        {
             contents = string.Empty;
             error = string.Empty;
 
             try
             {
-                string path = GetSlotPath(slotId);
                 if (!File.Exists(path))
                 {
-                    error = "Save slot does not exist: " + slotId;
+                    error = missingError;
                     return false;
                 }
 
