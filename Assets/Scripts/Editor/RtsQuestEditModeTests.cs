@@ -99,6 +99,20 @@ namespace QuestCommandRTS.Editor
         }
 
         [Test]
+        public void QuestInitializationPlacesBattlefieldAtTabletopHeight()
+        {
+            RtsGame game = CreateInitializedGame(RtsRuntimeMode.QuestVr);
+            QuestTabletopSettings settings = game.GetComponent<QuestTabletopSettings>();
+
+            Assert.IsNotNull(settings);
+            Assert.IsNotNull(game.QuestRig);
+            Assert.AreEqual(0.82f, settings.BoardHeightMeters, 0.001f);
+            Assert.AreEqual(1.78f, settings.BattlefieldWidthMeters, 0.01f);
+            Assert.AreEqual(settings.GetRigRootPosition(), game.QuestRig.RigRoot.position);
+            Assert.AreEqual(-settings.BoardHeightSimulationUnits, game.QuestRig.RigRoot.position.y, 0.001f);
+        }
+
+        [Test]
         public void QuestValidatorReportsCorePackageAndAndroidSettings()
         {
             var report = QuestXrProjectValidator.BuildValidationReport();

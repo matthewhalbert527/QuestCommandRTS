@@ -82,7 +82,7 @@ The Quest command console has three tabs:
 
 Building placement follows the existing desktop build rules. The preview snaps to the map, turns green when valid, turns red when invalid, and reports concise invalid reasons such as outside map, outside build radius, blocked footprint, missing prerequisite, or insufficient credits.
 
-The full battlefield remains approximately 224 simulation units wide. The Quest rig defaults to 126 simulation units per physical meter, so the board appears roughly 1.78 meters wide while gameplay coordinates and movement logic stay unchanged.
+The full battlefield remains approximately 224 simulation units wide. The Quest rig defaults to 126 simulation units per physical meter, so the board appears roughly 1.78 meters wide while gameplay coordinates and movement logic stay unchanged. `QuestTabletopSettings.BoardHeightMeters` defaults to 0.82m, which shifts the generated battlefield to tabletop height above the physical tracking origin instead of leaving the board on the floor.
 
 ## Persistence And Lifecycle
 

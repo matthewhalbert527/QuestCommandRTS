@@ -21,7 +21,7 @@ namespace QuestCommandRTS
             GameObject rigObject = new GameObject("Quest Tabletop Rig");
             RigRoot = rigObject.transform;
             RigRoot.SetParent(transform, false);
-            RigRoot.position = settings.InitialRigPosition;
+            RigRoot.position = settings.GetRigRootPosition();
             RigRoot.rotation = Quaternion.Euler(0f, settings.InitialYawDegrees, 0f);
             RigRoot.localScale = Vector3.one * settings.SimulationUnitsPerMeter;
 

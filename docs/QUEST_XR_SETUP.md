@@ -106,6 +106,7 @@ Open the console with X/left primary.
 - HMD pose tracking works without camera snapping.
 - Both controllers track.
 - Battlefield appears about 1.75 to 1.8 meters wide.
+- Battlefield appears at tabletop height, not floor height.
 - Right ray and reticle align with the controller.
 - Trigger selects a friendly unit or structure.
 - Left trigger modifier allows additive selection.
@@ -154,6 +155,8 @@ Open the console with X/left primary.
 - Inspect the `QuestTabletopSettings` component created at runtime.
 - Default `SimulationUnitsPerMeter` is 126.
 - The 224-unit board should appear roughly 1.78 meters wide.
+- Default `BoardHeightMeters` is 0.82, which offsets the rig root so the battlefield plane sits at physical tabletop height above the tracking origin.
+- If the board appears on the floor, verify the project includes the `BoardHeightMeters` setting and that `QuestTabletopRig` uses `QuestTabletopSettings.GetRigRootPosition()`.
 
 ### Desktop Camera Incorrectly Appearing
 
