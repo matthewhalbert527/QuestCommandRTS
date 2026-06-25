@@ -48,7 +48,7 @@ The scene is intentionally empty. `RtsBootstrap` creates the map, units, buildin
 - Mouse wheel: zoom camera.
 - A: attack-move selected units toward the cursor.
 - S: stop selected units.
-- Number keys 1-5: train rifleman, harvester, light tank, medium tank, and heavy tank.
+- Number keys 1-5: train gunner, harvester, light tank, medium tank, and heavy tank.
 - Q/W/E/R/T: place power plant, barracks, refinery, war factory, and turret.
 - Z: repair the most damaged selected structure.
 - X: sell selected structures for a partial refund.
@@ -77,7 +77,7 @@ The scene is intentionally empty. `RtsBootstrap` creates the map, units, buildin
 The Quest command console has four tabs:
 
 - `Build`: browse player structures, credit costs, power effects, prerequisites, affordability, and disabled reasons. Pick a structure to start controller-ray placement.
-- `Produce`: select a production building, browse trainable units, queue units, see the active item/progress, inspect queued items, and cancel queued or active production for a full unit-cost refund.
+- `Produce`: select a production building, browse infantry, harvester, and tank options, queue units, see the active item/progress, inspect queued items, and cancel queued or active production for a full unit-cost refund.
 - `Selected`: inspect selected health/counts, production/rally status, repair eligible player structures, sell selected player structures, stop selected units, and view the rally-point hint.
 - `System`: pause/resume the simulation, save the manual slot, load the manual slot when one exists, and start a new match.
 
@@ -87,7 +87,7 @@ The Quest tactical map is a non-interactive world-space battle-view panel. It mi
 
 The full battlefield remains approximately 224 simulation units wide. The Quest rig defaults to 126 simulation units per physical meter, so the board appears roughly 1.78 meters wide while gameplay coordinates and movement logic stay unchanged. `Command RTS > Profile > Use Room-Sized Quest Tabletop Scale` writes a local profile preset that expands the board to roughly 4.0 meters wide and increases pointer reach; `Use Default Quest Tabletop Scale` restores the default. `QuestTabletopSettings.BoardHeightMeters` defaults to 0.82m, which shifts the generated battlefield to tabletop height above the physical tracking origin instead of leaving the board on the floor.
 
-The generated battlefield uses original primitive placeholder art with sandy terrain accents, projected water channels, ridges, rocks, scorches, rails, and corner pylons. These set-dressing pieces are visual-only and have their colliders removed so pointer raycasts and build placement still use the underlying battlefield.
+The generated battlefield uses original primitive placeholder art with sandy terrain accents, projected water channels, ridges, rocks, scorches, rails, and corner pylons. Imported Bastion infantry and tank meshes now replace several unit placeholders while the set-dressing pieces remain visual-only and have their colliders removed so pointer raycasts and build placement still use the underlying battlefield.
 
 ## Persistence And Lifecycle
 
@@ -112,7 +112,7 @@ The generated battlefield uses original primitive placeholder art with sandy ter
 
 - The enemy commander now has its own credit bank, income ticks, paid unit production, and periodic attack orders.
 - Enemy structures can be rebuilt from fixed base slots while at least one enemy structure remains alive.
-- Timed enemy attacks still exist, but spawned attackers now spend commander credits instead of appearing for free.
+- Timed enemy attacks still exist, but spawned attackers now spend commander credits instead of appearing for free and can include mixed gunner, grenadier, rocket, and flame infantry.
 
 See `docs/SAVE_SYSTEM.md`, `docs/LIFECYCLE_TEST_MATRIX.md`, `docs/PERFORMANCE_TESTING.md`, and `docs/MILESTONE_STATUS.md`.
 
@@ -121,7 +121,7 @@ See `docs/SAVE_SYSTEM.md`, `docs/LIFECYCLE_TEST_MATRIX.md`, `docs/PERFORMANCE_TE
 - No radial menus, box/lasso selection volume, hand tracking, passthrough, spatial anchors, locomotion, or board grabbing.
 - The VR console and tactical map are still placeholder UI, but now use layered holographic-style world panels with color-coded row icon tiles, pooled map pips, and text labels.
 - Quest Link and device behavior still require manual headset verification.
-- Primitive placeholder art remains intentionally lightweight.
+- Infantry currently includes gunner, grenadier, rocket soldier, flame trooper, and engineer roles using imported low-poly assets. Grenadiers/flamers apply splash, rockets hit armored targets harder, and engineers can repair damaged friendly units or structures through context commands.
 
 ## Editor Tools
 

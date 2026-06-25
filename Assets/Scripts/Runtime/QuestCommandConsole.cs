@@ -297,19 +297,19 @@ namespace QuestCommandRTS
             for (int i = 0; i < productionRows.Length; i++)
             {
                 UnitKind kind = RtsCommandConsoleModel.UnitKinds[i];
-                ConsoleRow row = CreateSelectionTile(produceRoot, "Produce Row " + i, i, new Vector2(220f, 116f), () => OnProduceClicked(kind));
+                ConsoleRow row = CreateSelectionTile(produceRoot, "Produce Row " + i, i, new Vector2(220f, 92f), () => OnProduceClicked(kind));
                 AddUnitGlyph(row.Icon.rectTransform, kind);
                 productionRows[i] = row;
             }
 
-            CreatePanelImage(produceRoot, "Production Queue Backplate", new Color(0.025f, 0.06f, 0.07f, 0.76f), new Vector2(0f, -272f), new Vector2(704f, 116f));
-            CreateText(produceRoot, "Queue Label", "Queue", 18, TextAnchor.MiddleLeft, new Vector2(18f, -280f), new Vector2(260f, 28f));
+            CreatePanelImage(produceRoot, "Production Queue Backplate", new Color(0.025f, 0.06f, 0.07f, 0.76f), new Vector2(0f, -324f), new Vector2(704f, 82f));
+            CreateText(produceRoot, "Queue Label", "Queue", 16, TextAnchor.MiddleLeft, new Vector2(18f, -330f), new Vector2(260f, 24f));
             for (int i = 0; i < queueLines.Length; i++)
             {
-                queueLines[i] = CreateText(produceRoot, "Queue " + i, "", 14, TextAnchor.MiddleLeft, new Vector2(18f, -310f - i * 20f), new Vector2(400f, 18f));
+                queueLines[i] = CreateText(produceRoot, "Queue " + i, "", 12, TextAnchor.MiddleLeft, new Vector2(18f, -354f - i * 16f), new Vector2(414f, 15f));
             }
 
-            cancelQueueButton = CreateButton(produceRoot, "Cancel Queue Button", "Cancel Production", new Vector2(456f, -326f), new Vector2(230f, 42f), () => game.PlayerCommands.CancelProduction());
+            cancelQueueButton = CreateButton(produceRoot, "Cancel Queue Button", "Cancel Production", new Vector2(468f, -354f), new Vector2(216f, 38f), () => game.PlayerCommands.CancelProduction());
         }
 
         private void BuildSelectedTab()
@@ -334,19 +334,21 @@ namespace QuestCommandRTS
         private ConsoleRow CreateSelectionTile(RectTransform parent, string name, int index, Vector2 size, Action clicked)
         {
             const float columnGap = 18f;
-            const float rowGap = 18f;
+            const float rowGap = 12f;
             int column = index % 3;
             int row = index / 3;
             Vector2 position = new Vector2(column * (size.x + columnGap), -12f - row * (size.y + rowGap));
             ConsoleButton button = CreateButton(parent, name, "", position, size, clicked);
 
             CreatePanelImage(button.Rect, name + " Tile Glow", new Color(0.2f, 0.84f, 1f, 0.22f), new Vector2(7f, -7f), new Vector2(size.x - 14f, 3f));
-            float iconHeight = Mathf.Clamp(size.y * 0.46f, 50f, 74f);
-            Image icon = CreatePanelImage(button.Rect, name + " Icon", new Color(0.2f, 0.75f, 0.9f, 0.92f), new Vector2(48f, -20f), new Vector2(124f, iconHeight));
-            CreatePanelImage(button.Rect, name + " Icon Shine", new Color(0.9f, 1f, 1f, 0.18f), new Vector2(56f, -28f), new Vector2(108f, 4f));
-            float titleTop = -Mathf.Min(size.y - 42f, 104f);
-            Text title = CreateText(button.Rect, name + " Title", "", 17, TextAnchor.MiddleCenter, new Vector2(12f, titleTop), new Vector2(size.x - 24f, 24f));
-            Text detail = CreateText(button.Rect, name + " Detail", "", 13, TextAnchor.MiddleCenter, new Vector2(12f, titleTop - 24f), new Vector2(size.x - 24f, 22f));
+            bool compact = size.y <= 100f;
+            float iconHeight = compact ? 42f : Mathf.Clamp(size.y * 0.46f, 50f, 74f);
+            float iconTop = compact ? -14f : -20f;
+            Image icon = CreatePanelImage(button.Rect, name + " Icon", new Color(0.2f, 0.75f, 0.9f, 0.92f), new Vector2(48f, iconTop), new Vector2(124f, iconHeight));
+            CreatePanelImage(button.Rect, name + " Icon Shine", new Color(0.9f, 1f, 1f, 0.18f), new Vector2(56f, iconTop - 8f), new Vector2(108f, 4f));
+            float titleTop = compact ? -56f : -Mathf.Min(size.y - 42f, 104f);
+            Text title = CreateText(button.Rect, name + " Title", "", compact ? 14 : 17, TextAnchor.MiddleCenter, new Vector2(12f, titleTop), new Vector2(size.x - 24f, compact ? 20f : 24f));
+            Text detail = CreateText(button.Rect, name + " Detail", "", compact ? 11 : 13, TextAnchor.MiddleCenter, new Vector2(12f, titleTop - (compact ? 19f : 24f)), new Vector2(size.x - 24f, compact ? 17f : 22f));
 
             GameObject stripObject = new GameObject(name + " State");
             stripObject.transform.SetParent(button.Rect, false);
@@ -435,8 +437,40 @@ namespace QuestCommandRTS
             Color glyph = new Color(0.88f, 0.98f, 1f, 0.92f);
             Color dim = new Color(0.45f, 0.85f, 0.95f, 0.5f);
 
+            if (parent.rect.height <= 48f)
+            {
+                AddCompactUnitGlyph(parent, kind, glyph, dim);
+                return;
+            }
+
             switch (kind)
             {
+                case UnitKind.Grenadier:
+                    CreatePanelImage(parent, "Grenadier Glyph Body", glyph, new Vector2(56f, -22f), new Vector2(16f, 34f));
+                    CreatePanelImage(parent, "Grenadier Glyph Launcher", dim, new Vector2(70f, -32f), new Vector2(30f, 12f));
+                    CreatePanelImage(parent, "Grenadier Glyph Shell", new Color(0.95f, 0.5f, 0.28f, 0.9f), new Vector2(100f, -25f), new Vector2(8f, 8f));
+                    CreatePanelImage(parent, "Grenadier Glyph Feet", glyph, new Vector2(42f, -58f), new Vector2(44f, 8f));
+                    break;
+                case UnitKind.RocketSoldier:
+                    CreatePanelImage(parent, "Rocket Glyph Body", glyph, new Vector2(56f, -22f), new Vector2(16f, 34f));
+                    CreatePanelImage(parent, "Rocket Glyph Tube", dim, new Vector2(70f, -27f), new Vector2(42f, 10f));
+                    CreatePanelImage(parent, "Rocket Glyph Nose", new Color(1f, 0.32f, 0.26f, 0.9f), new Vector2(108f, -25f), new Vector2(10f, 6f));
+                    CreatePanelImage(parent, "Rocket Glyph Feet", glyph, new Vector2(42f, -58f), new Vector2(44f, 8f));
+                    break;
+                case UnitKind.FlameTrooper:
+                    CreatePanelImage(parent, "Flame Glyph Body", glyph, new Vector2(56f, -22f), new Vector2(16f, 34f));
+                    CreatePanelImage(parent, "Flame Glyph Tank", dim, new Vector2(42f, -30f), new Vector2(12f, 24f));
+                    CreatePanelImage(parent, "Flame Glyph Hose", dim, new Vector2(70f, -30f), new Vector2(30f, 6f));
+                    CreatePanelImage(parent, "Flame Glyph Jet", new Color(1f, 0.48f, 0.18f, 0.9f), new Vector2(100f, -34f), new Vector2(14f, 14f));
+                    CreatePanelImage(parent, "Flame Glyph Feet", glyph, new Vector2(42f, -58f), new Vector2(44f, 8f));
+                    break;
+                case UnitKind.Engineer:
+                    CreatePanelImage(parent, "Engineer Glyph Body", glyph, new Vector2(56f, -22f), new Vector2(16f, 34f));
+                    CreatePanelImage(parent, "Engineer Glyph Tool", dim, new Vector2(74f, -30f), new Vector2(28f, 7f));
+                    CreatePanelImage(parent, "Engineer Glyph Wrench A", new Color(0.5f, 1f, 0.78f, 0.9f), new Vector2(100f, -22f), new Vector2(8f, 22f));
+                    CreatePanelImage(parent, "Engineer Glyph Wrench B", new Color(0.5f, 1f, 0.78f, 0.9f), new Vector2(92f, -18f), new Vector2(22f, 7f));
+                    CreatePanelImage(parent, "Engineer Glyph Feet", glyph, new Vector2(42f, -58f), new Vector2(44f, 8f));
+                    break;
                 case UnitKind.Harvester:
                     CreatePanelImage(parent, "Harvester Glyph Body", glyph, new Vector2(28f, -34f), new Vector2(62f, 28f));
                     CreatePanelImage(parent, "Harvester Glyph Scoop", dim, new Vector2(90f, -44f), new Vector2(24f, 16f));
@@ -464,6 +498,66 @@ namespace QuestCommandRTS
                     CreatePanelImage(parent, "Rifleman Glyph Body", glyph, new Vector2(56f, -22f), new Vector2(16f, 34f));
                     CreatePanelImage(parent, "Rifleman Glyph Rifle", dim, new Vector2(74f, -28f), new Vector2(32f, 6f));
                     CreatePanelImage(parent, "Rifleman Glyph Feet", glyph, new Vector2(42f, -58f), new Vector2(44f, 8f));
+                    break;
+            }
+        }
+
+        private static void AddCompactUnitGlyph(RectTransform parent, UnitKind kind, Color glyph, Color dim)
+        {
+            if (RtsBalance.IsInfantry(kind))
+            {
+                CreatePanelImage(parent, "Infantry Compact Body", glyph, new Vector2(56f, -8f), new Vector2(14f, 22f));
+                CreatePanelImage(parent, "Infantry Compact Feet", glyph, new Vector2(44f, -34f), new Vector2(38f, 6f));
+
+                switch (kind)
+                {
+                    case UnitKind.Grenadier:
+                        CreatePanelImage(parent, "Grenadier Compact Launcher", dim, new Vector2(72f, -18f), new Vector2(26f, 8f));
+                        CreatePanelImage(parent, "Grenadier Compact Shell", new Color(0.95f, 0.5f, 0.28f, 0.9f), new Vector2(98f, -15f), new Vector2(7f, 7f));
+                        break;
+                    case UnitKind.RocketSoldier:
+                        CreatePanelImage(parent, "Rocket Compact Tube", dim, new Vector2(72f, -17f), new Vector2(36f, 8f));
+                        CreatePanelImage(parent, "Rocket Compact Nose", new Color(1f, 0.32f, 0.26f, 0.9f), new Vector2(108f, -16f), new Vector2(8f, 5f));
+                        break;
+                    case UnitKind.FlameTrooper:
+                        CreatePanelImage(parent, "Flame Compact Hose", dim, new Vector2(72f, -19f), new Vector2(28f, 5f));
+                        CreatePanelImage(parent, "Flame Compact Jet", new Color(1f, 0.48f, 0.18f, 0.9f), new Vector2(100f, -23f), new Vector2(12f, 12f));
+                        break;
+                    case UnitKind.Engineer:
+                        CreatePanelImage(parent, "Engineer Compact Tool", new Color(0.5f, 1f, 0.78f, 0.9f), new Vector2(74f, -19f), new Vector2(30f, 6f));
+                        CreatePanelImage(parent, "Engineer Compact Wrench", new Color(0.5f, 1f, 0.78f, 0.9f), new Vector2(102f, -10f), new Vector2(7f, 20f));
+                        break;
+                    default:
+                        CreatePanelImage(parent, "Gunner Compact Rifle", dim, new Vector2(72f, -18f), new Vector2(34f, 5f));
+                        break;
+                }
+
+                return;
+            }
+
+            switch (kind)
+            {
+                case UnitKind.Harvester:
+                    CreatePanelImage(parent, "Harvester Compact Body", glyph, new Vector2(28f, -12f), new Vector2(58f, 20f));
+                    CreatePanelImage(parent, "Harvester Compact Scoop", dim, new Vector2(86f, -23f), new Vector2(22f, 12f));
+                    CreatePanelImage(parent, "Harvester Compact Tread", new Color(0.02f, 0.08f, 0.09f, 0.75f), new Vector2(24f, -34f), new Vector2(76f, 7f));
+                    break;
+                case UnitKind.HeavyTank:
+                    CreatePanelImage(parent, "Heavy Compact Hull", glyph, new Vector2(20f, -20f), new Vector2(84f, 17f));
+                    CreatePanelImage(parent, "Heavy Compact Turret", glyph, new Vector2(48f, -9f), new Vector2(30f, 13f));
+                    CreatePanelImage(parent, "Heavy Compact Barrel A", dim, new Vector2(74f, -9f), new Vector2(36f, 4f));
+                    CreatePanelImage(parent, "Heavy Compact Barrel B", dim, new Vector2(74f, -17f), new Vector2(36f, 4f));
+                    break;
+                case UnitKind.MediumTank:
+                case UnitKind.Tank:
+                    CreatePanelImage(parent, "Medium Compact Hull", glyph, new Vector2(26f, -21f), new Vector2(72f, 16f));
+                    CreatePanelImage(parent, "Medium Compact Turret", glyph, new Vector2(50f, -10f), new Vector2(24f, 12f));
+                    CreatePanelImage(parent, "Medium Compact Barrel", dim, new Vector2(72f, -9f), new Vector2(36f, 4f));
+                    break;
+                default:
+                    CreatePanelImage(parent, "Light Compact Hull", glyph, new Vector2(30f, -22f), new Vector2(64f, 14f));
+                    CreatePanelImage(parent, "Light Compact Turret", glyph, new Vector2(52f, -12f), new Vector2(20f, 10f));
+                    CreatePanelImage(parent, "Light Compact Barrel", dim, new Vector2(70f, -10f), new Vector2(34f, 4f));
                     break;
             }
         }
@@ -709,6 +803,14 @@ namespace QuestCommandRTS
                     return new Color(0.92f, 0.72f, 0.34f, 0.98f);
                 case UnitKind.HeavyTank:
                     return new Color(1f, 0.48f, 0.32f, 0.98f);
+                case UnitKind.Grenadier:
+                    return new Color(0.95f, 0.7f, 0.34f, 0.98f);
+                case UnitKind.RocketSoldier:
+                    return new Color(1f, 0.42f, 0.34f, 0.98f);
+                case UnitKind.FlameTrooper:
+                    return new Color(1f, 0.56f, 0.22f, 0.98f);
+                case UnitKind.Engineer:
+                    return new Color(0.48f, 1f, 0.72f, 0.98f);
                 default:
                     return new Color(0.45f, 0.88f, 1f, 0.98f);
             }

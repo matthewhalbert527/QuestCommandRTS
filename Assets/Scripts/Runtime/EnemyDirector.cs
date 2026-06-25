@@ -151,13 +151,14 @@ namespace QuestCommandRTS
             int spawned = 0;
             for (int i = 0; i < infantryCount; i++)
             {
-                if (!TrySpendEnemyCredits(RtsBalance.GetUnit(UnitKind.Rifleman).Cost))
+                UnitKind infantryKind = GetWaveInfantryKind(nextWaveIndex, i);
+                if (!TrySpendEnemyCredits(RtsBalance.GetUnit(infantryKind).Cost))
                 {
                     break;
                 }
 
                 Vector3 spawn = enemyBase + new Vector3(Random.Range(-8f, 8f), 0f, Random.Range(-8f, 8f));
-                RtsUnit unit = game.CreateUnit(RtsTeam.Enemy, UnitKind.Rifleman, spawn);
+                RtsUnit unit = game.CreateUnit(RtsTeam.Enemy, infantryKind, spawn);
                 unit.IssueAttack(target);
                 spawned++;
             }
@@ -323,7 +324,38 @@ namespace QuestCommandRTS
                 return UnitKind.LightTank;
             }
 
+            if (enemyCredits >= RtsBalance.GetUnit(UnitKind.RocketSoldier).Cost && CountLivingEnemyUnits(UnitKind.RocketSoldier) < 3)
+            {
+                return UnitKind.RocketSoldier;
+            }
+
+            if (enemyCredits >= RtsBalance.GetUnit(UnitKind.FlameTrooper).Cost && CountLivingEnemyUnits(UnitKind.FlameTrooper) < 3)
+            {
+                return UnitKind.FlameTrooper;
+            }
+
+            if (enemyCredits >= RtsBalance.GetUnit(UnitKind.Grenadier).Cost && CountLivingEnemyUnits(UnitKind.Grenadier) < 4)
+            {
+                return UnitKind.Grenadier;
+            }
+
             return UnitKind.Rifleman;
+        }
+
+        private static UnitKind GetWaveInfantryKind(int wave, int index)
+        {
+            int pattern = (wave + index) % 5;
+            switch (pattern)
+            {
+                case 1:
+                    return UnitKind.Grenadier;
+                case 2:
+                    return UnitKind.RocketSoldier;
+                case 3:
+                    return UnitKind.FlameTrooper;
+                default:
+                    return UnitKind.Rifleman;
+            }
         }
 
         private ProductionStructure FindEnemyProducer(UnitKind kind)

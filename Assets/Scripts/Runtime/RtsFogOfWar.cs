@@ -418,6 +418,10 @@ namespace QuestCommandRTS
                 {
                     case UnitKind.Harvester:
                         return 17f;
+                    case UnitKind.RocketSoldier:
+                        return 18f;
+                    case UnitKind.Engineer:
+                        return 15f;
                     case UnitKind.Tank:
                     case UnitKind.LightTank:
                     case UnitKind.MediumTank:

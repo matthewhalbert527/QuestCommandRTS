@@ -107,10 +107,13 @@ namespace QuestCommandRTS
 
         public bool CanTrain(UnitKind kind)
         {
+            if (RtsBalance.IsInfantry(kind))
+            {
+                return StructureKind == StructureKind.Barracks || StructureKind == StructureKind.CommandCenter;
+            }
+
             switch (kind)
             {
-                case UnitKind.Rifleman:
-                    return StructureKind == StructureKind.Barracks || StructureKind == StructureKind.CommandCenter;
                 case UnitKind.Harvester:
                     return StructureKind == StructureKind.Refinery || StructureKind == StructureKind.WarFactory || StructureKind == StructureKind.CommandCenter;
                 case UnitKind.Tank:

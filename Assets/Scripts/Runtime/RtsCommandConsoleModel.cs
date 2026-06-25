@@ -64,6 +64,10 @@ namespace QuestCommandRTS
         public static readonly UnitKind[] UnitKinds =
         {
             UnitKind.Rifleman,
+            UnitKind.Grenadier,
+            UnitKind.RocketSoldier,
+            UnitKind.FlameTrooper,
+            UnitKind.Engineer,
             UnitKind.Harvester,
             UnitKind.LightTank,
             UnitKind.MediumTank,
@@ -218,7 +222,7 @@ namespace QuestCommandRTS
             MediumTankUnit mediumTank = entity as MediumTankUnit;
             if (mediumTank != null)
             {
-                view.QueueSummary = mediumTank.HasPassenger ? "Passenger gunner loaded" : "No passenger gunner";
+                view.QueueSummary = mediumTank.HasPassenger ? "Passenger " + RtsBalance.GetUnit(mediumTank.LoadedPassengerKind).Name + " loaded" : "No passenger infantry";
             }
 
             return view;

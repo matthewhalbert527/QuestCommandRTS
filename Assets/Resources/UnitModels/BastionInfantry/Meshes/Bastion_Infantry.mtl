@@ -1,0 +1,9 @@
+# Single shared palette material. Unity's editor builder replaces this with a URP/Built-in compatible material.
+newmtl BastionInfantryPalette
+Ka 0.120000 0.120000 0.120000
+Kd 1.000000 1.000000 1.000000
+Ks 0.100000 0.100000 0.100000
+Ns 28.000000
+d 1.000000
+illum 2
+map_Kd ../Textures/Bastion_Infantry_Palette.png

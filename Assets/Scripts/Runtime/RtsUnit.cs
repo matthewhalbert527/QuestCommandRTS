@@ -19,6 +19,7 @@ namespace QuestCommandRTS
         protected bool hasAttackMoveDestination;
         protected RtsEntity attackTarget;
         protected MediumTankUnit boardingTarget;
+        protected RtsEntity repairTarget;
 
         private float nextAttackTime;
 
@@ -53,6 +54,7 @@ namespace QuestCommandRTS
 
         public virtual void IssueMove(Vector3 worldPosition)
         {
+            repairTarget = null;
             boardingTarget = null;
             attackTarget = null;
             hasDestination = true;
@@ -67,6 +69,7 @@ namespace QuestCommandRTS
                 return;
             }
 
+            repairTarget = null;
             boardingTarget = null;
             attackTarget = target;
             hasDestination = false;
@@ -75,6 +78,7 @@ namespace QuestCommandRTS
 
         public virtual void IssueAttackMove(Vector3 worldPosition)
         {
+            repairTarget = null;
             boardingTarget = null;
             attackTarget = null;
             hasDestination = false;
@@ -84,7 +88,7 @@ namespace QuestCommandRTS
 
         public virtual bool CanBoardMediumTank(MediumTankUnit target)
         {
-            return UnitKind == UnitKind.Rifleman && target != null && target.Team == Team && target.CanLoadPassenger(this);
+            return RtsBalance.IsInfantry(UnitKind) && target != null && target.Team == Team && target.CanLoadPassenger(this);
         }
 
         public virtual void IssueBoardMediumTank(MediumTankUnit target)
@@ -95,6 +99,26 @@ namespace QuestCommandRTS
             }
 
             boardingTarget = target;
+            repairTarget = null;
+            attackTarget = null;
+            hasDestination = false;
+            hasAttackMoveDestination = false;
+        }
+
+        public virtual bool CanRepairTarget(RtsEntity target)
+        {
+            return false;
+        }
+
+        public virtual void IssueRepair(RtsEntity target)
+        {
+            if (!CanRepairTarget(target))
+            {
+                return;
+            }
+
+            repairTarget = target;
+            boardingTarget = null;
             attackTarget = null;
             hasDestination = false;
             hasAttackMoveDestination = false;
@@ -102,6 +126,7 @@ namespace QuestCommandRTS
 
         public virtual void IssueStop()
         {
+            repairTarget = null;
             boardingTarget = null;
             attackTarget = null;
             hasDestination = false;
@@ -137,6 +162,14 @@ namespace QuestCommandRTS
                 return data;
             }
 
+            if (repairTarget != null && repairTarget.IsAlive)
+            {
+                data.orderType = "Repair";
+                data.targetEntityId = repairTarget.PersistentId;
+                data.destination = new Vector3Data(repairTarget.transform.position);
+                return data;
+            }
+
             if (boardingTarget != null && boardingTarget.IsAlive)
             {
                 data.orderType = "Board";
@@ -163,6 +196,7 @@ namespace QuestCommandRTS
         {
             attackTarget = null;
             boardingTarget = null;
+            repairTarget = null;
             hasDestination = false;
             hasAttackMoveDestination = false;
 
@@ -201,6 +235,12 @@ namespace QuestCommandRTS
                 return;
             }
 
+            if (data.orderType == "Repair" && entityById != null && entityById.TryGetValue(data.targetEntityId, out RtsEntity repairEntity))
+            {
+                IssueRepair(repairEntity);
+                return;
+            }
+
             if (data.orderType == "Attack" && entityById != null && entityById.TryGetValue(data.targetEntityId, out RtsEntity target))
             {
                 IssueAttack(target);
@@ -212,6 +252,12 @@ namespace QuestCommandRTS
             if (attackTarget != null && (!attackTarget.IsAlive || attackTarget.Team == Team))
             {
                 attackTarget = null;
+            }
+
+            if (repairTarget != null)
+            {
+                TickRepairOrder(deltaTime);
+                return;
             }
 
             if (boardingTarget != null)
@@ -273,6 +319,30 @@ namespace QuestCommandRTS
             target.TryLoadPassenger(this);
         }
 
+        private void TickRepairOrder(float deltaTime)
+        {
+            if (repairTarget == null || !CanRepairTarget(repairTarget))
+            {
+                repairTarget = null;
+                return;
+            }
+
+            float distance = PlanarDistance(transform.position, repairTarget.transform.position);
+            if (distance > 1.8f)
+            {
+                MoveToward(repairTarget.transform.position, deltaTime, 1.45f);
+                return;
+            }
+
+            FacePoint(repairTarget.transform.position, deltaTime);
+            OnRepairTick(repairTarget, deltaTime);
+
+            if (repairTarget == null || repairTarget.Health >= repairTarget.MaxHealth - 0.01f)
+            {
+                repairTarget = null;
+            }
+        }
+
         protected bool MoveToward(Vector3 targetPosition, float deltaTime, float stoppingDistance)
         {
             Vector3 target = ClampToMap(targetPosition);
@@ -318,6 +388,31 @@ namespace QuestCommandRTS
         }
 
         protected virtual void OnPrimaryAttackFired(RtsEntity target)
+        {
+            if (target == null || !RtsGame.HasInstance)
+            {
+                return;
+            }
+
+            switch (UnitKind)
+            {
+                case UnitKind.Grenadier:
+                    RtsGame.Instance.DamageEnemiesInRadius(Team, target.GroundPosition, 2.35f, Damage * 0.55f, this, target);
+                    break;
+                case UnitKind.FlameTrooper:
+                    RtsGame.Instance.DamageEnemiesInRadius(Team, target.GroundPosition, 1.8f, Damage * 0.45f, this, target);
+                    break;
+                case UnitKind.RocketSoldier:
+                    if (target.IsAlive && (target is RtsStructure || IsArmoredTarget(target)))
+                    {
+                        target.TakeDamage(Damage * 0.45f, this);
+                    }
+
+                    break;
+            }
+        }
+
+        protected virtual void OnRepairTick(RtsEntity target, float deltaTime)
         {
         }
 
@@ -370,6 +465,39 @@ namespace QuestCommandRTS
                     return 0.72f;
             }
         }
+
+        private static bool IsArmoredTarget(RtsEntity target)
+        {
+            RtsUnit unit = target as RtsUnit;
+            return unit != null && RtsBalance.IsTank(unit.UnitKind);
+        }
+    }
+
+    public sealed class EngineerUnit : RtsUnit
+    {
+        private const float RepairRatePerSecond = 34f;
+        private float nextRepairTextTime;
+
+        public override bool CanRepairTarget(RtsEntity target)
+        {
+            return UnitKind == UnitKind.Engineer &&
+                target != null &&
+                target != this &&
+                target.IsAlive &&
+                target.Team == Team &&
+                target.Health < target.MaxHealth - 0.01f;
+        }
+
+        protected override void OnRepairTick(RtsEntity target, float deltaTime)
+        {
+            target.Repair(RepairRatePerSecond * deltaTime);
+
+            if (RtsGame.HasInstance && GetSimulationTime() >= nextRepairTextTime)
+            {
+                nextRepairTextTime = GetSimulationTime() + 1.2f;
+                RtsGame.Instance.SpawnFloatingText("Repair", target.GroundPosition + Vector3.up * 2.1f, new Color(0.5f, 1f, 0.78f));
+            }
+        }
     }
 
     public sealed class MediumTankUnit : RtsUnit
@@ -377,6 +505,7 @@ namespace QuestCommandRTS
         public const int PassengerCapacity = 1;
         public int LoadedRiflemen { get; private set; }
         public bool HasPassenger => LoadedRiflemen > 0;
+        public UnitKind LoadedPassengerKind { get; private set; } = UnitKind.Rifleman;
 
         private Transform passengerIndicator;
 
@@ -385,7 +514,7 @@ namespace QuestCommandRTS
             return passenger != null &&
                 passenger.IsAlive &&
                 passenger.Team == Team &&
-                passenger.UnitKind == UnitKind.Rifleman &&
+                RtsBalance.IsInfantry(passenger.UnitKind) &&
                 LoadedRiflemen < PassengerCapacity;
         }
 
@@ -397,11 +526,12 @@ namespace QuestCommandRTS
             }
 
             LoadedRiflemen++;
+            LoadedPassengerKind = passenger.UnitKind;
             RefreshPassengerIndicator();
 
             if (RtsGame.HasInstance)
             {
-                RtsGame.Instance.SpawnFloatingText("Rifleman loaded", GroundPosition + Vector3.up * 2.2f, new Color(0.55f, 0.95f, 1f));
+                RtsGame.Instance.SpawnFloatingText(RtsBalance.GetUnit(LoadedPassengerKind).Name + " loaded", GroundPosition + Vector3.up * 2.2f, new Color(0.55f, 0.95f, 1f));
                 RtsGame.Instance.UnregisterEntity(passenger);
             }
 
@@ -419,6 +549,12 @@ namespace QuestCommandRTS
 
         public void RestoreLoadedRiflemen(int count)
         {
+            RestorePassenger(UnitKind.Rifleman, count);
+        }
+
+        public void RestorePassenger(UnitKind kind, int count)
+        {
+            LoadedPassengerKind = RtsBalance.IsInfantry(kind) ? kind : UnitKind.Rifleman;
             LoadedRiflemen = Mathf.Clamp(count, 0, PassengerCapacity);
             RefreshPassengerIndicator();
         }
@@ -430,7 +566,12 @@ namespace QuestCommandRTS
                 return;
             }
 
-            float passengerDamage = RtsBalance.GetUnit(UnitKind.Rifleman).Damage * LoadedRiflemen;
+            float passengerDamage = RtsBalance.GetUnit(LoadedPassengerKind).Damage * LoadedRiflemen;
+            if (passengerDamage <= 0f)
+            {
+                return;
+            }
+
             target.TakeDamage(passengerDamage, this);
 
             if (RtsGame.HasInstance)
@@ -467,7 +608,7 @@ namespace QuestCommandRTS
             }
 
             GameObject indicator = GameObject.CreatePrimitive(PrimitiveType.Capsule);
-            indicator.name = "Loaded Rifleman Indicator";
+            indicator.name = "Loaded Infantry Indicator";
             indicator.transform.SetParent(transform, false);
             indicator.transform.localPosition = new Vector3(0.62f, 1.24f, -0.18f);
             indicator.transform.localScale = new Vector3(0.18f, 0.34f, 0.18f);

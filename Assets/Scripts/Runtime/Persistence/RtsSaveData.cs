@@ -82,6 +82,7 @@ namespace QuestCommandRTS
         public float health;
         public float maxHealth;
         public int carriedRiflemen;
+        public string carriedInfantryKind;
         public RtsUnitOrderSaveData order;
         public RtsHarvesterSaveData harvester;
         public RtsProductionSaveData production;

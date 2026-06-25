@@ -735,6 +735,10 @@ namespace QuestCommandRTS
             {
                 unit = root.AddComponent<HarvesterUnit>();
             }
+            else if (kind == UnitKind.Engineer)
+            {
+                unit = root.AddComponent<EngineerUnit>();
+            }
             else if (kind == UnitKind.MediumTank)
             {
                 unit = root.AddComponent<MediumTankUnit>();
@@ -930,6 +934,37 @@ namespace QuestCommandRTS
             }
 
             return best;
+        }
+
+        public int DamageEnemiesInRadius(RtsTeam attackerTeam, Vector3 center, float radius, float damage, RtsEntity attacker, RtsEntity excluded)
+        {
+            if (damage <= 0f || radius <= 0f)
+            {
+                return 0;
+            }
+
+            int damaged = 0;
+            float radiusSqr = radius * radius;
+            for (int i = 0; i < entities.Count; i++)
+            {
+                RtsEntity entity = entities[i];
+                if (entity == null || entity == excluded || !entity.IsAlive || entity.Team == attackerTeam || entity.Team == RtsTeam.Neutral)
+                {
+                    continue;
+                }
+
+                Vector3 delta = entity.GroundPosition - center;
+                delta.y = 0f;
+                if (delta.sqrMagnitude > radiusSqr)
+                {
+                    continue;
+                }
+
+                entity.TakeDamage(damage, attacker);
+                damaged++;
+            }
+
+            return damaged;
         }
 
         public RtsEntity FindPlayerPrimaryTarget()
@@ -1259,7 +1294,13 @@ namespace QuestCommandRTS
                     MediumTankUnit mediumTank = unit as MediumTankUnit;
                     if (mediumTank != null)
                     {
-                        mediumTank.RestoreLoadedRiflemen(entityData.carriedRiflemen);
+                        UnitKind passengerKind = UnitKind.Rifleman;
+                        if (!string.IsNullOrEmpty(entityData.carriedInfantryKind))
+                        {
+                            Enum.TryParse(entityData.carriedInfantryKind, out passengerKind);
+                        }
+
+                        mediumTank.RestorePassenger(passengerKind, entityData.carriedRiflemen);
                     }
                 }
 
@@ -1326,6 +1367,7 @@ namespace QuestCommandRTS
                 if (mediumTank != null)
                 {
                     data.carriedRiflemen = mediumTank.LoadedRiflemen;
+                    data.carriedInfantryKind = mediumTank.LoadedPassengerKind.ToString();
                 }
 
                 return data;
@@ -1864,9 +1906,71 @@ namespace QuestCommandRTS
                 return;
             }
 
+            if (RtsBalance.IsInfantry(kind))
+            {
+                if (TryBuildImportedInfantryVisual(root, kind, teamMaterial))
+                {
+                    return;
+                }
+
+                BuildFallbackInfantryVisual(root, kind, teamMaterial);
+                return;
+            }
+
+            BuildFallbackInfantryVisual(root, kind, teamMaterial);
+        }
+
+        private bool TryBuildImportedInfantryVisual(Transform root, UnitKind kind, Material teamMaterial)
+        {
+            string modelPath = GetInfantryModelResourcePath(kind);
+            if (string.IsNullOrEmpty(modelPath))
+            {
+                return false;
+            }
+
+            GameObject modelPrefab = UnityEngine.Resources.Load<GameObject>(modelPath);
+            if (modelPrefab == null)
+            {
+                return false;
+            }
+
+            GameObject model = Instantiate(modelPrefab, root);
+            model.name = RtsBalance.GetUnit(kind).Name + " Model";
+            model.transform.localPosition = Vector3.zero;
+            model.transform.localRotation = Quaternion.identity;
+            model.transform.localScale = Vector3.one * GetInfantryModelScale(kind);
+
+            foreach (Collider collider in model.GetComponentsInChildren<Collider>())
+            {
+                DestroyRuntimeObject(collider);
+            }
+
+            foreach (Renderer renderer in model.GetComponentsInChildren<Renderer>())
+            {
+                renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+                renderer.receiveShadows = false;
+            }
+
+            CreatePrimitive(PrimitiveType.Cube, root, "Infantry Team Band", new Vector3(0f, 1.14f, -0.17f), new Vector3(0.42f, 0.07f, 0.08f), teamMaterial);
+            return true;
+        }
+
+        private void BuildFallbackInfantryVisual(Transform root, UnitKind kind, Material teamMaterial)
+        {
             CreatePrimitive(PrimitiveType.Capsule, root, "Body", new Vector3(0f, 0.8f, 0f), new Vector3(0.58f, 0.78f, 0.58f), teamMaterial);
             CreatePrimitive(PrimitiveType.Sphere, root, "Helmet", new Vector3(0f, 1.55f, 0.03f), new Vector3(0.46f, 0.36f, 0.46f), teamMaterial);
-            CreatePrimitive(PrimitiveType.Cube, root, "Rifle", new Vector3(0.35f, 1.05f, 0.38f), new Vector3(0.12f, 0.12f, 0.95f), darkMaterial);
+            if (kind == UnitKind.Engineer)
+            {
+                CreatePrimitive(PrimitiveType.Cube, root, "Repair Tool", new Vector3(0.35f, 1.02f, 0.34f), new Vector3(0.13f, 0.13f, 0.55f), darkMaterial);
+            }
+            else if (kind == UnitKind.RocketSoldier)
+            {
+                CreatePrimitive(PrimitiveType.Cube, root, "Rocket Launcher", new Vector3(0.38f, 1.15f, 0.36f), new Vector3(0.22f, 0.22f, 1.05f), darkMaterial);
+            }
+            else
+            {
+                CreatePrimitive(PrimitiveType.Cube, root, "Rifle", new Vector3(0.35f, 1.05f, 0.38f), new Vector3(0.12f, 0.12f, 0.95f), darkMaterial);
+            }
         }
 
         private bool TryBuildImportedTankVisual(Transform root, UnitKind kind, Material teamMaterial)
@@ -1941,6 +2045,28 @@ namespace QuestCommandRTS
                 default:
                     return string.Empty;
             }
+        }
+
+        private static string GetInfantryModelResourcePath(UnitKind kind)
+        {
+            switch (kind)
+            {
+                case UnitKind.Grenadier:
+                    return "UnitModels/BastionInfantry/Meshes/Bastion_Grenadier_Static";
+                case UnitKind.RocketSoldier:
+                    return "UnitModels/BastionInfantry/Meshes/Bastion_RocketSoldier_Static";
+                case UnitKind.FlameTrooper:
+                    return "UnitModels/BastionInfantry/Meshes/Bastion_FlameTrooper_Static";
+                case UnitKind.Engineer:
+                    return "UnitModels/BastionInfantry/Meshes/Bastion_Engineer_Static";
+                default:
+                    return "UnitModels/BastionInfantry/Meshes/Bastion_Gunner_Static";
+            }
+        }
+
+        private static float GetInfantryModelScale(UnitKind kind)
+        {
+            return 0.86f;
         }
 
         private static float GetTankModelScale(UnitKind kind)

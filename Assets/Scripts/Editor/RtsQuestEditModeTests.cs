@@ -330,10 +330,10 @@ namespace QuestCommandRTS.Editor
 
             ClickConsoleButton(console, "Produce Tab");
 
-            Image rifleIcon = AssertPanelImage("Produce Row 0 Icon", 0.6f);
-            Image harvesterIcon = AssertPanelImage("Produce Row 1 Icon", 0.6f);
-            Image heavyTankIcon = AssertPanelImage("Produce Row 4 Icon", 0.6f);
-            Assert.AreNotEqual(rifleIcon.color, harvesterIcon.color);
+            Image gunnerIcon = AssertPanelImage("Produce Row 0 Icon", 0.6f);
+            Image harvesterIcon = AssertPanelImage("Produce Row 5 Icon", 0.6f);
+            Image heavyTankIcon = AssertPanelImage("Produce Row 8 Icon", 0.6f);
+            Assert.AreNotEqual(gunnerIcon.color, harvesterIcon.color);
             Assert.AreNotEqual(harvesterIcon.color, heavyTankIcon.color);
             AssertPanelImage("Production Queue Backplate", 0.7f);
         }
@@ -353,6 +353,48 @@ namespace QuestCommandRTS.Editor
             Assert.IsNotNull(light.transform.Find("Light Tank Model"));
             Assert.IsNotNull(medium.transform.Find("Medium Tank Model"));
             Assert.IsNotNull(heavy.transform.Find("Heavy Tank Model"));
+        }
+
+        [Test]
+        public void InfantryVariantsUseImportedBastionModelPayloads()
+        {
+            RtsGame game = CreateInitializedGame(RtsRuntimeMode.Desktop);
+
+            RtsUnit gunner = game.CreateUnit(RtsTeam.Player, UnitKind.Rifleman, new Vector3(-52f, 0f, -48f));
+            RtsUnit grenadier = game.CreateUnit(RtsTeam.Player, UnitKind.Grenadier, new Vector3(-50f, 0f, -48f));
+            RtsUnit rocket = game.CreateUnit(RtsTeam.Player, UnitKind.RocketSoldier, new Vector3(-48f, 0f, -48f));
+            RtsUnit flamer = game.CreateUnit(RtsTeam.Player, UnitKind.FlameTrooper, new Vector3(-46f, 0f, -48f));
+            RtsUnit engineer = game.CreateUnit(RtsTeam.Player, UnitKind.Engineer, new Vector3(-44f, 0f, -48f));
+
+            Assert.AreEqual("Gunner", RtsBalance.GetUnit(UnitKind.Rifleman).Name);
+            Assert.IsNotNull(gunner.transform.Find("Gunner Model"));
+            Assert.IsNotNull(grenadier.transform.Find("Grenadier Model"));
+            Assert.IsNotNull(rocket.transform.Find("Rocket Soldier Model"));
+            Assert.IsNotNull(flamer.transform.Find("Flame Trooper Model"));
+            Assert.IsNotNull(engineer.transform.Find("Engineer Model"));
+        }
+
+        [Test]
+        public void EngineerRepairsDamagedFriendlyTargets()
+        {
+            RtsGame game = CreateInitializedGame(RtsRuntimeMode.Desktop);
+            RtsUnit engineer = game.CreateUnit(RtsTeam.Player, UnitKind.Engineer, new Vector3(-58f, 0f, -62f));
+            RtsStructure powerPlant = FindStructure(game, RtsTeam.Player, StructureKind.PowerPlant);
+            powerPlant.TakeDamage(120f, null);
+
+            game.ClearSelection();
+            game.SelectEntity(engineer, false);
+
+            Assert.AreEqual(RtsContextCommandKind.Repair, game.CommandDispatcher.ResolveContextCommand(powerPlant, null, powerPlant.transform.position));
+
+            float damagedHealth = powerPlant.Health;
+            engineer.IssueRepair(powerPlant);
+            for (int i = 0; i < 120 && powerPlant.Health <= damagedHealth; i++)
+            {
+                engineer.TickOrdersForTests(0.1f);
+            }
+
+            Assert.Greater(powerPlant.Health, damagedHealth);
         }
 
         [Test]
@@ -822,7 +864,12 @@ namespace QuestCommandRTS.Editor
             Assert.IsTrue(snapshot.buildPlacement.active);
             Assert.IsTrue(snapshot.buildPlacement.hasPoint);
             Assert.IsTrue(snapshot.buildPlacement.valid);
-            Assert.GreaterOrEqual(FindDiagnosticsUnitKind(snapshot, "Rifleman").total, 34);
+            int infantryTotal = FindDiagnosticsUnitKind(snapshot, "Rifleman").total +
+                FindDiagnosticsUnitKind(snapshot, "Grenadier").total +
+                FindDiagnosticsUnitKind(snapshot, "RocketSoldier").total +
+                FindDiagnosticsUnitKind(snapshot, "FlameTrooper").total +
+                FindDiagnosticsUnitKind(snapshot, "Engineer").total;
+            Assert.GreaterOrEqual(infantryTotal, 34);
             Assert.GreaterOrEqual(FindDiagnosticsUnitKind(snapshot, "Harvester").player, 5);
             int armorTotal = FindDiagnosticsUnitKind(snapshot, "LightTank").total +
                 FindDiagnosticsUnitKind(snapshot, "MediumTank").total +

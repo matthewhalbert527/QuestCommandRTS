@@ -116,7 +116,7 @@ namespace QuestCommandRTS.Editor
         {
             for (int i = 0; i < 12; i++)
             {
-                game.CreateUnit(RtsTeam.Player, UnitKind.Rifleman, FormationPoint(new Vector3(-48f, 0f, -46f), i, 6, 2.6f));
+                game.CreateUnit(RtsTeam.Player, InfantryKindForIndex(i), FormationPoint(new Vector3(-48f, 0f, -46f), i, 6, 2.6f));
             }
 
             for (int i = 0; i < 8; i++)
@@ -132,7 +132,7 @@ namespace QuestCommandRTS.Editor
 
             for (int i = 0; i < 18; i++)
             {
-                game.CreateUnit(RtsTeam.Enemy, UnitKind.Rifleman, FormationPoint(new Vector3(48f, 0f, 48f), i, 6, 2.6f));
+                game.CreateUnit(RtsTeam.Enemy, InfantryKindForIndex(i + 2), FormationPoint(new Vector3(48f, 0f, 48f), i, 6, 2.6f));
             }
 
             for (int i = 0; i < 12; i++)
@@ -158,6 +158,10 @@ namespace QuestCommandRTS.Editor
             {
                 ProductionStructure producer = producers[i];
                 QueueIfAvailable(producer, UnitKind.Rifleman);
+                QueueIfAvailable(producer, UnitKind.Grenadier);
+                QueueIfAvailable(producer, UnitKind.RocketSoldier);
+                QueueIfAvailable(producer, UnitKind.FlameTrooper);
+                QueueIfAvailable(producer, UnitKind.Engineer);
                 QueueIfAvailable(producer, UnitKind.Harvester);
                 QueueIfAvailable(producer, UnitKind.LightTank);
                 QueueIfAvailable(producer, UnitKind.MediumTank);
@@ -171,6 +175,23 @@ namespace QuestCommandRTS.Editor
             if (producer.CanTrain(kind))
             {
                 producer.QueueUnit(kind);
+            }
+        }
+
+        private static UnitKind InfantryKindForIndex(int index)
+        {
+            switch (index % 5)
+            {
+                case 1:
+                    return UnitKind.Grenadier;
+                case 2:
+                    return UnitKind.RocketSoldier;
+                case 3:
+                    return UnitKind.FlameTrooper;
+                case 4:
+                    return UnitKind.Engineer;
+                default:
+                    return UnitKind.Rifleman;
             }
         }
 

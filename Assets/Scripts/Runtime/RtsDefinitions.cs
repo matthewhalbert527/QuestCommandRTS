@@ -23,7 +23,11 @@ namespace QuestCommandRTS
         Tank,
         LightTank,
         MediumTank,
-        HeavyTank
+        HeavyTank,
+        Grenadier,
+        RocketSoldier,
+        FlameTrooper,
+        Engineer
     }
 
     public enum StructureKind
@@ -136,6 +140,14 @@ namespace QuestCommandRTS
         {
             switch (kind)
             {
+                case UnitKind.Grenadier:
+                    return new UnitStats("Grenadier", 220, 3.6f, 72f, 4.15f, 6.5f, 20f, 1.35f);
+                case UnitKind.RocketSoldier:
+                    return new UnitStats("Rocket Soldier", 320, 4.8f, 76f, 3.9f, 11.5f, 34f, 1.75f);
+                case UnitKind.FlameTrooper:
+                    return new UnitStats("Flame Trooper", 260, 4.0f, 86f, 3.75f, 4.2f, 12f, 0.5f);
+                case UnitKind.Engineer:
+                    return new UnitStats("Engineer", 300, 4.5f, 60f, 4.35f, 0f, 0f, 1f);
                 case UnitKind.Harvester:
                     return new UnitStats("Harvester", 900, 9f, 180f, 3.4f, 0f, 0f, 1f);
                 case UnitKind.LightTank:
@@ -146,7 +158,7 @@ namespace QuestCommandRTS
                 case UnitKind.HeavyTank:
                     return new UnitStats("Heavy Tank", 1250, 10.5f, 360f, 2.35f, 10.5f, 48f, 1.35f);
                 default:
-                    return new UnitStats("Rifleman", 120, 2.2f, 65f, 4.6f, 7f, 9f, 0.7f);
+                    return new UnitStats("Gunner", 140, 2.4f, 68f, 4.6f, 7f, 8f, 0.45f);
             }
         }
 
@@ -159,6 +171,26 @@ namespace QuestCommandRTS
         {
             UnitKind normalized = NormalizeUnitKind(kind);
             return normalized == UnitKind.LightTank || normalized == UnitKind.MediumTank || normalized == UnitKind.HeavyTank;
+        }
+
+        public static bool IsInfantry(UnitKind kind)
+        {
+            switch (NormalizeUnitKind(kind))
+            {
+                case UnitKind.Rifleman:
+                case UnitKind.Grenadier:
+                case UnitKind.RocketSoldier:
+                case UnitKind.FlameTrooper:
+                case UnitKind.Engineer:
+                    return true;
+                default:
+                    return false;
+            }
+        }
+
+        public static bool IsEngineer(UnitKind kind)
+        {
+            return NormalizeUnitKind(kind) == UnitKind.Engineer;
         }
 
         public static StructureStats GetStructure(StructureKind kind)

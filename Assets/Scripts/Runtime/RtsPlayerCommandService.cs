@@ -328,10 +328,13 @@ namespace QuestCommandRTS
             ProductionStructure selectedProducer = FindSelectedProductionStructure();
             if (selectedProducer != null)
             {
+                if (RtsBalance.IsInfantry(kind))
+                {
+                    return selectedProducer.CanTrain(kind) ? string.Empty : "Select Barracks or Command Center";
+                }
+
                 switch (kind)
                 {
-                    case UnitKind.Rifleman:
-                        return selectedProducer.CanTrain(kind) ? string.Empty : "Select Barracks or Command Center";
                     case UnitKind.Harvester:
                         return selectedProducer.CanTrain(kind) ? string.Empty : "Select Refinery, War Factory, or Command Center";
                     case UnitKind.Tank:

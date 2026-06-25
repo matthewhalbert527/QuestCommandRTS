@@ -99,7 +99,7 @@ namespace QuestCommandRTS
             CreateText(commandPanel, "Production Label", "Production", 17, TextAnchor.MiddleLeft, new Vector2(14f, -26f), new Vector2(198f, 26f));
 
             float y = -68f;
-            AddCommandButton(commandPanel, "Rifleman", y, () => game.PlayerCommands.QueueProduction(UnitKind.Rifleman), () => CanQueue(UnitKind.Rifleman), () => "Rifleman  " + RtsBalance.GetUnit(UnitKind.Rifleman).Cost);
+            AddCommandButton(commandPanel, "Gunner", y, () => game.PlayerCommands.QueueProduction(UnitKind.Rifleman), () => CanQueue(UnitKind.Rifleman), () => "Gunner  " + RtsBalance.GetUnit(UnitKind.Rifleman).Cost);
             y -= 48f;
             AddCommandButton(commandPanel, "Harvester", y, () => game.PlayerCommands.QueueProduction(UnitKind.Harvester), () => CanQueue(UnitKind.Harvester), () => "Harvester  " + RtsBalance.GetUnit(UnitKind.Harvester).Cost);
             y -= 48f;

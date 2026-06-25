@@ -1,0 +1,1 @@
+Drag the Meshes and Textures folders into Unity together. These are the rounded one-piece neutral-pose models. Use the full Unity package for articulated prefabs, aiming, procedural movement, colliders, and three-stage LOD groups.
