@@ -48,6 +48,8 @@ namespace QuestCommandRTS
             Add(results, "Quest input present", input != null, "QuestRtsInputController should translate controller state into shared dispatcher calls.");
             Add(results, "Quest world HUD present", worldHud != null && HasWorldSpaceCanvas("Quest World Status"), "Quest mode should expose a world-space status panel.");
             Add(results, "Quest world HUD control hints", HasWorldHudControlHints(), "World-space status panel should show trigger, A/B, and X command-console hints.");
+            string worldHudDetail;
+            Add(results, "Quest world HUD non-interactive", HasNonInteractiveWorldHud(out worldHudDetail), worldHudDetail);
             Add(results, "Quest tactical map present", tacticalMap != null && HasWorldSpaceCanvas("Quest Tactical Map"), "Quest mode should expose the battle map as world-space headset UI.");
             string tacticalMapDetail;
             Add(results, "Quest tactical map non-interactive", HasNonInteractiveTacticalMap(out tacticalMapDetail), tacticalMapDetail);
@@ -139,12 +141,22 @@ namespace QuestCommandRTS
             return false;
         }
 
+        private static bool HasNonInteractiveWorldHud(out string detail)
+        {
+            return HasNonInteractiveCanvas("Quest World Status", out detail);
+        }
+
         private static bool HasNonInteractiveTacticalMap(out string detail)
         {
-            GameObject canvasObject = GameObject.Find("Quest Tactical Map");
+            return HasNonInteractiveCanvas("Quest Tactical Map", out detail);
+        }
+
+        private static bool HasNonInteractiveCanvas(string objectName, out string detail)
+        {
+            GameObject canvasObject = GameObject.Find(objectName);
             if (canvasObject == null)
             {
-                detail = "Quest Tactical Map object is missing.";
+                detail = objectName + " object is missing.";
                 return false;
             }
 

@@ -576,6 +576,7 @@ namespace QuestCommandRTS.Editor
             AssertSmokePassed(report, "Quest input present");
             AssertSmokePassed(report, "Quest world HUD present");
             AssertSmokePassed(report, "Quest world HUD control hints");
+            AssertSmokePassed(report, "Quest world HUD non-interactive");
             AssertSmokePassed(report, "Quest tactical map present");
             AssertSmokePassed(report, "Quest tactical map non-interactive");
             AssertSmokePassed(report, "Quest command console present");

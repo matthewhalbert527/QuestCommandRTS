@@ -42,6 +42,7 @@ namespace QuestCommandRTS
 
             Image background = canvasObject.AddComponent<Image>();
             background.color = new Color(0.018f, 0.028f, 0.032f, 0.86f);
+            background.raycastTarget = false;
 
             GameObject textObject = new GameObject("Status Text");
             textObject.transform.SetParent(canvasObject.transform, false);
@@ -58,6 +59,7 @@ namespace QuestCommandRTS
             statusText.horizontalOverflow = HorizontalWrapMode.Wrap;
             statusText.verticalOverflow = VerticalWrapMode.Truncate;
             statusText.color = new Color(0.86f, 0.96f, 1f, 1f);
+            statusText.raycastTarget = false;
             Refresh(true);
         }
 
