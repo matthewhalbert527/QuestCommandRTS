@@ -208,6 +208,7 @@ namespace QuestCommandRTS.Editor
             Assert.AreEqual(4.5f, settings.RayLengthMeters, 0.001f);
             Assert.AreEqual(2.222f, settings.BattlefieldWidthMeters, 0.01f);
             Assert.AreEqual(0.696f, settings.StatusPanelSizeMeters.x, 0.001f);
+            Assert.AreEqual(0.312f, settings.StatusPanelSizeMeters.y, 0.001f);
             Assert.AreEqual(0.624f, settings.CommandConsoleSizeMeters.y, 0.001f);
         }
 
