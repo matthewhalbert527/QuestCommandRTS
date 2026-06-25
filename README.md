@@ -116,6 +116,8 @@ See `docs/SAVE_SYSTEM.md`, `docs/LIFECYCLE_TEST_MATRIX.md`, and `docs/PERFORMANC
 - `Tools > Quest RTS > Apply Recommended Quest Settings`
 - `Tools > Quest RTS > Validate XR Setup`
 
+The desktop build command targets `StandaloneWindows64` and requires Windows Build Support for Unity 2022.3.62f3. If the command reports that `StandaloneWindows64` is not supported or that the `WindowsPlayer.exe` template is missing, repair the editor install in Unity Hub and add the Windows build module before treating desktop player builds as verified.
+
 ## Tests
 
 Batch edit-mode test command:

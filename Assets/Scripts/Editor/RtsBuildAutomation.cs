@@ -11,10 +11,21 @@ namespace QuestCommandRTS.Editor
     {
         private const string BattlefieldScene = "Assets/Scenes/Battlefield.unity";
         private const string WindowsBuildPath = "Builds/Windows/QuestCommandRTS.exe";
+        private const string WindowsPlayerTemplateRelativePath = "Data/PlaybackEngines/windowsstandalonesupport/Variations/win64_player_development_mono/WindowsPlayer.exe";
 
         [MenuItem("Command RTS/Build/Desktop Development Build")]
         public static void BuildDesktopDevelopment()
         {
+            if (!IsWindowsStandaloneBuildSupported())
+            {
+                throw new InvalidOperationException(GetUnsupportedDesktopBuildTargetMessage());
+            }
+
+            if (!HasWindowsStandalonePlayerTemplate(EditorApplication.applicationPath))
+            {
+                throw new InvalidOperationException(GetMissingDesktopPlayerTemplateMessage(EditorApplication.applicationPath));
+            }
+
             BuildPlayerOptions options = new BuildPlayerOptions
             {
                 scenes = new[] { BattlefieldScene },
@@ -46,6 +57,37 @@ namespace QuestCommandRTS.Editor
             }
 
             return new FileInfo(path).Length > 0;
+        }
+
+        internal static bool IsWindowsStandaloneBuildSupported()
+        {
+            return BuildPipeline.IsBuildTargetSupported(BuildTargetGroup.Standalone, BuildTarget.StandaloneWindows64);
+        }
+
+        internal static bool HasWindowsStandalonePlayerTemplate(string editorApplicationPath)
+        {
+            return IsValidBuildArtifact(GetWindowsStandalonePlayerTemplatePath(editorApplicationPath));
+        }
+
+        internal static string GetUnsupportedDesktopBuildTargetMessage()
+        {
+            return "Desktop build target StandaloneWindows64 is not supported by this Unity editor install. Install or repair Windows Build Support for Unity 2022.3.62f3 in Unity Hub, then rerun Command RTS > Build > Desktop Development Build.";
+        }
+
+        internal static string GetMissingDesktopPlayerTemplateMessage(string editorApplicationPath)
+        {
+            return "Desktop build target StandaloneWindows64 is missing its WindowsPlayer.exe template at " + GetWindowsStandalonePlayerTemplatePath(editorApplicationPath) + ". Repair Unity 2022.3.62f3 in Unity Hub or reinstall Windows Build Support, then rerun Command RTS > Build > Desktop Development Build.";
+        }
+
+        private static string GetWindowsStandalonePlayerTemplatePath(string editorApplicationPath)
+        {
+            if (string.IsNullOrEmpty(editorApplicationPath))
+            {
+                return WindowsPlayerTemplateRelativePath;
+            }
+
+            string editorFolder = Path.GetDirectoryName(editorApplicationPath);
+            return Path.Combine(editorFolder, WindowsPlayerTemplateRelativePath);
         }
     }
 }

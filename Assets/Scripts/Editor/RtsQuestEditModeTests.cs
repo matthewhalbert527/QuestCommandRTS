@@ -258,6 +258,46 @@ namespace QuestCommandRTS.Editor
         }
 
         [Test]
+        public void DesktopBuildUnsupportedMessageNamesRequiredEditorModule()
+        {
+            string message = RtsBuildAutomation.GetUnsupportedDesktopBuildTargetMessage();
+            StringAssert.Contains("StandaloneWindows64", message);
+            StringAssert.Contains("Windows Build Support", message);
+            StringAssert.Contains("Unity 2022.3.62f3", message);
+        }
+
+        [Test]
+        public void DesktopBuildTemplateValidationRequiresWindowsPlayerExecutable()
+        {
+            string directory = Path.Combine(Path.GetTempPath(), "QuestCommandRTS-EditorTemplateValidation");
+            string editorPath = Path.Combine(directory, "Editor", "Unity.exe");
+            string templatePath = Path.Combine(directory, "Editor", "Data", "PlaybackEngines", "windowsstandalonesupport", "Variations", "win64_player_development_mono", "WindowsPlayer.exe");
+            Directory.CreateDirectory(Path.GetDirectoryName(editorPath));
+            Directory.CreateDirectory(Path.GetDirectoryName(templatePath));
+
+            try
+            {
+                File.WriteAllBytes(editorPath, new byte[] { 1, 2, 3 });
+
+                Assert.IsFalse(RtsBuildAutomation.HasWindowsStandalonePlayerTemplate(editorPath));
+
+                File.WriteAllBytes(templatePath, new byte[] { 4, 5, 6 });
+                Assert.IsTrue(RtsBuildAutomation.HasWindowsStandalonePlayerTemplate(editorPath));
+
+                string message = RtsBuildAutomation.GetMissingDesktopPlayerTemplateMessage(editorPath);
+                StringAssert.Contains("WindowsPlayer.exe", message);
+                StringAssert.Contains("Windows Build Support", message);
+            }
+            finally
+            {
+                if (Directory.Exists(directory))
+                {
+                    Directory.Delete(directory, true);
+                }
+            }
+        }
+
+        [Test]
         public void DispatcherSelectsClearsAndAddsFromWorldRays()
         {
             RtsGame game = CreateInitializedGame(RtsRuntimeMode.QuestVr);
