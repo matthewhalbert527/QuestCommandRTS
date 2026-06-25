@@ -298,6 +298,38 @@ namespace QuestCommandRTS.Editor
         }
 
         [Test]
+        public void DesktopBuildSupportValidationReportsEnvironmentFailures()
+        {
+            string directory = Path.Combine(Path.GetTempPath(), "QuestCommandRTS-BuildSupportValidation");
+            string editorPath = Path.Combine(directory, "Editor", "Unity.exe");
+            string templatePath = Path.Combine(directory, "Editor", "Data", "PlaybackEngines", "windowsstandalonesupport", "Variations", "win64_player_development_mono", "WindowsPlayer.exe");
+            Directory.CreateDirectory(Path.GetDirectoryName(editorPath));
+            Directory.CreateDirectory(Path.GetDirectoryName(templatePath));
+
+            try
+            {
+                File.WriteAllBytes(editorPath, new byte[] { 1, 2, 3 });
+
+                Assert.IsFalse(RtsBuildAutomation.TryValidateDesktopBuildSupport(false, editorPath, out string unsupportedError));
+                StringAssert.Contains("StandaloneWindows64", unsupportedError);
+
+                Assert.IsFalse(RtsBuildAutomation.TryValidateDesktopBuildSupport(true, editorPath, out string missingTemplateError));
+                StringAssert.Contains("WindowsPlayer.exe", missingTemplateError);
+
+                File.WriteAllBytes(templatePath, new byte[] { 4, 5, 6 });
+                Assert.IsTrue(RtsBuildAutomation.TryValidateDesktopBuildSupport(true, editorPath, out string validationError));
+                Assert.AreEqual(string.Empty, validationError);
+            }
+            finally
+            {
+                if (Directory.Exists(directory))
+                {
+                    Directory.Delete(directory, true);
+                }
+            }
+        }
+
+        [Test]
         public void DispatcherSelectsClearsAndAddsFromWorldRays()
         {
             RtsGame game = CreateInitializedGame(RtsRuntimeMode.QuestVr);

@@ -16,14 +16,9 @@ namespace QuestCommandRTS.Editor
         [MenuItem("Command RTS/Build/Desktop Development Build")]
         public static void BuildDesktopDevelopment()
         {
-            if (!IsWindowsStandaloneBuildSupported())
+            if (!TryValidateDesktopBuildSupport(out string validationError))
             {
-                throw new InvalidOperationException(GetUnsupportedDesktopBuildTargetMessage());
-            }
-
-            if (!HasWindowsStandalonePlayerTemplate(EditorApplication.applicationPath))
-            {
-                throw new InvalidOperationException(GetMissingDesktopPlayerTemplateMessage(EditorApplication.applicationPath));
+                throw new InvalidOperationException(validationError);
             }
 
             BuildPlayerOptions options = new BuildPlayerOptions
@@ -47,6 +42,40 @@ namespace QuestCommandRTS.Editor
             }
 
             Debug.Log("Desktop build created at " + Path.GetFullPath(WindowsBuildPath));
+        }
+
+        [MenuItem("Command RTS/Build/Validate Desktop Build Support")]
+        public static void ValidateDesktopBuildSupport()
+        {
+            if (!TryValidateDesktopBuildSupport(out string validationError))
+            {
+                throw new InvalidOperationException(validationError);
+            }
+
+            Debug.Log("Desktop build support validated for StandaloneWindows64 at " + Path.GetFullPath(WindowsBuildPath));
+        }
+
+        internal static bool TryValidateDesktopBuildSupport(out string validationError)
+        {
+            return TryValidateDesktopBuildSupport(IsWindowsStandaloneBuildSupported(), EditorApplication.applicationPath, out validationError);
+        }
+
+        internal static bool TryValidateDesktopBuildSupport(bool buildTargetSupported, string editorApplicationPath, out string validationError)
+        {
+            if (!buildTargetSupported)
+            {
+                validationError = GetUnsupportedDesktopBuildTargetMessage();
+                return false;
+            }
+
+            if (!HasWindowsStandalonePlayerTemplate(editorApplicationPath))
+            {
+                validationError = GetMissingDesktopPlayerTemplateMessage(editorApplicationPath);
+                return false;
+            }
+
+            validationError = string.Empty;
+            return true;
         }
 
         internal static bool IsValidBuildArtifact(string path)
