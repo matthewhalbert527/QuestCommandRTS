@@ -291,8 +291,15 @@ namespace QuestCommandRTS.Editor
             RtsGame game = CreateInitializedGame(RtsRuntimeMode.QuestVr);
             QuestCommandConsole console = game.GetComponent<QuestCommandConsole>();
             Assert.IsNotNull(console);
+            Assert.IsNotNull(game.QuestRig);
+            Assert.IsNotNull(game.QuestRig.LeftController);
 
             console.SetOpen(true);
+
+            Assert.IsNotNull(console.WristAnchor);
+            Assert.AreEqual("Left Wrist Build Menu Anchor", console.WristAnchor.name);
+            Assert.IsTrue(console.WristAnchor.IsChildOf(game.QuestRig.LeftController), "Quest command console should be anchored to the left wrist/controller.");
+            Assert.IsTrue(console.PanelRect.transform.IsChildOf(console.WristAnchor), "Panel should follow the left wrist anchor.");
 
             AssertPanelImage("Console Top Glow", 0.7f);
             AssertPanelImage("Console Left Glow", 0.5f);
@@ -306,7 +313,7 @@ namespace QuestCommandRTS.Editor
         }
 
         [Test]
-        public void QuestCommandConsoleRowsUseIconTilesForBuildAndProduction()
+        public void QuestCommandConsoleUsesLargeSelectionTilesForBuildAndProduction()
         {
             RtsGame game = CreateInitializedGame(RtsRuntimeMode.QuestVr);
             QuestCommandConsole console = game.GetComponent<QuestCommandConsole>();
@@ -317,12 +324,16 @@ namespace QuestCommandRTS.Editor
             Image commandCenterIcon = AssertPanelImage("Build Row 0 Icon", 0.6f);
             Image powerIcon = AssertPanelImage("Build Row 1 Icon", 0.6f);
             Assert.AreNotEqual(commandCenterIcon.color, powerIcon.color);
+            Assert.GreaterOrEqual(commandCenterIcon.rectTransform.rect.width, 120f);
+            Assert.GreaterOrEqual(commandCenterIcon.rectTransform.rect.height, 70f);
+            AssertPanelImage("Build Row 0 Tile Glow", 0.18f);
 
             ClickConsoleButton(console, "Produce Tab");
 
             Image rifleIcon = AssertPanelImage("Produce Row 0 Icon", 0.6f);
             Image harvesterIcon = AssertPanelImage("Produce Row 1 Icon", 0.6f);
             Assert.AreNotEqual(rifleIcon.color, harvesterIcon.color);
+            AssertPanelImage("Production Queue Backplate", 0.7f);
         }
 
         [Test]

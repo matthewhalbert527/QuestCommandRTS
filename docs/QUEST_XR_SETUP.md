@@ -87,7 +87,7 @@ If the validator reports a failure, rerun `Tools > Quest RTS > Apply Recommended
 ## Expected Controller Mapping
 
 - Right controller ray: hover target or terrain.
-- X/left primary button: open or close the Quest command console.
+- X/left primary button: open or close the left-wrist Quest build menu.
 - Right trigger: select, or activate a Quest command-console control when the ray is over the console.
 - Left trigger held + right trigger: additive select on a friendly entity, or area-select nearby friendly units when aimed at terrain.
 - A/right primary button: context command.
@@ -99,10 +99,10 @@ If the validator reports a failure, rerun `Tools > Quest RTS > Apply Recommended
 
 ## Quest Command Console Flow
 
-Open the console with X/left primary.
+Open the left-wrist build menu with X/left primary. The menu follows the left controller and uses large holographic selection tiles for structure construction and unit production. Aim at the wrist menu with the right ray and use the right trigger to tap a tile.
 
-- Build tab: choose a structure. The row shows cost, power effect, availability, and any disabled reason. After choosing, aim at the battlefield with the right ray. A confirms a valid preview; B cancels.
-- Produce tab: select a Command Center, Barracks, Refinery, or War Factory first. The tab shows trainable units, cost, build time, queue state, active progress, and a Cancel Production control for queued or active units.
+- Build tab: choose a structure tile. The tile shows cost, power effect, availability, and any disabled reason. After choosing, aim at the battlefield with the right ray. A confirms a valid preview; B cancels.
+- Produce tab: select a Command Center, Barracks, Refinery, or War Factory first. The tab shows trainable unit tiles, cost, build time, queue state, active progress, and a Cancel Production control for queued or active units.
 - Selected tab: inspect health, selected counts, queue/rally status, and use Repair or Sell when a player structure is eligible. Rally points are set by selecting a production structure and pressing A on terrain.
 - System tab: pause/resume, save the manual slot, load the manual slot when one exists, and start a new match.
 
@@ -119,8 +119,8 @@ The tactical map is a non-interactive world-space battle-view panel next to the 
 - Right ray and reticle align with the controller.
 - Trigger selects a friendly unit or structure.
 - Left trigger modifier allows additive selection and terrain-centered area selection for nearby friendly units.
-- X opens and closes the Quest command console.
-- Right trigger activates console controls without selecting through the panel.
+- X opens and closes the left-wrist Quest build menu.
+- Right trigger activates wrist-menu controls without selecting through the panel.
 - Build tab starts placement for every available player structure.
 - Placement preview follows the right ray, snaps to valid points, and shows valid/invalid state.
 - A confirms valid placement and spends credits once.
@@ -138,6 +138,7 @@ The tactical map is a non-interactive world-space battle-view panel next to the 
 - System tab can pause/resume, save, load, and start a new match without enabling desktop HUD.
 - Desktop overlay HUD and OnGUI minimap are absent in Quest mode.
 - World-space status panel is readable and does not cover the board.
+- Left-wrist build menu follows the left controller and keeps structure/unit selection tiles readable.
 - World-space tactical map is readable, updates resource/unit pips, and does not capture pointer input.
 - No GameObject named `Command Camera` is created in Quest mode.
 - Basic play has no recurring exceptions.

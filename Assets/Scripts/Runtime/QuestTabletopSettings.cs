@@ -24,7 +24,8 @@ namespace QuestCommandRTS
         public Vector2 StatusPanelSizeMeters = new Vector2(0.58f, 0.26f);
         public Vector3 TacticalMapLocalPositionMeters = new Vector3(0.68f, 1.12f, 0.46f);
         public Vector2 TacticalMapSizeMeters = new Vector2(0.34f, 0.34f);
-        public Vector3 CommandConsoleLocalPositionMeters = new Vector3(-0.78f, 0.96f, 0.12f);
+        public Vector3 CommandConsoleLocalPositionMeters = new Vector3(0.05f, 0.07f, 0.12f);
+        public Vector3 CommandConsoleLocalEulerDegrees = new Vector3(58f, 18f, -10f);
         public Vector2 CommandConsoleSizeMeters = new Vector2(0.74f, 0.52f);
 
         public float BoardHeightSimulationUnits => BoardHeightMeters * SimulationUnitsPerMeter;

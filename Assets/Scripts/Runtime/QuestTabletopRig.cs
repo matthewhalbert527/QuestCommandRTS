@@ -58,7 +58,7 @@ namespace QuestCommandRTS
             TacticalMap.Initialize(game, RigRoot, settings);
 
             CommandConsole = gameObject.AddComponent<QuestCommandConsole>();
-            CommandConsole.Initialize(game, RigRoot, settings);
+            CommandConsole.Initialize(game, RigRoot, LeftController, settings);
 
             input.SetCommandConsole(CommandConsole);
         }

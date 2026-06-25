@@ -74,6 +74,7 @@ namespace QuestCommandRTS
 
         public bool IsOpen => canvasObject != null && canvasObject.activeSelf;
         public RectTransform PanelRect => panelRect;
+        public Transform WristAnchor => wristAnchor;
 
         private readonly List<ConsoleButton> buttons = new List<ConsoleButton>(24);
         private readonly ConsoleRow[] buildRows = new ConsoleRow[RtsCommandConsoleModel.BuildKinds.Length];
@@ -84,6 +85,7 @@ namespace QuestCommandRTS
         private QuestTabletopSettings settings;
         private RtsCommandConsoleModel model;
         private GameObject canvasObject;
+        private Transform wristAnchor;
         private RectTransform panelRect;
         private RectTransform buildRoot;
         private RectTransform produceRoot;
@@ -112,7 +114,7 @@ namespace QuestCommandRTS
         private QuestCommandConsoleTab activeTab = QuestCommandConsoleTab.Build;
         private float nextRefreshTime;
 
-        public void Initialize(RtsGame owner, Transform rigRoot, QuestTabletopSettings tabletopSettings)
+        public void Initialize(RtsGame owner, Transform rigRoot, Transform leftController, QuestTabletopSettings tabletopSettings)
         {
             game = owner;
             settings = tabletopSettings;
@@ -120,7 +122,7 @@ namespace QuestCommandRTS
             model.Initialize(game);
             font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
 
-            BuildCanvas(rigRoot);
+            BuildCanvas(rigRoot, leftController);
             SetOpen(false);
         }
 
@@ -204,12 +206,13 @@ namespace QuestCommandRTS
             return TryGetPanelPoint(ray, out point);
         }
 
-        private void BuildCanvas(Transform rigRoot)
+        private void BuildCanvas(Transform rigRoot, Transform leftController)
         {
+            Transform canvasParent = CreateWristAnchor(rigRoot, leftController);
             canvasObject = new GameObject("Quest Command Console");
-            canvasObject.transform.SetParent(rigRoot, false);
-            canvasObject.transform.localPosition = settings.CommandConsoleLocalPositionMeters;
-            canvasObject.transform.localRotation = Quaternion.Euler(10f, 8f, 0f);
+            canvasObject.transform.SetParent(canvasParent, false);
+            canvasObject.transform.localPosition = Vector3.zero;
+            canvasObject.transform.localRotation = Quaternion.identity;
             canvasObject.transform.localScale = Vector3.one * 0.001f;
 
             Canvas canvas = canvasObject.AddComponent<Canvas>();
@@ -253,6 +256,18 @@ namespace QuestCommandRTS
             SetTab(QuestCommandConsoleTab.Build);
         }
 
+        private Transform CreateWristAnchor(Transform rigRoot, Transform leftController)
+        {
+            Transform parent = leftController != null ? leftController : rigRoot;
+            GameObject anchorObject = new GameObject("Left Wrist Build Menu Anchor");
+            Transform anchor = anchorObject.transform;
+            anchor.SetParent(parent, false);
+            anchor.localPosition = settings.CommandConsoleLocalPositionMeters;
+            anchor.localRotation = Quaternion.Euler(settings.CommandConsoleLocalEulerDegrees);
+            wristAnchor = anchor;
+            return anchor;
+        }
+
         private RectTransform CreateRoot(string name)
         {
             GameObject rootObject = new GameObject(name);
@@ -271,7 +286,8 @@ namespace QuestCommandRTS
             {
                 int capturedIndex = i;
                 StructureKind kind = RtsCommandConsoleModel.BuildKinds[i];
-                ConsoleRow row = CreateRow(buildRoot, "Build Row " + i, new Vector2(0f, -12f - i * 58f), new Vector2(708f, 48f), () => OnBuildClicked(kind));
+                ConsoleRow row = CreateSelectionTile(buildRoot, "Build Row " + i, i, new Vector2(220f, 160f), () => OnBuildClicked(kind));
+                AddStructureGlyph(row.Icon.rectTransform, kind);
                 buildRows[capturedIndex] = row;
             }
         }
@@ -281,17 +297,19 @@ namespace QuestCommandRTS
             for (int i = 0; i < productionRows.Length; i++)
             {
                 UnitKind kind = RtsCommandConsoleModel.UnitKinds[i];
-                ConsoleRow row = CreateRow(produceRoot, "Produce Row " + i, new Vector2(0f, -12f - i * 58f), new Vector2(420f, 48f), () => OnProduceClicked(kind));
+                ConsoleRow row = CreateSelectionTile(produceRoot, "Produce Row " + i, i, new Vector2(220f, 146f), () => OnProduceClicked(kind));
+                AddUnitGlyph(row.Icon.rectTransform, kind);
                 productionRows[i] = row;
             }
 
-            CreateText(produceRoot, "Queue Label", "Queue", 18, TextAnchor.MiddleLeft, new Vector2(440f, -12f), new Vector2(260f, 28f));
+            CreatePanelImage(produceRoot, "Production Queue Backplate", new Color(0.025f, 0.06f, 0.07f, 0.76f), new Vector2(0f, -178f), new Vector2(704f, 152f));
+            CreateText(produceRoot, "Queue Label", "Queue", 18, TextAnchor.MiddleLeft, new Vector2(18f, -188f), new Vector2(260f, 28f));
             for (int i = 0; i < queueLines.Length; i++)
             {
-                queueLines[i] = CreateText(produceRoot, "Queue " + i, "", 15, TextAnchor.MiddleLeft, new Vector2(440f, -48f - i * 30f), new Vector2(260f, 28f));
+                queueLines[i] = CreateText(produceRoot, "Queue " + i, "", 15, TextAnchor.MiddleLeft, new Vector2(18f, -222f - i * 28f), new Vector2(400f, 26f));
             }
 
-            cancelQueueButton = CreateButton(produceRoot, "Cancel Queue Button", "Cancel Production", new Vector2(440f, -186f), new Vector2(260f, 40f), () => game.PlayerCommands.CancelProduction());
+            cancelQueueButton = CreateButton(produceRoot, "Cancel Queue Button", "Cancel Production", new Vector2(456f, -238f), new Vector2(230f, 46f), () => game.PlayerCommands.CancelProduction());
         }
 
         private void BuildSelectedTab()
@@ -313,18 +331,25 @@ namespace QuestCommandRTS
             restartButton = CreateButton(systemRoot, "New Match Button", "New Match", new Vector2(486f, -182f), new Vector2(218f, 44f), () => game.TryRestartMatch());
         }
 
-        private ConsoleRow CreateRow(RectTransform parent, string name, Vector2 position, Vector2 size, Action clicked)
+        private ConsoleRow CreateSelectionTile(RectTransform parent, string name, int index, Vector2 size, Action clicked)
         {
+            const float columnGap = 18f;
+            const float rowGap = 18f;
+            int column = index % 3;
+            int row = index / 3;
+            Vector2 position = new Vector2(column * (size.x + columnGap), -12f - row * (size.y + rowGap));
             ConsoleButton button = CreateButton(parent, name, "", position, size, clicked);
 
-            Image icon = CreatePanelImage(button.Rect, name + " Icon", new Color(0.2f, 0.75f, 0.9f, 0.95f), new Vector2(14f, -8f), new Vector2(32f, 32f));
-            Text title = CreateText(button.Rect, name + " Title", "", 17, TextAnchor.MiddleLeft, new Vector2(56f, -4f), new Vector2(size.x - 262f, 22f));
-            Text detail = CreateText(button.Rect, name + " Detail", "", 14, TextAnchor.MiddleRight, new Vector2(size.x - 228f, -4f), new Vector2(208f, 22f));
+            CreatePanelImage(button.Rect, name + " Tile Glow", new Color(0.2f, 0.84f, 1f, 0.22f), new Vector2(7f, -7f), new Vector2(size.x - 14f, 3f));
+            Image icon = CreatePanelImage(button.Rect, name + " Icon", new Color(0.2f, 0.75f, 0.9f, 0.92f), new Vector2(48f, -20f), new Vector2(124f, 74f));
+            CreatePanelImage(button.Rect, name + " Icon Shine", new Color(0.9f, 1f, 1f, 0.18f), new Vector2(56f, -28f), new Vector2(108f, 4f));
+            Text title = CreateText(button.Rect, name + " Title", "", 17, TextAnchor.MiddleCenter, new Vector2(12f, -104f), new Vector2(size.x - 24f, 24f));
+            Text detail = CreateText(button.Rect, name + " Detail", "", 13, TextAnchor.MiddleCenter, new Vector2(12f, -128f), new Vector2(size.x - 24f, 22f));
 
             GameObject stripObject = new GameObject(name + " State");
             stripObject.transform.SetParent(button.Rect, false);
             RectTransform stripRect = stripObject.AddComponent<RectTransform>();
-            SetTopLeft(stripRect, new Vector2(0f, 0f), new Vector2(6f, size.y));
+            SetTopLeft(stripRect, new Vector2(0f, 0f), new Vector2(size.x, 5f));
             Image strip = stripObject.AddComponent<Image>();
 
             return new ConsoleRow
@@ -361,6 +386,71 @@ namespace QuestCommandRTS
 
             buttons.Add(button);
             return button;
+        }
+
+        private static void AddStructureGlyph(RectTransform parent, StructureKind kind)
+        {
+            Color glyph = new Color(0.88f, 0.98f, 1f, 0.92f);
+            Color dim = new Color(0.45f, 0.85f, 0.95f, 0.5f);
+
+            switch (kind)
+            {
+                case StructureKind.CommandCenter:
+                    CreatePanelImage(parent, "Command Glyph Base", glyph, new Vector2(22f, -44f), new Vector2(82f, 20f));
+                    CreatePanelImage(parent, "Command Glyph Tower", glyph, new Vector2(46f, -20f), new Vector2(34f, 28f));
+                    CreatePanelImage(parent, "Command Glyph Dish", dim, new Vector2(82f, -28f), new Vector2(24f, 8f));
+                    break;
+                case StructureKind.PowerPlant:
+                    CreatePanelImage(parent, "Power Glyph Base", glyph, new Vector2(22f, -50f), new Vector2(82f, 14f));
+                    CreatePanelImage(parent, "Power Glyph Stack A", glyph, new Vector2(36f, -18f), new Vector2(14f, 32f));
+                    CreatePanelImage(parent, "Power Glyph Stack B", glyph, new Vector2(70f, -12f), new Vector2(14f, 38f));
+                    break;
+                case StructureKind.Barracks:
+                    CreatePanelImage(parent, "Barracks Glyph Body", glyph, new Vector2(22f, -38f), new Vector2(80f, 26f));
+                    CreatePanelImage(parent, "Barracks Glyph Roof", dim, new Vector2(34f, -20f), new Vector2(56f, 12f));
+                    CreatePanelImage(parent, "Barracks Glyph Door", new Color(0.02f, 0.08f, 0.09f, 0.8f), new Vector2(56f, -46f), new Vector2(14f, 18f));
+                    break;
+                case StructureKind.Refinery:
+                    CreatePanelImage(parent, "Refinery Glyph Body", glyph, new Vector2(18f, -42f), new Vector2(58f, 22f));
+                    CreatePanelImage(parent, "Refinery Glyph Silo A", dim, new Vector2(82f, -18f), new Vector2(14f, 42f));
+                    CreatePanelImage(parent, "Refinery Glyph Silo B", dim, new Vector2(102f, -28f), new Vector2(10f, 32f));
+                    break;
+                case StructureKind.WarFactory:
+                    CreatePanelImage(parent, "Factory Glyph Body", glyph, new Vector2(18f, -36f), new Vector2(88f, 28f));
+                    CreatePanelImage(parent, "Factory Glyph Door", new Color(0.02f, 0.08f, 0.09f, 0.8f), new Vector2(52f, -44f), new Vector2(28f, 20f));
+                    CreatePanelImage(parent, "Factory Glyph Rail", dim, new Vector2(28f, -20f), new Vector2(68f, 6f));
+                    break;
+                case StructureKind.Turret:
+                    CreatePanelImage(parent, "Turret Glyph Base", glyph, new Vector2(42f, -50f), new Vector2(44f, 14f));
+                    CreatePanelImage(parent, "Turret Glyph Neck", glyph, new Vector2(56f, -34f), new Vector2(18f, 16f));
+                    CreatePanelImage(parent, "Turret Glyph Barrel", dim, new Vector2(72f, -24f), new Vector2(34f, 8f));
+                    break;
+            }
+        }
+
+        private static void AddUnitGlyph(RectTransform parent, UnitKind kind)
+        {
+            Color glyph = new Color(0.88f, 0.98f, 1f, 0.92f);
+            Color dim = new Color(0.45f, 0.85f, 0.95f, 0.5f);
+
+            switch (kind)
+            {
+                case UnitKind.Harvester:
+                    CreatePanelImage(parent, "Harvester Glyph Body", glyph, new Vector2(28f, -34f), new Vector2(62f, 28f));
+                    CreatePanelImage(parent, "Harvester Glyph Scoop", dim, new Vector2(90f, -44f), new Vector2(24f, 16f));
+                    CreatePanelImage(parent, "Harvester Glyph Tread", new Color(0.02f, 0.08f, 0.09f, 0.75f), new Vector2(24f, -54f), new Vector2(76f, 10f));
+                    break;
+                case UnitKind.Tank:
+                    CreatePanelImage(parent, "Tank Glyph Hull", glyph, new Vector2(26f, -42f), new Vector2(72f, 22f));
+                    CreatePanelImage(parent, "Tank Glyph Turret", glyph, new Vector2(50f, -26f), new Vector2(24f, 16f));
+                    CreatePanelImage(parent, "Tank Glyph Barrel", dim, new Vector2(72f, -22f), new Vector2(36f, 6f));
+                    break;
+                default:
+                    CreatePanelImage(parent, "Rifleman Glyph Body", glyph, new Vector2(56f, -22f), new Vector2(16f, 34f));
+                    CreatePanelImage(parent, "Rifleman Glyph Rifle", dim, new Vector2(74f, -28f), new Vector2(32f, 6f));
+                    CreatePanelImage(parent, "Rifleman Glyph Feet", glyph, new Vector2(42f, -58f), new Vector2(44f, 8f));
+                    break;
+            }
         }
 
         private Text CreateText(RectTransform parent, string name, string value, int size, TextAnchor anchor, Vector2 position, Vector2 dimensions)

@@ -147,11 +147,23 @@ namespace QuestCommandRTS.Editor
                 status.transform.localScale = Vector3.one * 0.00062f;
             }
 
+            if (game.QuestRig.LeftController != null)
+            {
+                game.QuestRig.LeftController.localPosition = new Vector3(-0.56f, 0.88f, 0.42f);
+                game.QuestRig.LeftController.localRotation = Quaternion.Euler(28f, 34f, -34f);
+            }
+
+            if (game.QuestRig.CommandConsole.WristAnchor != null)
+            {
+                game.QuestRig.CommandConsole.WristAnchor.localPosition = new Vector3(0.03f, 0.07f, 0.12f);
+                game.QuestRig.CommandConsole.WristAnchor.localRotation = Quaternion.Euler(56f, 18f, -8f);
+            }
+
             if (game.QuestRig.CommandConsole.PanelRect != null)
             {
                 Transform console = game.QuestRig.CommandConsole.PanelRect.transform;
-                console.localPosition = new Vector3(-0.46f, 0.72f, 0.46f);
-                console.localRotation = Quaternion.Euler(18f, 4f, 0f);
+                console.localPosition = Vector3.zero;
+                console.localRotation = Quaternion.identity;
                 console.localScale = Vector3.one * 0.00058f;
             }
 
