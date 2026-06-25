@@ -916,6 +916,63 @@ namespace QuestCommandRTS.Editor
         }
 
         [Test]
+        public void QuestConsoleBuildRowStartsPlacementAndQuestPrimaryConfirmsStructure()
+        {
+            RtsGame game = CreateInitializedGame(RtsRuntimeMode.QuestVr);
+            QuestCommandConsole console = game.GetComponent<QuestCommandConsole>();
+            QuestRtsInputController controller = game.GetComponent<QuestRtsInputController>();
+            Assert.IsNotNull(console);
+            Assert.IsNotNull(controller);
+
+            int startingCredits = game.Resources.Credits;
+            int cost = RtsBalance.GetStructure(StructureKind.PowerPlant).Cost;
+            int startingPowerPlants = CountPlayerStructures(game, StructureKind.PowerPlant);
+
+            console.SetOpen(true);
+            ClickConsoleButton(console, "Build Row 1", false);
+
+            Assert.IsFalse(console.IsOpen);
+            Assert.IsTrue(game.BuildManager.IsPlacing);
+            Assert.AreEqual(StructureKind.PowerPlant, game.BuildManager.PendingKind);
+            Assert.AreEqual(startingCredits, game.Resources.Credits);
+
+            Vector3 placementPoint = FindValidBuildPoint(game, StructureKind.PowerPlant);
+            Ray placementRay = RayAtPoint(placementPoint);
+            Assert.AreEqual(RtsCommandResult.PlacementConfirmed, controller.ProcessInputFrameForTests(QuestFrame(placementRay, false, false, true, false, false), false));
+
+            Assert.IsFalse(game.BuildManager.IsPlacing);
+            Assert.AreEqual(startingCredits - cost, game.Resources.Credits);
+            Assert.AreEqual(startingPowerPlants + 1, CountPlayerStructures(game, StructureKind.PowerPlant));
+        }
+
+        [Test]
+        public void QuestConsoleProduceTabQueuesAndCancelsSelectedProducerThroughPointer()
+        {
+            RtsGame game = CreateInitializedGame(RtsRuntimeMode.QuestVr);
+            QuestCommandConsole console = game.GetComponent<QuestCommandConsole>();
+            Assert.IsNotNull(console);
+
+            ProductionStructure barracks = FindPlayerProduction(game, StructureKind.Barracks);
+            game.ClearSelection();
+            game.SelectEntity(barracks, false);
+
+            int startingCredits = game.Resources.Credits;
+            int cost = RtsBalance.GetUnit(UnitKind.Rifleman).Cost;
+
+            console.SetOpen(true);
+            ClickConsoleButton(console, "Produce Tab");
+            ClickConsoleButton(console, "Produce Row 0");
+
+            Assert.AreEqual(startingCredits - cost, game.Resources.Credits);
+            Assert.AreEqual(1, barracks.PendingQueueCount);
+
+            ClickConsoleButton(console, "Cancel Queue Button");
+
+            Assert.AreEqual(startingCredits, game.Resources.Credits);
+            Assert.AreEqual(0, barracks.PendingQueueCount);
+        }
+
+        [Test]
         public void QuestConsoleNewMatchButtonResetsMatchThroughPointer()
         {
             RtsGame game = CreateInitializedGame(RtsRuntimeMode.QuestVr);
@@ -1017,7 +1074,7 @@ namespace QuestCommandRTS.Editor
             controller.ProcessInputFrameForTests(QuestFrame(ray, false, false, false, false, false), false);
         }
 
-        private static void ClickConsoleButton(QuestCommandConsole console, string objectName)
+        private static void ClickConsoleButton(QuestCommandConsole console, string objectName, bool expectHoverAfterClick = true)
         {
             RectTransform rect = FindRectTransform(objectName);
             Assert.IsTrue(rect.gameObject.activeInHierarchy, objectName + " should be active before it can be clicked.");
@@ -1025,7 +1082,10 @@ namespace QuestCommandRTS.Editor
             Vector3 center = rect.TransformPoint(rect.rect.center);
             Ray ray = new Ray(center - console.PanelRect.forward * 8f, console.PanelRect.forward);
             Assert.IsTrue(console.TryHandlePointer(ray, true), objectName + " should capture pointer activation.");
-            Assert.IsTrue(console.TryHandlePointer(ray, false), objectName + " should capture pointer hover.");
+            if (expectHoverAfterClick)
+            {
+                Assert.IsTrue(console.TryHandlePointer(ray, false), objectName + " should capture pointer hover.");
+            }
         }
 
         private static RectTransform FindRectTransform(string objectName)
