@@ -68,6 +68,8 @@ namespace QuestCommandRTS
         private Material resourceMaterial;
         private Material depletedResourceMaterial;
         private Material darkMaterial;
+        private Material vehicleDetailMaterial;
+        private Material structureDetailMaterial;
         private bool initialized;
         private float nextObjectiveCheckTime;
         private int nextEntityId = 1;
@@ -139,6 +141,16 @@ namespace QuestCommandRTS
             material.color = color;
             material.SetColor("_Color", color);
             material.SetColor("_BaseColor", color);
+            return material;
+        }
+
+        private static Material CreateTeamMaterial(Color color)
+        {
+            Material material = CreateMaterial(color);
+            Color emission = color * 0.26f;
+            emission.a = 1f;
+            material.EnableKeyword("_EMISSION");
+            material.SetColor("_EmissionColor", emission);
             return material;
         }
 
@@ -1576,8 +1588,8 @@ namespace QuestCommandRTS
 
         private void CreateMaterials()
         {
-            playerMaterial = CreateMaterial(RtsBalance.TeamColor(RtsTeam.Player));
-            enemyMaterial = CreateMaterial(RtsBalance.TeamColor(RtsTeam.Enemy));
+            playerMaterial = CreateTeamMaterial(RtsBalance.TeamColor(RtsTeam.Player));
+            enemyMaterial = CreateTeamMaterial(RtsBalance.TeamColor(RtsTeam.Enemy));
             neutralMaterial = CreateMaterial(new Color(0.42f, 0.4f, 0.34f));
 
             Texture2D sandGroundTexture = CreateTerrainTexture(
@@ -1630,6 +1642,16 @@ namespace QuestCommandRTS
                 0.2f,
                 0.85f,
                 0.12f);
+            Texture2D armorPlateTexture = CreateTerrainTexture(
+                "Command RTS Armor Plate Texture",
+                new Color(0.25f, 0.29f, 0.25f),
+                new Color(0.12f, 0.15f, 0.13f),
+                new Color(0.46f, 0.49f, 0.42f),
+                new Color(0.05f, 0.06f, 0.055f),
+                89,
+                0.2f,
+                0.38f,
+                0.22f);
 
             groundMaterial = CreateTexturedMaterial(
                 new Color(0.54f, 0.43f, 0.27f),
@@ -1654,6 +1676,14 @@ namespace QuestCommandRTS
             resourceMaterial = CreateMaterial(new Color(0.2f, 0.95f, 0.62f));
             depletedResourceMaterial = CreateMaterial(new Color(0.11f, 0.18f, 0.14f));
             darkMaterial = CreateMaterial(new Color(0.075f, 0.08f, 0.09f));
+            vehicleDetailMaterial = CreateTexturedMaterial(
+                new Color(0.28f, 0.32f, 0.27f),
+                armorPlateTexture,
+                new Vector2(2.2f, 2.2f));
+            structureDetailMaterial = CreateTexturedMaterial(
+                new Color(0.22f, 0.26f, 0.22f),
+                armorPlateTexture,
+                new Vector2(3.2f, 3.2f));
         }
 
         private void CreateRoots()
@@ -1979,7 +2009,7 @@ namespace QuestCommandRTS
                 renderer.receiveShadows = false;
             }
 
-            CreatePrimitive(PrimitiveType.Cube, root, "Infantry Team Band", new Vector3(0f, 1.14f, -0.17f), new Vector3(0.42f, 0.07f, 0.08f), teamMaterial);
+            CreateInfantryReadabilityPanels(root, teamMaterial);
             return true;
         }
 
@@ -2008,7 +2038,7 @@ namespace QuestCommandRTS
                 renderer.receiveShadows = false;
             }
 
-            CreatePrimitive(PrimitiveType.Cube, root, "Harvester Team Strip", new Vector3(0f, 0.86f, -0.78f), new Vector3(0.92f, 0.08f, 0.14f), teamMaterial);
+            CreateHarvesterReadabilityPanels(root, teamMaterial);
             return true;
         }
 
@@ -2061,7 +2091,7 @@ namespace QuestCommandRTS
                 renderer.receiveShadows = false;
             }
 
-            CreatePrimitive(PrimitiveType.Cube, root, "Team Recognition Strip", new Vector3(0f, 0.82f, -0.55f), GetTankRecognitionStripSize(kind), teamMaterial);
+            CreateTankReadabilityPanels(root, kind, teamMaterial);
             return true;
         }
 
@@ -2178,6 +2208,58 @@ namespace QuestCommandRTS
             }
         }
 
+        private void CreateInfantryReadabilityPanels(Transform root, Material teamMaterial)
+        {
+            CreatePrimitive(PrimitiveType.Cube, root, "Infantry Team Band", new Vector3(0f, 1.14f, -0.17f), new Vector3(0.46f, 0.08f, 0.1f), teamMaterial);
+            CreatePrimitive(PrimitiveType.Cube, root, "Infantry Team Top Plate", new Vector3(0f, 1.52f, -0.02f), new Vector3(0.32f, 0.045f, 0.24f), teamMaterial);
+            CreatePrimitive(PrimitiveType.Cube, root, "Infantry Kit Detail Plate", new Vector3(0f, 0.78f, 0.2f), new Vector3(0.3f, 0.06f, 0.18f), vehicleDetailMaterial);
+        }
+
+        private void CreateHarvesterReadabilityPanels(Transform root, Material teamMaterial)
+        {
+            CreatePrimitive(PrimitiveType.Cube, root, "Harvester Team Strip", new Vector3(0f, 0.86f, -0.78f), new Vector3(1.08f, 0.1f, 0.16f), teamMaterial);
+            CreatePrimitive(PrimitiveType.Cube, root, "Harvester Team Roof Plate", new Vector3(0f, 1.02f, -0.1f), new Vector3(0.92f, 0.08f, 0.62f), teamMaterial);
+            CreatePrimitive(PrimitiveType.Cube, root, "Harvester Team Left Plate", new Vector3(-0.72f, 0.58f, -0.04f), new Vector3(0.08f, 0.24f, 0.9f), teamMaterial);
+            CreatePrimitive(PrimitiveType.Cube, root, "Harvester Team Right Plate", new Vector3(0.72f, 0.58f, -0.04f), new Vector3(0.08f, 0.24f, 0.9f), teamMaterial);
+            CreatePrimitive(PrimitiveType.Cube, root, "Harvester Armor Detail Plate", new Vector3(0f, 0.48f, 0.72f), new Vector3(1.08f, 0.08f, 0.32f), vehicleDetailMaterial);
+        }
+
+        private void CreateTankReadabilityPanels(Transform root, UnitKind kind, Material teamMaterial)
+        {
+            Vector3 roofPosition;
+            Vector3 roofSize;
+            Vector3 sideSize;
+            float sideOffset;
+
+            switch (kind)
+            {
+                case UnitKind.LightTank:
+                    roofPosition = new Vector3(0f, 0.74f, -0.02f);
+                    roofSize = new Vector3(0.74f, 0.075f, 0.5f);
+                    sideSize = new Vector3(0.07f, 0.18f, 0.76f);
+                    sideOffset = 0.62f;
+                    break;
+                case UnitKind.HeavyTank:
+                    roofPosition = new Vector3(0f, 1.08f, 0.02f);
+                    roofSize = new Vector3(1.08f, 0.095f, 0.76f);
+                    sideSize = new Vector3(0.09f, 0.26f, 1.18f);
+                    sideOffset = 0.98f;
+                    break;
+                default:
+                    roofPosition = new Vector3(0f, 0.9f, 0f);
+                    roofSize = new Vector3(0.9f, 0.085f, 0.62f);
+                    sideSize = new Vector3(0.08f, 0.22f, 0.96f);
+                    sideOffset = 0.78f;
+                    break;
+            }
+
+            CreatePrimitive(PrimitiveType.Cube, root, "Team Recognition Strip", new Vector3(0f, 0.82f, -0.55f), GetTankRecognitionStripSize(kind), teamMaterial);
+            CreatePrimitive(PrimitiveType.Cube, root, "Tank Team Roof Plate", roofPosition, roofSize, teamMaterial);
+            CreatePrimitive(PrimitiveType.Cube, root, "Tank Team Left Plate", new Vector3(-sideOffset, 0.52f, -0.05f), sideSize, teamMaterial);
+            CreatePrimitive(PrimitiveType.Cube, root, "Tank Team Right Plate", new Vector3(sideOffset, 0.52f, -0.05f), sideSize, teamMaterial);
+            CreatePrimitive(PrimitiveType.Cube, root, "Tank Armor Detail Plate", new Vector3(0f, 0.46f, 0.56f), new Vector3(roofSize.x * 0.82f, 0.07f, 0.22f), vehicleDetailMaterial);
+        }
+
         private Transform BuildStructureVisual(Transform root, StructureKind kind, RtsTeam team)
         {
             Material teamMaterial = GetTeamMaterial(team);
@@ -2266,8 +2348,25 @@ namespace QuestCommandRTS
                 renderer.receiveShadows = false;
             }
 
-            CreatePrimitive(PrimitiveType.Cube, root, "Structure Team Strip", GetStructureRecognitionStripPosition(kind), GetStructureRecognitionStripSize(kind), teamMaterial);
+            CreateStructureReadabilityPanels(root, kind, teamMaterial);
             return true;
+        }
+
+        private void CreateStructureReadabilityPanels(Transform root, StructureKind kind, Material teamMaterial)
+        {
+            Vector3 roofPosition = GetStructureRoofTeamPosition(kind);
+            Vector3 roofSize = GetStructureRoofTeamSize(kind);
+            float sideOffset = GetStructureSideTeamOffset(kind);
+            Vector3 sideSize = GetStructureSideTeamSize(kind);
+            Vector3 detailPosition = GetStructureDetailPanelPosition(kind);
+            Vector3 detailSize = GetStructureDetailPanelSize(kind);
+
+            CreatePrimitive(PrimitiveType.Cube, root, "Structure Team Strip", GetStructureRecognitionStripPosition(kind), GetStructureRecognitionStripSize(kind), teamMaterial);
+            CreatePrimitive(PrimitiveType.Cube, root, "Structure Team Roof Plate", roofPosition, roofSize, teamMaterial);
+            CreatePrimitive(PrimitiveType.Cube, root, "Structure Team Left Plate", new Vector3(-sideOffset, sideSize.y + 0.22f, 0f), sideSize, teamMaterial);
+            CreatePrimitive(PrimitiveType.Cube, root, "Structure Team Right Plate", new Vector3(sideOffset, sideSize.y + 0.22f, 0f), sideSize, teamMaterial);
+            CreatePrimitive(PrimitiveType.Cube, root, "Structure Armor Detail Plate", detailPosition, detailSize, structureDetailMaterial);
+            CreatePrimitive(PrimitiveType.Cube, root, "Structure Dark Panel Line", detailPosition + new Vector3(0f, 0.07f, -detailSize.z * 0.65f), new Vector3(detailSize.x * 0.76f, 0.035f, 0.045f), darkMaterial);
         }
 
         private static string GetStructureModelResourcePath(StructureKind kind)
@@ -2317,6 +2416,140 @@ namespace QuestCommandRTS
                     return 0.95f;
                 default:
                     return 0.95f;
+            }
+        }
+
+        private static Vector3 GetStructureRoofTeamPosition(StructureKind kind)
+        {
+            switch (kind)
+            {
+                case StructureKind.CommandCenter:
+                    return new Vector3(0f, 3.32f, -0.18f);
+                case StructureKind.WarFactory:
+                    return new Vector3(0f, 1.45f, -0.1f);
+                case StructureKind.Refinery:
+                    return new Vector3(0f, 1.45f, -0.05f);
+                case StructureKind.PowerPlant:
+                    return new Vector3(0f, 1.28f, -0.02f);
+                case StructureKind.Turret:
+                    return new Vector3(0f, 1.08f, -0.05f);
+                case StructureKind.GunTower:
+                    return new Vector3(0f, 2.75f, -0.08f);
+                case StructureKind.AdvancedGunTower:
+                    return new Vector3(0f, 3.55f, -0.08f);
+                default:
+                    return new Vector3(0f, 0.95f, -0.05f);
+            }
+        }
+
+        private static Vector3 GetStructureRoofTeamSize(StructureKind kind)
+        {
+            switch (kind)
+            {
+                case StructureKind.CommandCenter:
+                    return new Vector3(1.5f, 0.09f, 1.0f);
+                case StructureKind.WarFactory:
+                    return new Vector3(1.35f, 0.08f, 0.82f);
+                case StructureKind.Refinery:
+                    return new Vector3(1.1f, 0.08f, 0.72f);
+                case StructureKind.PowerPlant:
+                    return new Vector3(0.92f, 0.08f, 0.62f);
+                case StructureKind.Turret:
+                    return new Vector3(0.68f, 0.07f, 0.46f);
+                case StructureKind.GunTower:
+                    return new Vector3(0.82f, 0.08f, 0.5f);
+                case StructureKind.AdvancedGunTower:
+                    return new Vector3(1.0f, 0.09f, 0.58f);
+                default:
+                    return new Vector3(0.92f, 0.08f, 0.58f);
+            }
+        }
+
+        private static float GetStructureSideTeamOffset(StructureKind kind)
+        {
+            switch (kind)
+            {
+                case StructureKind.CommandCenter:
+                    return 3.0f;
+                case StructureKind.WarFactory:
+                    return 2.4f;
+                case StructureKind.Refinery:
+                    return 2.05f;
+                case StructureKind.PowerPlant:
+                    return 1.55f;
+                case StructureKind.Turret:
+                    return 0.82f;
+                case StructureKind.GunTower:
+                    return 0.9f;
+                case StructureKind.AdvancedGunTower:
+                    return 1.05f;
+                default:
+                    return 1.45f;
+            }
+        }
+
+        private static Vector3 GetStructureSideTeamSize(StructureKind kind)
+        {
+            switch (kind)
+            {
+                case StructureKind.CommandCenter:
+                    return new Vector3(0.09f, 0.7f, 1.35f);
+                case StructureKind.WarFactory:
+                    return new Vector3(0.08f, 0.42f, 1.05f);
+                case StructureKind.Refinery:
+                    return new Vector3(0.08f, 0.38f, 0.9f);
+                case StructureKind.PowerPlant:
+                    return new Vector3(0.07f, 0.34f, 0.74f);
+                case StructureKind.Turret:
+                    return new Vector3(0.06f, 0.24f, 0.42f);
+                case StructureKind.GunTower:
+                    return new Vector3(0.06f, 0.46f, 0.5f);
+                case StructureKind.AdvancedGunTower:
+                    return new Vector3(0.07f, 0.58f, 0.58f);
+                default:
+                    return new Vector3(0.07f, 0.32f, 0.64f);
+            }
+        }
+
+        private static Vector3 GetStructureDetailPanelPosition(StructureKind kind)
+        {
+            switch (kind)
+            {
+                case StructureKind.CommandCenter:
+                    return new Vector3(0f, 0.44f, -2.05f);
+                case StructureKind.WarFactory:
+                    return new Vector3(0f, 0.42f, -1.55f);
+                case StructureKind.Refinery:
+                    return new Vector3(0f, 0.4f, -1.25f);
+                case StructureKind.Turret:
+                    return new Vector3(0f, 0.62f, -0.54f);
+                case StructureKind.GunTower:
+                    return new Vector3(0f, 1.18f, -0.58f);
+                case StructureKind.AdvancedGunTower:
+                    return new Vector3(0f, 1.52f, -0.68f);
+                default:
+                    return new Vector3(0f, 0.38f, -1.0f);
+            }
+        }
+
+        private static Vector3 GetStructureDetailPanelSize(StructureKind kind)
+        {
+            switch (kind)
+            {
+                case StructureKind.CommandCenter:
+                    return new Vector3(2.0f, 0.08f, 0.48f);
+                case StructureKind.WarFactory:
+                    return new Vector3(1.65f, 0.07f, 0.42f);
+                case StructureKind.Refinery:
+                    return new Vector3(1.35f, 0.07f, 0.38f);
+                case StructureKind.Turret:
+                    return new Vector3(0.62f, 0.06f, 0.22f);
+                case StructureKind.GunTower:
+                    return new Vector3(0.74f, 0.06f, 0.26f);
+                case StructureKind.AdvancedGunTower:
+                    return new Vector3(0.86f, 0.06f, 0.3f);
+                default:
+                    return new Vector3(1.05f, 0.07f, 0.34f);
             }
         }
 

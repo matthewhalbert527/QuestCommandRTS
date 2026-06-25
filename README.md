@@ -87,7 +87,7 @@ The Quest tactical map is a non-interactive world-space battle-view panel. It mi
 
 The full battlefield remains approximately 224 simulation units wide. The Quest rig defaults to 126 simulation units per physical meter, so the board appears roughly 1.78 meters wide while gameplay coordinates and movement logic stay unchanged. `Command RTS > Profile > Use Room-Sized Quest Tabletop Scale` writes a local profile preset that expands the board to roughly 4.0 meters wide and increases pointer reach; `Use Default Quest Tabletop Scale` restores the default. `QuestTabletopSettings.BoardHeightMeters` defaults to 0.82m, which shifts the generated battlefield to tabletop height above the physical tracking origin instead of leaving the board on the floor.
 
-The generated battlefield uses original primitive placeholder art with sandy terrain accents, projected water channels, ridges, rocks, scorches, rails, and corner pylons. Imported Bastion infantry, vehicle, structure, fabrication hub, and defense meshes now replace several gameplay placeholders while the set-dressing pieces remain visual-only and have their colliders removed so pointer raycasts and build placement still use the underlying battlefield.
+The generated battlefield uses original primitive placeholder art with sandy terrain accents, projected water channels, ridges, rocks, scorches, rails, and corner pylons. Imported Bastion infantry, vehicle, structure, fabrication hub, and defense meshes now replace several gameplay placeholders, with added team-color roof/side plates and textured armor/detail panels for skirmish readability. The set-dressing pieces remain visual-only and have their colliders removed so pointer raycasts and build placement still use the underlying battlefield.
 
 ## Persistence And Lifecycle
 
@@ -113,6 +113,7 @@ The generated battlefield uses original primitive placeholder art with sandy ter
 - The enemy commander now has its own credit bank, income ticks, paid unit production, and periodic attack orders.
 - Enemy structures can be rebuilt from fixed base slots while at least one enemy structure remains alive, including upgraded defensive towers.
 - Timed enemy attacks still exist, but spawned attackers now spend commander credits instead of appearing for free and can include mixed gunner, grenadier, rocket, and flame infantry.
+- Player and enemy units/buildings use multiple colored recognition plates so teams are readable from the skirmish camera and Quest tabletop view.
 
 See `docs/SAVE_SYSTEM.md`, `docs/LIFECYCLE_TEST_MATRIX.md`, `docs/PERFORMANCE_TESTING.md`, and `docs/MILESTONE_STATUS.md`.
 
@@ -122,7 +123,7 @@ See `docs/SAVE_SYSTEM.md`, `docs/LIFECYCLE_TEST_MATRIX.md`, `docs/PERFORMANCE_TE
 - The VR console and tactical map are still placeholder UI, but now use layered holographic-style world panels with color-coded row icon tiles, pooled map pips, and text labels.
 - Quest Link and device behavior still require manual headset verification.
 - Infantry currently includes gunner, grenadier, rocket soldier, flame trooper, and engineer roles using imported low-poly assets. Grenadiers/flamers apply splash, rockets hit armored targets harder, and engineers can repair damaged friendly units or structures through context commands.
-- Base structures now use imported low-poly meshes for the fabrication hub command center, power plant, barracks, refinery, war factory, harvester, turret, gun tower, and advanced gun tower. Gun Tower and Advanced Gun Tower are buildable defensive structures in the Quest Build tab.
+- Base structures now use imported low-poly meshes for the fabrication hub command center, power plant, barracks, refinery, war factory, harvester, turret, gun tower, and advanced gun tower, with added textured detail panels to reduce the flat single-color read. Gun Tower and Advanced Gun Tower are buildable defensive structures in the Quest Build tab.
 
 ## Editor Tools
 

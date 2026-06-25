@@ -354,6 +354,9 @@ namespace QuestCommandRTS.Editor
             Assert.IsNotNull(light.transform.Find("Light Tank Model"));
             Assert.IsNotNull(medium.transform.Find("Medium Tank Model"));
             Assert.IsNotNull(heavy.transform.Find("Heavy Tank Model"));
+            Assert.IsNotNull(light.transform.Find("Tank Team Roof Plate"));
+            Assert.IsNotNull(medium.transform.Find("Tank Team Left Plate"));
+            Assert.IsNotNull(heavy.transform.Find("Tank Armor Detail Plate"));
         }
 
         [Test]
@@ -373,6 +376,8 @@ namespace QuestCommandRTS.Editor
             Assert.IsNotNull(rocket.transform.Find("Rocket Soldier Model"));
             Assert.IsNotNull(flamer.transform.Find("Flame Trooper Model"));
             Assert.IsNotNull(engineer.transform.Find("Engineer Model"));
+            Assert.IsNotNull(gunner.transform.Find("Infantry Team Top Plate"));
+            Assert.IsNotNull(engineer.transform.Find("Infantry Kit Detail Plate"));
         }
 
         [Test]
@@ -400,6 +405,10 @@ namespace QuestCommandRTS.Editor
             Assert.IsNotNull(gunTower.transform.Find("Gun Tower Model"));
             Assert.IsNotNull(advanced.transform.Find("Advanced Gun Tower Model"));
             Assert.IsNotNull(harvester.transform.Find("Harvester Model"));
+            Assert.IsNotNull(command.transform.Find("Structure Team Roof Plate"));
+            Assert.IsNotNull(refinery.transform.Find("Structure Armor Detail Plate"));
+            Assert.IsNotNull(advanced.transform.Find("Structure Team Left Plate"));
+            Assert.IsNotNull(harvester.transform.Find("Harvester Team Roof Plate"));
             Assert.IsInstanceOf<TurretStructure>(turret);
             Assert.IsInstanceOf<TurretStructure>(gunTower);
             Assert.IsInstanceOf<TurretStructure>(advanced);
