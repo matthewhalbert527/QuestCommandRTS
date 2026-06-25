@@ -390,6 +390,7 @@ namespace QuestCommandRTS.Editor
             RtsStructure advanced = game.CreateStructure(RtsTeam.Player, StructureKind.AdvancedGunTower, new Vector3(-4f, 0f, -40f));
             RtsUnit harvester = game.CreateUnit(RtsTeam.Player, UnitKind.Harvester, new Vector3(4f, 0f, -40f));
 
+            Assert.IsNotNull(Resources.Load<GameObject>("StructureModels/BastionFabricationHub/Meshes/Bastion_FabricationHub_Static"));
             Assert.IsNotNull(command.transform.Find("Command Center Model"));
             Assert.IsNotNull(refinery.transform.Find("Refinery Model"));
             Assert.IsNotNull(barracks.transform.Find("Barracks Model"));

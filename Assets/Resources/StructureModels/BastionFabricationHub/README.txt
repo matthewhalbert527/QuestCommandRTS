@@ -1,0 +1,1 @@
+Drag Meshes and Textures into Unity together. The Static OBJ is a closed-door neutral-pose model. Use the full package for the generated prefab, articulated crane, moving trolley, sliding door, sockets, collider, and LOD.

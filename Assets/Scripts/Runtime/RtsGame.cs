@@ -2274,6 +2274,8 @@ namespace QuestCommandRTS
         {
             switch (kind)
             {
+                case StructureKind.CommandCenter:
+                    return "StructureModels/BastionFabricationHub/Meshes/Bastion_FabricationHub_Static";
                 case StructureKind.Refinery:
                     return "StructureModels/BastionStructures/Meshes/Bastion_Refinery_Static";
                 case StructureKind.Barracks:
@@ -2297,6 +2299,8 @@ namespace QuestCommandRTS
         {
             switch (kind)
             {
+                case StructureKind.CommandCenter:
+                    return 0.62f;
                 case StructureKind.Barracks:
                     return 0.7f;
                 case StructureKind.Refinery:
