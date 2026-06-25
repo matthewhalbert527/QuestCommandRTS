@@ -213,6 +213,7 @@ namespace QuestCommandRTS.Editor
             AssertValidationPassed(report, "OpenXR package");
             AssertValidationPassed(report, "XR Interaction Toolkit package");
             AssertValidationPassed(report, "Input System package");
+            AssertValidationExists(report, "Android Build Support");
             AssertValidationPassed(report, "Android min API");
             AssertValidationPassed(report, "Android target API");
             AssertValidationPassed(report, "Android scripting backend");
@@ -226,6 +227,24 @@ namespace QuestCommandRTS.Editor
             AssertValidationPassed(report, "Standalone Single Pass Instanced");
             AssertValidationPassed(report, "Standalone Oculus Touch profile");
             AssertValidationManual(report, "Headset setup");
+        }
+
+        [Test]
+        public void AndroidBuildSupportValidationReportsActionableInstallState()
+        {
+            QuestXrProjectValidator.ValidationItem supported = QuestXrProjectValidator.CreateAndroidBuildSupportValidationItem(true);
+            Assert.AreEqual("Android Build Support", supported.Label);
+            Assert.IsTrue(supported.Passed);
+            Assert.IsFalse(supported.WarningOnly);
+            StringAssert.Contains("BuildTarget.Android is supported", supported.Detail);
+
+            QuestXrProjectValidator.ValidationItem missing = QuestXrProjectValidator.CreateAndroidBuildSupportValidationItem(false);
+            Assert.AreEqual("Android Build Support", missing.Label);
+            Assert.IsFalse(missing.Passed);
+            Assert.IsFalse(missing.WarningOnly);
+            StringAssert.Contains("Android Build Support is not installed", missing.Detail);
+            StringAssert.Contains("SDK and NDK Tools", missing.Detail);
+            StringAssert.Contains("OpenJDK", missing.Detail);
         }
 
         [Test]
@@ -1030,6 +1049,11 @@ namespace QuestCommandRTS.Editor
             QuestXrProjectValidator.ValidationItem item = FindValidationItem(report, label);
             Assert.IsFalse(item.Passed, label + " should remain manually verified.");
             Assert.IsTrue(item.WarningOnly, label + " should be warning-only.");
+        }
+
+        private static void AssertValidationExists(System.Collections.Generic.List<QuestXrProjectValidator.ValidationItem> report, string label)
+        {
+            FindValidationItem(report, label);
         }
 
         private static QuestXrProjectValidator.ValidationItem FindValidationItem(System.Collections.Generic.List<QuestXrProjectValidator.ValidationItem> report, string label)

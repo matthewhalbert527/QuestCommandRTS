@@ -103,6 +103,7 @@ namespace QuestCommandRTS.Editor
             Add(results, "OpenXR package", manifest.Contains("\"com.unity.xr.openxr\": \"1.15.1\""), "manifest should include com.unity.xr.openxr 1.15.1");
             Add(results, "XR Interaction Toolkit package", manifest.Contains("\"com.unity.xr.interaction.toolkit\": \"3.2.2\""), "manifest should include com.unity.xr.interaction.toolkit 3.2.2");
             Add(results, "Input System package", manifest.Contains("\"com.unity.inputsystem\": \"1.18.0\""), "manifest should include com.unity.inputsystem 1.18.0");
+            results.Add(CreateAndroidBuildSupportValidationItem(IsAndroidBuildTargetSupported()));
             Add(results, "Android min API", PlayerSettings.Android.minSdkVersion == AndroidSdkVersions.AndroidApiLevel29, PlayerSettings.Android.minSdkVersion.ToString());
             Add(results, "Android target API", (int)PlayerSettings.Android.targetSdkVersion == 0, "Automatic/highest installed target expected");
             Add(results, "Android scripting backend", PlayerSettings.GetScriptingBackend(BuildTargetGroup.Android) == ScriptingImplementation.IL2CPP, PlayerSettings.GetScriptingBackend(BuildTargetGroup.Android).ToString());
@@ -129,6 +130,22 @@ namespace QuestCommandRTS.Editor
 
             AddManual(results, "Headset setup", "Developer mode, USB debugging, and Quest Link/device build testing require manual headset verification.");
             return results;
+        }
+
+        internal static ValidationItem CreateAndroidBuildSupportValidationItem(bool buildTargetSupported)
+        {
+            return new ValidationItem(
+                "Android Build Support",
+                buildTargetSupported,
+                false,
+                buildTargetSupported
+                    ? "BuildTarget.Android is supported by this Unity editor install."
+                    : "Android Build Support is not installed for this Unity editor. Install Android Build Support, SDK and NDK Tools, and OpenJDK for Unity 2022.3.62f3 in Unity Hub before Quest device builds.");
+        }
+
+        private static bool IsAndroidBuildTargetSupported()
+        {
+            return BuildPipeline.IsBuildTargetSupported(BuildTargetGroup.Android, BuildTarget.Android);
         }
 
         private static bool HasPrimaryGraphicsApi(GraphicsDeviceType expected)

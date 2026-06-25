@@ -25,8 +25,8 @@ This document records what has been implemented and what has actually been verif
 
 Automated verification last run locally:
 
-- EditMode tests: `48` total, `48` passed, `0` failed.
-- XR setup validator: automated package/project-setting checks passed; manual headset and Android OpenXR UI verification remain manual.
+- EditMode tests: `49` total, `49` passed, `0` failed.
+- XR setup validator: automated package/project-setting checks pass except for local Android Build Support, which is missing from this Unity install; manual headset and Android OpenXR UI verification remain manual.
 - Generated Quest runtime smoke report: automated object-graph checks pass in EditMode; physical headset behavior remains manual.
 - Screenshot exporter: produced `C:\Users\matth\Documents\Codex\2026-06-24\i-s\outputs\quest-command-rts-sample.png`.
 - Desktop build support validator: fails fast on this machine because the Unity 2022.3.62f3 install is missing `WindowsPlayer.exe` under the Windows standalone playback engine template. Repair Unity/Windows Build Support before treating desktop player builds as verified.
@@ -43,7 +43,7 @@ Automated verification last run locally:
 | Quest path does not create, reposition, or rotate the desktop command camera | Pass | Forced Quest initialization tests assert no `Command Camera`, no `RtsInputController`, and no `RtsHud`; the view camera is the Quest head camera. |
 | Quest path does not run the desktop overlay HUD | Pass | Forced Quest initialization tests assert `RtsHud` is absent and `QuestWorldHud` is present. |
 | Tabletop scale is configurable and defaults to approximately 125-128 simulation units per physical meter | Pass | `QuestTabletopSettings.SimulationUnitsPerMeter` defaults to `126`, yielding an approximately `1.78m` battlefield width in tests. |
-| Android/OpenXR project settings are configured or explicitly validated and documented | Pass with manual remainder | Validator checks package pins, Android API/backend/architecture/package id/input/graphics, OpenXR loaders, SPI, and Oculus Touch. Android OpenXR package settings may require switching to Android with Android Build Support installed. |
+| Android/OpenXR project settings are configured or explicitly validated and documented | Partial local environment gap | Validator checks package pins, Android Build Support, Android API/backend/architecture/package id/input/graphics, OpenXR loaders, SPI, and Oculus Touch. This Unity install is missing Android Build Support, so Quest device builds are not locally verified. |
 | New per-frame Quest input code avoids obvious managed allocations | Pass | EditMode test scans Quest input, tracked pose, world HUD, and command console hot loops for obvious allocation-heavy patterns. |
 | README and Quest XR setup docs are updated | Pass | `README.md`, `docs/QUEST_XR_SETUP.md`, `docs/PERFORMANCE_TESTING.md`, and this status document record controls, setup, validation, limitations, and manual checks. |
 | Unverified physical-device behavior is clearly identified | Pass | Physical headset/Quest Link/device build verification remains marked manual and unverified here. |

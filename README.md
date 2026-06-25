@@ -18,7 +18,7 @@ The project manifest pins:
 - `com.unity.inputsystem` 1.18.0
 - `com.unity.test-framework` 1.1.33
 
-Android modules are not needed for desktop/editor play, but they are required for Quest device development builds.
+Android modules are not needed for desktop/editor play, but they are required for Quest device development builds. `Tools > Quest RTS > Validate XR Setup` reports whether this Unity install currently has Android Build Support available.
 
 ## Runtime Modes
 

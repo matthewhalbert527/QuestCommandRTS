@@ -46,7 +46,7 @@ Run `Tools > Quest RTS > Apply Recommended Quest Settings` to apply:
 - Android Oculus Touch Controller Profile
 - Standalone Oculus Touch Controller Profile
 
-Then run `Tools > Quest RTS > Validate XR Setup`.
+Then run `Tools > Quest RTS > Validate XR Setup`. The validator checks both project settings and whether this Unity editor install supports `BuildTarget.Android`. If it reports that Android Build Support is missing, install Android Build Support, SDK and NDK Tools, and OpenJDK through Unity Hub before attempting a Quest device build.
 
 Run `Tools > Quest RTS > Validate Generated Quest Runtime` for a local generated-runtime smoke report. It forces Quest mode in the editor, verifies the generated tabletop rig, XR head camera path, Quest input/controller objects, pointer visuals, world-space HUD, command console, and confirms the desktop camera/input/HUD path is absent. This does not replace physical headset testing.
 
