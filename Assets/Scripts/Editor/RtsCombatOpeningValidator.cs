@@ -21,12 +21,13 @@ namespace QuestCommandRTS.Editor
 
                 ValidateOpeningState(game);
                 ValidateProducerRouting(game);
+                ValidateWarFactoryHarvesterAutoHarvest(game);
                 ValidateTankTracks(game);
                 ValidateProjectileDamage(game);
                 ValidateTankTurretDelayAndMobileFire(game);
                 ValidateUnitBlocking(game);
                 ValidateEnemyOpeningGrace(game);
-                Debug.Log("[Command RTS Combat] PASS - Combat, production, tracks, unit blocking, and opening pacing validated.");
+                Debug.Log("[Command RTS Combat] PASS - Combat, production, auto-harvest, tracks, unit blocking, and opening pacing validated.");
             }
             finally
             {
@@ -64,6 +65,32 @@ namespace QuestCommandRTS.Editor
             Require(factory != null && factory.CanTrain(UnitKind.MediumTank), "War factory trains tanks", "Tanks should spawn from the war factory.");
             Require(factory != null && factory.CanTrain(UnitKind.Harvester), "War factory trains harvesters", "Harvesters should be treated as vehicles.");
             Require(factory != null && !factory.CanTrain(UnitKind.Rifleman), "War factory rejects infantry", "Soldiers should not come from the war factory.");
+        }
+
+        private static void ValidateWarFactoryHarvesterAutoHarvest(RtsGame game)
+        {
+            RefineryStructure farRefinery = game.CreateStructure(RtsTeam.Player, StructureKind.Refinery, new Vector3(-88f, 0f, -58f)) as RefineryStructure;
+            RefineryStructure closeRefinery = game.CreateStructure(RtsTeam.Player, StructureKind.Refinery, new Vector3(-46f, 0f, -58f)) as RefineryStructure;
+            ProductionStructure factory = game.CreateStructure(RtsTeam.Player, StructureKind.WarFactory, new Vector3(-50f, 0f, -64f)) as ProductionStructure;
+            Require(farRefinery != null && closeRefinery != null && factory != null, "Harvester economy structures", "Validation should create refineries and a war factory.");
+
+            HarvesterUnit harvester = factory.SpawnProducedUnitForTests(UnitKind.Harvester, null) as HarvesterUnit;
+            Require(harvester != null, "War factory produces harvester", "War factory completion should spawn a harvester unit.");
+            Require(harvester.HomeRefineryForTests == closeRefinery, "Harvester picks closest refinery", "Auto-harvest should assign the nearest live refinery as the dump-off point.");
+            Require(harvester.TargetResourceNodeForTests != null, "Harvester picks resource node", "Auto-harvest should assign an available resource field.");
+            Require(harvester.IsAutoHarvestExitingProductionForTests, "Harvester exits before harvesting", "Auto-harvest should preserve the visible factory rollout before heading to the field.");
+
+            Vector3 spawnOffset = harvester.transform.position - factory.transform.position;
+            spawnOffset.y = 0f;
+            Require(spawnOffset.magnitude < factory.FootprintRadius, "Harvester starts inside factory", "Produced harvesters should roll out from inside the war factory footprint.");
+
+            for (int i = 0; i < 120 && harvester.IsAutoHarvestExitingProductionForTests; i++)
+            {
+                harvester.TickHarvesterForTests(0.1f);
+            }
+
+            RtsHarvesterSaveData state = harvester.CaptureHarvesterState();
+            Require(state.state == 1 || state.state == 2, "Harvester starts harvest route", "After exiting the factory, the harvester should move toward or harvest from its assigned resource node.");
         }
 
         private static void ValidateTankTracks(RtsGame game)

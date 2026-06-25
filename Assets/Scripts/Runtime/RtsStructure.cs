@@ -317,6 +317,12 @@ namespace QuestCommandRTS
 
             Vector3 exitPoint = GetProductionExitPoint(completed);
             Vector3 moveTarget = rallyPoint.HasValue ? RtsGame.Instance.ClampWorldPoint(rallyPoint.Value) : exitPoint;
+            HarvesterUnit harvester = unit as HarvesterUnit;
+            if (harvester != null && !rallyPoint.HasValue && TryAssignAutomaticHarvest(harvester, exitPoint))
+            {
+                return unit;
+            }
+
             unit.IssueMove(moveTarget);
             return unit;
         }
@@ -355,6 +361,29 @@ namespace QuestCommandRTS
             UnitStats stats = RtsBalance.GetUnit(activeKind.Value);
             activeDuration = Mathf.Max(0.1f, stats.BuildTime);
             activeRemaining = activeDuration;
+        }
+
+        private bool TryAssignAutomaticHarvest(HarvesterUnit harvester, Vector3 exitPoint)
+        {
+            if (harvester == null || !RtsGame.HasInstance)
+            {
+                return false;
+            }
+
+            RefineryStructure refinery = RtsGame.Instance.FindNearestRefinery(Team, exitPoint);
+            if (refinery == null)
+            {
+                return false;
+            }
+
+            ResourceNode resource = RtsGame.Instance.FindNearestResource(refinery.transform.position);
+            if (resource == null)
+            {
+                return false;
+            }
+
+            harvester.IssueHarvestAfterExit(resource, refinery, exitPoint);
+            return true;
         }
 
         private Vector3 GetProductionSpawnPoint(UnitKind kind)

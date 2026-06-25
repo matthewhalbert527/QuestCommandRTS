@@ -103,6 +103,7 @@ namespace QuestCommandRTS
         public int cargo;
         public int targetResourceNodeId;
         public int homeRefineryEntityId;
+        public Vector3Data productionExitPoint;
         public float harvestAccumulator;
     }
 

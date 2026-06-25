@@ -1036,18 +1036,21 @@ namespace QuestCommandRTS
             Idle,
             MovingToResource,
             Harvesting,
-            Returning
+            Returning,
+            ExitingProduction
         }
 
         private HarvestState state;
         private ResourceNode targetNode;
         private RefineryStructure homeRefinery;
+        private Vector3 productionExitPoint;
         private float harvestAccumulator;
 
         public override void IssueMove(Vector3 worldPosition)
         {
             state = HarvestState.Idle;
             targetNode = null;
+            productionExitPoint = transform.position;
             base.IssueMove(worldPosition);
         }
 
@@ -1056,6 +1059,7 @@ namespace QuestCommandRTS
             state = HarvestState.Idle;
             targetNode = null;
             homeRefinery = null;
+            productionExitPoint = transform.position;
             base.IssueAttackMove(worldPosition);
         }
 
@@ -1064,6 +1068,7 @@ namespace QuestCommandRTS
             state = HarvestState.Idle;
             targetNode = null;
             homeRefinery = null;
+            productionExitPoint = transform.position;
             harvestAccumulator = 0f;
             base.IssueStop();
         }
@@ -1077,8 +1082,28 @@ namespace QuestCommandRTS
 
             targetNode = node;
             homeRefinery = refinery;
+            productionExitPoint = transform.position;
+            harvestAccumulator = 0f;
             state = HarvestState.MovingToResource;
             hasDestination = false;
+            hasAttackMoveDestination = false;
+            attackTarget = null;
+        }
+
+        public void IssueHarvestAfterExit(ResourceNode node, RefineryStructure refinery, Vector3 exitPoint)
+        {
+            if (node == null || refinery == null)
+            {
+                return;
+            }
+
+            targetNode = node;
+            homeRefinery = refinery;
+            productionExitPoint = ClampToMap(exitPoint);
+            harvestAccumulator = 0f;
+            state = HarvestState.ExitingProduction;
+            hasDestination = false;
+            hasAttackMoveDestination = false;
             attackTarget = null;
         }
 
@@ -1089,9 +1114,16 @@ namespace QuestCommandRTS
                 return;
             }
 
-            float deltaTime = GetDeltaTime();
+            TickHarvestOrders(GetDeltaTime());
+        }
+
+        private void TickHarvestOrders(float deltaTime)
+        {
             switch (state)
             {
+                case HarvestState.ExitingProduction:
+                    TickExitingProduction(deltaTime);
+                    break;
                 case HarvestState.MovingToResource:
                     TickMovingToResource(deltaTime);
                     break;
@@ -1102,7 +1134,7 @@ namespace QuestCommandRTS
                     TickReturning(deltaTime);
                     break;
                 default:
-                    base.Update();
+                    TickOrders(deltaTime);
                     break;
             }
         }
@@ -1115,6 +1147,7 @@ namespace QuestCommandRTS
                 cargo = Cargo,
                 targetResourceNodeId = targetNode != null ? targetNode.PersistentId : 0,
                 homeRefineryEntityId = homeRefinery != null ? homeRefinery.PersistentId : 0,
+                productionExitPoint = new Vector3Data(productionExitPoint),
                 harvestAccumulator = harvestAccumulator
             };
         }
@@ -1127,8 +1160,9 @@ namespace QuestCommandRTS
             }
 
             Cargo = Mathf.Clamp(data.cargo, 0, CargoCapacity);
-            state = (HarvestState)Mathf.Clamp(data.state, 0, 3);
+            state = (HarvestState)Mathf.Clamp(data.state, 0, 4);
             harvestAccumulator = Mathf.Max(0f, data.harvestAccumulator);
+            productionExitPoint = ClampToMap(data.productionExitPoint.ToVector3());
             targetNode = resourceById != null && resourceById.TryGetValue(data.targetResourceNodeId, out ResourceNode node) ? node : null;
             homeRefinery = null;
             if (entityById != null && entityById.TryGetValue(data.homeRefineryEntityId, out RtsEntity entity))
@@ -1141,9 +1175,23 @@ namespace QuestCommandRTS
                 hasDestination = false;
                 attackTarget = null;
             }
+
+            if (state == HarvestState.ExitingProduction && productionExitPoint.sqrMagnitude < 0.001f)
+            {
+                state = HarvestState.MovingToResource;
+            }
         }
 
 #if UNITY_EDITOR
+        public bool IsAutoHarvestExitingProductionForTests => state == HarvestState.ExitingProduction;
+        public ResourceNode TargetResourceNodeForTests => targetNode;
+        public RefineryStructure HomeRefineryForTests => homeRefinery;
+
+        public void TickHarvesterForTests(float deltaTime)
+        {
+            TickHarvestOrders(deltaTime);
+        }
+
         public void SetHarvestingForVisualsForTests(ResourceNode node, RefineryStructure refinery)
         {
             targetNode = node;
@@ -1154,6 +1202,30 @@ namespace QuestCommandRTS
             attackTarget = null;
         }
 #endif
+
+        private void TickExitingProduction(float deltaTime)
+        {
+            if (targetNode == null || targetNode.IsDepleted)
+            {
+                state = HarvestState.Idle;
+                return;
+            }
+
+            if (homeRefinery == null || !homeRefinery.IsAlive)
+            {
+                homeRefinery = RtsGame.HasInstance ? RtsGame.Instance.FindNearestRefinery(Team, transform.position) : null;
+                if (homeRefinery == null)
+                {
+                    state = HarvestState.Idle;
+                    return;
+                }
+            }
+
+            if (MoveToward(productionExitPoint, deltaTime, 0.45f) || PlanarDistance(transform.position, productionExitPoint) <= 0.48f)
+            {
+                state = HarvestState.MovingToResource;
+            }
+        }
 
         private void TickMovingToResource(float deltaTime)
         {
@@ -1200,7 +1272,7 @@ namespace QuestCommandRTS
         {
             if (homeRefinery == null || !homeRefinery.IsAlive)
             {
-                homeRefinery = RtsGame.Instance.FindNearestPlayerRefinery(transform.position);
+                homeRefinery = RtsGame.Instance.FindNearestRefinery(Team, transform.position);
                 if (homeRefinery == null)
                 {
                     state = HarvestState.Idle;

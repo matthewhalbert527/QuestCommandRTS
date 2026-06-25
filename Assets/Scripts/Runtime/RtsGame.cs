@@ -914,13 +914,18 @@ namespace QuestCommandRTS
 
         public RefineryStructure FindNearestPlayerRefinery(Vector3 point)
         {
+            return FindNearestRefinery(RtsTeam.Player, point);
+        }
+
+        public RefineryStructure FindNearestRefinery(RtsTeam team, Vector3 point)
+        {
             RefineryStructure best = null;
             float bestDistance = float.PositiveInfinity;
 
             for (int i = 0; i < entities.Count; i++)
             {
                 RefineryStructure refinery = entities[i] as RefineryStructure;
-                if (refinery == null || refinery.Team != RtsTeam.Player || !refinery.IsAlive)
+                if (refinery == null || refinery.Team != team || !refinery.IsAlive)
                 {
                     continue;
                 }
