@@ -571,6 +571,7 @@ namespace QuestCommandRTS.Editor
             AssertSmokePassed(report, "Desktop input absent");
             AssertSmokePassed(report, "Desktop HUD absent");
             AssertSmokePassed(report, "Quest rig present");
+            AssertSmokePassed(report, "Quest settings present");
             AssertSmokePassed(report, "Quest input present");
             AssertSmokePassed(report, "Quest world HUD present");
             AssertSmokePassed(report, "Quest tactical map present");

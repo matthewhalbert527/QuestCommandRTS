@@ -44,6 +44,7 @@ namespace QuestCommandRTS
             Add(results, "Desktop input absent", game.GetComponent<RtsInputController>() == null, "Quest mode must not install RtsInputController.");
             Add(results, "Desktop HUD absent", game.GetComponent<RtsHud>() == null, "Quest mode must not install the Screen Space Overlay desktop HUD.");
             Add(results, "Quest rig present", rig != null && rig.RigRoot != null && rig.HeadCamera != null, "QuestTabletopRig should own the tabletop root and XR head camera.");
+            Add(results, "Quest settings present", settings != null, "QuestTabletopSettings should own tabletop scale, height, ray, reticle, clip-plane, and world-space UI values.");
             Add(results, "Quest input present", input != null, "QuestRtsInputController should translate controller state into shared dispatcher calls.");
             Add(results, "Quest world HUD present", worldHud != null && HasWorldSpaceCanvas("Quest World Status"), "Quest mode should expose a world-space status panel.");
             Add(results, "Quest tactical map present", tacticalMap != null && HasWorldSpaceCanvas("Quest Tactical Map"), "Quest mode should expose the battle map as world-space headset UI.");
@@ -71,11 +72,6 @@ namespace QuestCommandRTS
                     Add(results, "Rig scale applied", rigScaleValid, "RigRoot.localScale=" + rig.RigRoot.localScale);
                 }
             }
-            else
-            {
-                Add(results, "Quest settings present", false, "QuestTabletopSettings component is missing.");
-            }
-
             if (rig != null)
             {
                 Add(results, "Head tracking node", HasTrackedPose(rig.Head), "XR Head should have QuestTrackedNodePose.");
