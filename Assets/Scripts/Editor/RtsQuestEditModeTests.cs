@@ -58,6 +58,20 @@ namespace QuestCommandRTS.Editor
         }
 
         [Test]
+        public void QuestInitializationScalesCameraClipPlanesWithTabletop()
+        {
+            RtsGame game = CreateInitializedGame(RtsRuntimeMode.QuestVr);
+            QuestTabletopSettings settings = game.GetComponent<QuestTabletopSettings>();
+
+            Assert.IsNotNull(settings);
+            Assert.IsNotNull(game.QuestRig.HeadCamera);
+            Assert.AreEqual(126f, settings.SimulationUnitsPerMeter, 0.001f);
+            Assert.AreEqual(settings.CameraNearClipSimulationUnits, game.QuestRig.HeadCamera.nearClipPlane, 0.001f);
+            Assert.AreEqual(settings.CameraFarClipSimulationUnits, game.QuestRig.HeadCamera.farClipPlane, 0.001f);
+            Assert.Greater(game.QuestRig.HeadCamera.farClipPlane, RtsBalance.MapHalfSize * 2f);
+        }
+
+        [Test]
         public void DispatcherSelectsClearsAndAddsFromWorldRays()
         {
             RtsGame game = CreateInitializedGame(RtsRuntimeMode.QuestVr);

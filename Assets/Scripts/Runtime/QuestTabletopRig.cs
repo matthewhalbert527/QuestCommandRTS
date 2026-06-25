@@ -29,8 +29,8 @@ namespace QuestCommandRTS
             HeadCamera = Head.gameObject.AddComponent<Camera>();
             HeadCamera.clearFlags = CameraClearFlags.SolidColor;
             HeadCamera.backgroundColor = new Color(0.035f, 0.04f, 0.05f);
-            HeadCamera.nearClipPlane = settings.CameraNearClipMeters;
-            HeadCamera.farClipPlane = settings.CameraFarClipMeters;
+            HeadCamera.nearClipPlane = settings.CameraNearClipSimulationUnits;
+            HeadCamera.farClipPlane = settings.CameraFarClipSimulationUnits;
             HeadCamera.stereoTargetEye = StereoTargetEyeMask.Both;
 
             if (Camera.main == null)
