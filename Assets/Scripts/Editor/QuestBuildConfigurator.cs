@@ -103,6 +103,7 @@ namespace QuestCommandRTS.Editor
             Add(results, "OpenXR package", manifest.Contains("\"com.unity.xr.openxr\": \"1.15.1\""), "manifest should include com.unity.xr.openxr 1.15.1");
             Add(results, "XR Interaction Toolkit package", manifest.Contains("\"com.unity.xr.interaction.toolkit\": \"3.2.2\""), "manifest should include com.unity.xr.interaction.toolkit 3.2.2");
             Add(results, "Input System package", manifest.Contains("\"com.unity.inputsystem\": \"1.18.0\""), "manifest should include com.unity.inputsystem 1.18.0");
+            results.Add(CreateForbiddenXrPackagesValidationItem(manifest));
             results.Add(CreateAndroidBuildSupportValidationItem(IsAndroidBuildTargetSupported()));
             Add(results, "Android min API", PlayerSettings.Android.minSdkVersion == AndroidSdkVersions.AndroidApiLevel29, PlayerSettings.Android.minSdkVersion.ToString());
             Add(results, "Android target API", (int)PlayerSettings.Android.targetSdkVersion == 0, "Automatic/highest installed target expected");
@@ -141,6 +142,22 @@ namespace QuestCommandRTS.Editor
                 buildTargetSupported
                     ? "BuildTarget.Android is supported by this Unity editor install."
                     : "Android Build Support is not installed for this Unity editor. Install Android Build Support, SDK and NDK Tools, and OpenJDK for Unity 2022.3.62f3 in Unity Hub before Quest device builds.");
+        }
+
+        internal static ValidationItem CreateForbiddenXrPackagesValidationItem(string manifest)
+        {
+            string text = manifest ?? string.Empty;
+            bool hasForbiddenPackage =
+                text.Contains("\"com.meta.xr") ||
+                text.Contains("\"com.unity.xr.meta-openxr\"");
+
+            return new ValidationItem(
+                "Forbidden XR packages absent",
+                !hasForbiddenPackage,
+                false,
+                hasForbiddenPackage
+                    ? "Remove Meta XR SDK/All-in-One, Meta Avatars, passthrough/hand-tracking packages, or com.unity.xr.meta-openxr packages for this milestone."
+                    : "Manifest uses Unity XR Management, OpenXR, XR Interaction Toolkit, and Input System without forbidden Meta XR SDK packages.");
         }
 
         private static bool IsAndroidBuildTargetSupported()

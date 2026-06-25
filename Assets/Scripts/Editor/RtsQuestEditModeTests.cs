@@ -463,6 +463,7 @@ namespace QuestCommandRTS.Editor
             AssertValidationPassed(report, "OpenXR package");
             AssertValidationPassed(report, "XR Interaction Toolkit package");
             AssertValidationPassed(report, "Input System package");
+            AssertValidationPassed(report, "Forbidden XR packages absent");
             AssertValidationExists(report, "Android Build Support");
             AssertValidationPassed(report, "Android min API");
             AssertValidationPassed(report, "Android target API");
@@ -495,6 +496,24 @@ namespace QuestCommandRTS.Editor
             StringAssert.Contains("Android Build Support is not installed", missing.Detail);
             StringAssert.Contains("SDK and NDK Tools", missing.Detail);
             StringAssert.Contains("OpenJDK", missing.Detail);
+        }
+
+        [Test]
+        public void QuestValidatorRejectsForbiddenMetaXrPackages()
+        {
+            QuestXrProjectValidator.ValidationItem clean = QuestXrProjectValidator.CreateForbiddenXrPackagesValidationItem("{\"dependencies\":{\"com.unity.xr.openxr\":\"1.15.1\"}}");
+            Assert.AreEqual("Forbidden XR packages absent", clean.Label);
+            Assert.IsTrue(clean.Passed);
+            Assert.IsFalse(clean.WarningOnly);
+
+            QuestXrProjectValidator.ValidationItem metaAllInOne = QuestXrProjectValidator.CreateForbiddenXrPackagesValidationItem("{\"dependencies\":{\"com.meta.xr.sdk.all\":\"72.0.0\"}}");
+            Assert.IsFalse(metaAllInOne.Passed);
+            Assert.IsFalse(metaAllInOne.WarningOnly);
+            StringAssert.Contains("Meta XR SDK", metaAllInOne.Detail);
+
+            QuestXrProjectValidator.ValidationItem unityMetaOpenXr = QuestXrProjectValidator.CreateForbiddenXrPackagesValidationItem("{\"dependencies\":{\"com.unity.xr.meta-openxr\":\"2.0.0\"}}");
+            Assert.IsFalse(unityMetaOpenXr.Passed);
+            StringAssert.Contains("com.unity.xr.meta-openxr", unityMetaOpenXr.Detail);
         }
 
         [Test]

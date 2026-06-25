@@ -37,8 +37,8 @@ This document records what has been implemented and what has actually been verif
 
 Automated verification last run locally:
 
-- EditMode tests: `91` total, `91` passed, `0` failed.
-- XR setup validator: automated package/project-setting checks pass except for local Android Build Support, which is missing from this Unity install; manual headset and Android OpenXR UI verification remain manual.
+- EditMode tests: `92` total, `92` passed, `0` failed.
+- XR setup validator: automated package/project-setting checks pass, including forbidden Meta XR package absence, except for local Android Build Support, which is missing from this Unity install; manual headset and Android OpenXR UI verification remain manual.
 - Generated Quest runtime smoke report: automated object-graph checks pass in EditMode; physical headset behavior remains manual.
 - Generated desktop runtime smoke report: automated object-graph checks pass in EditMode; hands-on desktop control regression remains manual.
 - Screenshot exporter: produces a populated desktop-board showcase at `C:\Users\matth\Documents\Codex\2026-06-24\i-s\outputs\quest-command-rts-sample.png`, a Quest-view world-space UI showcase at `C:\Users\matth\Documents\Codex\2026-06-24\i-s\outputs\quest-command-rts-quest-sample.png`, and a room-sized Quest profile showcase at `C:\Users\matth\Documents\Codex\2026-06-24\i-s\outputs\quest-command-rts-quest-room-sample.png`.
@@ -59,7 +59,7 @@ Automated verification last run locally:
 | Quest path does not create, reposition, or rotate the desktop command camera | Pass | Forced Quest initialization tests assert no `Command Camera`, no `RtsInputController`, and no `RtsHud`; the view camera is the Quest head camera. |
 | Quest path does not run the desktop overlay HUD | Pass | Forced Quest initialization tests assert `RtsHud` is absent and `QuestWorldHud` plus `QuestTacticalMap` are present. Desktop smoke checks also assert Quest-only world UI is absent from desktop mode. |
 | Tabletop scale is configurable and defaults to approximately 125-128 simulation units per physical meter | Pass | `QuestTabletopSettings.SimulationUnitsPerMeter` defaults to `126`, yielding an approximately `1.78m` battlefield width in tests. Profile presets also cover an optional approximately `4.0m` room-sized board. |
-| Android/OpenXR project settings are configured or explicitly validated and documented | Partial local environment gap | Validator checks package pins, Android Build Support, Android API/backend/architecture/package id/input/graphics, OpenXR loaders, SPI, and Oculus Touch. This Unity install is missing Android Build Support, so Quest device builds are not locally verified. |
+| Android/OpenXR project settings are configured or explicitly validated and documented | Partial local environment gap | Validator checks package pins, absence of forbidden Meta XR SDK packages, Android Build Support, Android API/backend/architecture/package id/input/graphics, OpenXR loaders, SPI, and Oculus Touch. This Unity install is missing Android Build Support, so Quest device builds are not locally verified. |
 | New per-frame Quest input code avoids obvious managed allocations | Pass | EditMode test scans Quest input, tracked pose, world HUD, tactical map, and command console hot loops for obvious allocation-heavy patterns. Quest scene budget tests also guard generated object, renderer, material, collider, camera, light, UI, tactical map, and visual set-dressing counts. |
 | README and Quest XR setup docs are updated | Pass | `README.md`, `docs/QUEST_XR_SETUP.md`, `docs/SAVE_SYSTEM.md`, `docs/LIFECYCLE_TEST_MATRIX.md`, `docs/PERFORMANCE_TESTING.md`, and this status document record controls, persistence/settings, setup, validation, limitations, and manual checks. |
 | Unverified physical-device behavior is clearly identified | Pass | Physical headset/Quest Link/device build verification remains marked manual and unverified here. |
