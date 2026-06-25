@@ -23,6 +23,7 @@ namespace QuestCommandRTS
         protected RtsEntity repairTarget;
         public RtsEntity CurrentAttackTargetForVisuals => attackTarget != null && attackTarget.IsAlive ? attackTarget : null;
 
+        private RtsUnitVisualAnimator visualAnimator;
         private float nextAttackTime;
         private float nextAwarenessScanTime;
         private const float AwarenessScanInterval = 0.35f;
@@ -52,6 +53,7 @@ namespace QuestCommandRTS
             Damage = stats.Damage;
             AttackCooldown = stats.AttackCooldown;
             SightRange = GetSightRange(UnitKind, AttackRange, Damage);
+            visualAnimator = GetComponent<RtsUnitVisualAnimator>();
 
             float radius = GetSelectionRadius(UnitKind);
             Initialize(team, stats.Name, stats.Health, radius);
@@ -61,7 +63,11 @@ namespace QuestCommandRTS
         {
             repairTarget = null;
             boardingTarget = null;
-            attackTarget = null;
+            if (!CanMoveWhileAttacking())
+            {
+                attackTarget = null;
+            }
+
             hasDestination = true;
             hasAttackMoveDestination = false;
             destination = ClampToMap(worldPosition);
@@ -273,7 +279,22 @@ namespace QuestCommandRTS
 
             if (attackTarget != null)
             {
-                TickAttackOrder(deltaTime);
+                if (CanMoveWhileAttacking() && (hasDestination || hasAttackMoveDestination))
+                {
+                    TickAttackOrder(deltaTime, true);
+                    if (hasDestination && MoveToward(destination, deltaTime, StopDistance))
+                    {
+                        hasDestination = false;
+                    }
+                    else if (hasAttackMoveDestination && MoveToward(attackMoveDestination, deltaTime, StopDistance))
+                    {
+                        hasAttackMoveDestination = false;
+                    }
+
+                    return;
+                }
+
+                TickAttackOrder(deltaTime, false);
                 return;
             }
 
@@ -283,7 +304,18 @@ namespace QuestCommandRTS
                 if (acquired != null)
                 {
                     attackTarget = acquired;
-                    TickAttackOrder(deltaTime);
+                    if (CanMoveWhileAttacking())
+                    {
+                        TickAttackOrder(deltaTime, true);
+                        if (MoveToward(attackMoveDestination, deltaTime, StopDistance))
+                        {
+                            hasAttackMoveDestination = false;
+                        }
+
+                        return;
+                    }
+
+                    TickAttackOrder(deltaTime, false);
                     return;
                 }
 
@@ -297,7 +329,7 @@ namespace QuestCommandRTS
 
             if (!hasDestination && TryAcquireNearbyEnemy())
             {
-                TickAttackOrder(deltaTime);
+                TickAttackOrder(deltaTime, false);
                 return;
             }
 
@@ -433,51 +465,160 @@ namespace QuestCommandRTS
             return false;
         }
 
-        private void TickAttackOrder(float deltaTime)
+        private void TickAttackOrder(float deltaTime, bool allowIndependentMovement)
         {
             float distance = PlanarDistance(transform.position, attackTarget.transform.position);
-            float desiredRange = Mathf.Max(1.2f, AttackRange * 0.88f);
+            float desiredRange = Mathf.Max(1.2f, AttackRange * (RtsBalance.IsTank(UnitKind) ? 0.98f : 0.88f));
 
             if (distance > desiredRange)
             {
-                MoveToward(attackTarget.transform.position, deltaTime, desiredRange);
+                if (!allowIndependentMovement)
+                {
+                    MoveToward(attackTarget.transform.position, deltaTime, desiredRange);
+                }
+
                 return;
             }
 
-            FacePoint(attackTarget.transform.position, deltaTime);
+            if (RtsBalance.IsTank(UnitKind))
+            {
+                if (!IsTurretReadyToFireAt(attackTarget, deltaTime))
+                {
+                    return;
+                }
+            }
+            else
+            {
+                FacePoint(attackTarget.transform.position, deltaTime);
+            }
 
             float currentTime = GetSimulationTime();
             if (currentTime >= nextAttackTime)
             {
                 nextAttackTime = currentTime + Mathf.Max(0.15f, AttackCooldown);
-                attackTarget.TakeDamage(Damage, this);
-                RtsGame.Instance.SpawnTracer(GroundPosition + Vector3.up * 0.8f, attackTarget.GroundPosition + Vector3.up * 0.8f, Team);
+                FirePrimaryWeapon(attackTarget);
                 OnPrimaryAttackFired(attackTarget);
             }
         }
 
         protected virtual void OnPrimaryAttackFired(RtsEntity target)
         {
+        }
+
+        private void FirePrimaryWeapon(RtsEntity target)
+        {
             if (target == null || !RtsGame.HasInstance)
             {
                 return;
             }
 
+            RtsGame.Instance.SpawnProjectile(
+                GetProjectileKind(),
+                Team,
+                this,
+                target,
+                GetWeaponMuzzlePoint(),
+                GetProjectileDirectDamage(target),
+                GetProjectileSplashRadius(),
+                GetProjectileSplashDamage());
+        }
+
+        private bool IsTurretReadyToFireAt(RtsEntity target, float deltaTime)
+        {
+            if (visualAnimator == null)
+            {
+                visualAnimator = GetComponent<RtsUnitVisualAnimator>();
+            }
+
+            return visualAnimator == null || visualAnimator.AimTurretAt(target.GroundPosition, deltaTime);
+        }
+
+        private bool CanMoveWhileAttacking()
+        {
+            return RtsBalance.IsTank(UnitKind);
+        }
+
+        private Vector3 GetWeaponMuzzlePoint()
+        {
+            if (RtsBalance.IsTank(UnitKind))
+            {
+                if (visualAnimator == null)
+                {
+                    visualAnimator = GetComponent<RtsUnitVisualAnimator>();
+                }
+
+                if (visualAnimator != null)
+                {
+                    return visualAnimator.GetTurretMuzzleWorldPosition();
+                }
+            }
+
             switch (UnitKind)
             {
                 case UnitKind.Grenadier:
-                    RtsGame.Instance.DamageEnemiesInRadius(Team, target.GroundPosition, 2.35f, Damage * 0.55f, this, target);
-                    break;
-                case UnitKind.FlameTrooper:
-                    RtsGame.Instance.DamageEnemiesInRadius(Team, target.GroundPosition, 1.8f, Damage * 0.45f, this, target);
-                    break;
+                    return transform.TransformPoint(new Vector3(0.34f, 1.12f, 0.24f));
                 case UnitKind.RocketSoldier:
-                    if (target.IsAlive && (target is RtsStructure || IsArmoredTarget(target)))
-                    {
-                        target.TakeDamage(Damage * 0.45f, this);
-                    }
+                    return transform.TransformPoint(new Vector3(0.38f, 1.18f, 0.58f));
+                case UnitKind.FlameTrooper:
+                    return transform.TransformPoint(new Vector3(0.36f, 1.02f, 0.46f));
+                default:
+                    return transform.TransformPoint(new Vector3(0.34f, 1.05f, 0.48f));
+            }
+        }
 
-                    break;
+        private RtsProjectileKind GetProjectileKind()
+        {
+            switch (UnitKind)
+            {
+                case UnitKind.Grenadier:
+                    return RtsProjectileKind.Grenade;
+                case UnitKind.RocketSoldier:
+                    return RtsProjectileKind.Rocket;
+                case UnitKind.FlameTrooper:
+                    return RtsProjectileKind.FlameBolt;
+                case UnitKind.LightTank:
+                case UnitKind.MediumTank:
+                case UnitKind.HeavyTank:
+                case UnitKind.Tank:
+                    return RtsProjectileKind.TankShell;
+                default:
+                    return RtsProjectileKind.RifleRound;
+            }
+        }
+
+        private float GetProjectileDirectDamage(RtsEntity target)
+        {
+            if (UnitKind == UnitKind.RocketSoldier && target != null && (target is RtsStructure || IsArmoredTarget(target)))
+            {
+                return Damage * 1.45f;
+            }
+
+            return Damage;
+        }
+
+        private float GetProjectileSplashRadius()
+        {
+            switch (UnitKind)
+            {
+                case UnitKind.Grenadier:
+                    return 2.35f;
+                case UnitKind.FlameTrooper:
+                    return 1.8f;
+                default:
+                    return 0f;
+            }
+        }
+
+        private float GetProjectileSplashDamage()
+        {
+            switch (UnitKind)
+            {
+                case UnitKind.Grenadier:
+                    return Damage * 0.55f;
+                case UnitKind.FlameTrooper:
+                    return Damage * 0.45f;
+                default:
+                    return 0f;
             }
         }
 
@@ -653,7 +794,7 @@ namespace QuestCommandRTS
 
         protected override void OnPrimaryAttackFired(RtsEntity target)
         {
-            if (LoadedRiflemen <= 0 || target == null || !target.IsAlive)
+            if (LoadedRiflemen <= 0 || target == null || !target.IsAlive || !RtsGame.HasInstance)
             {
                 return;
             }
@@ -664,13 +805,8 @@ namespace QuestCommandRTS
                 return;
             }
 
-            target.TakeDamage(passengerDamage, this);
-
-            if (RtsGame.HasInstance)
-            {
-                Vector3 muzzle = GroundPosition + transform.TransformDirection(new Vector3(0.62f, 1.15f, 0.35f));
-                RtsGame.Instance.SpawnTracer(muzzle, target.GroundPosition + Vector3.up * 0.75f, Team);
-            }
+            Vector3 muzzle = GroundPosition + transform.TransformDirection(new Vector3(0.62f, 1.15f, 0.35f));
+            RtsGame.Instance.SpawnProjectile(RtsProjectileKind.RifleRound, Team, this, target, muzzle, passengerDamage, 0f, 0f);
         }
 
         private void RefreshPassengerIndicator()

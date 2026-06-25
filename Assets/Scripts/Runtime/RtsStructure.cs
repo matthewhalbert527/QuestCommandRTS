@@ -106,13 +106,12 @@ namespace QuestCommandRTS
         {
             if (RtsBalance.IsInfantry(kind))
             {
-                return StructureKind == StructureKind.Barracks || StructureKind == StructureKind.CommandCenter;
+                return StructureKind == StructureKind.Barracks;
             }
 
             switch (kind)
             {
                 case UnitKind.Harvester:
-                    return StructureKind == StructureKind.Refinery || StructureKind == StructureKind.WarFactory || StructureKind == StructureKind.CommandCenter;
                 case UnitKind.Tank:
                 case UnitKind.LightTank:
                 case UnitKind.MediumTank:
@@ -453,6 +452,8 @@ namespace QuestCommandRTS
 
         private float nextAttackTime;
         private Transform head;
+        private const float HeadTurnSpeedDegreesPerSecond = 280f;
+        private const float HeadAimToleranceDegrees = 8f;
 
         public void SetHead(Transform turretHead)
         {
@@ -485,7 +486,7 @@ namespace QuestCommandRTS
 
         private void Update()
         {
-            if (!RtsGame.HasInstance || RtsGame.Instance.IsMatchOver || RtsGame.Instance.Clock.IsPaused || RtsGame.Instance.Clock.SimulationTime < nextAttackTime)
+            if (!RtsGame.HasInstance || RtsGame.Instance.IsMatchOver || RtsGame.Instance.Clock.IsPaused)
             {
                 return;
             }
@@ -496,20 +497,61 @@ namespace QuestCommandRTS
                 return;
             }
 
-            nextAttackTime = RtsGame.Instance.Clock.SimulationTime + AttackCooldown;
             Vector3 aimPoint = target.GroundPosition + Vector3.up * 0.8f;
-
-            if (head != null)
+            bool aimed = AimHeadAt(aimPoint, RtsGame.Instance.Clock.DeltaTime);
+            if (!aimed || RtsGame.Instance.Clock.SimulationTime < nextAttackTime)
             {
-                Vector3 flat = new Vector3(aimPoint.x - head.position.x, 0f, aimPoint.z - head.position.z);
-                if (flat.sqrMagnitude > 0.01f)
-                {
-                    head.rotation = Quaternion.LookRotation(flat.normalized, Vector3.up);
-                }
+                return;
             }
 
-            target.TakeDamage(Damage, this);
-            RtsGame.Instance.SpawnTracer(transform.position + Vector3.up * 1.4f, aimPoint, Team);
+            nextAttackTime = RtsGame.Instance.Clock.SimulationTime + AttackCooldown;
+            RtsGame.Instance.SpawnProjectile(GetProjectileKind(), Team, this, target, GetMuzzlePoint(), Damage, 0f, 0f);
+        }
+
+        private bool AimHeadAt(Vector3 aimPoint, float deltaTime)
+        {
+            if (head == null)
+            {
+                return true;
+            }
+
+            Vector3 flat = new Vector3(aimPoint.x - head.position.x, 0f, aimPoint.z - head.position.z);
+            if (flat.sqrMagnitude <= 0.01f)
+            {
+                return true;
+            }
+
+            Quaternion targetRotation = Quaternion.LookRotation(flat.normalized, Vector3.up);
+            head.rotation = Quaternion.RotateTowards(head.rotation, targetRotation, HeadTurnSpeedDegreesPerSecond * Mathf.Max(0.0001f, deltaTime));
+            return Quaternion.Angle(head.rotation, targetRotation) <= HeadAimToleranceDegrees;
+        }
+
+        private Vector3 GetMuzzlePoint()
+        {
+            if (head != null)
+            {
+                return head.position + head.forward * GetMuzzleForwardOffset() + Vector3.up * 0.03f;
+            }
+
+            return transform.position + transform.forward * 1.1f + Vector3.up * 1.4f;
+        }
+
+        private float GetMuzzleForwardOffset()
+        {
+            switch (StructureKind)
+            {
+                case StructureKind.GunTower:
+                    return 1.05f;
+                case StructureKind.AdvancedGunTower:
+                    return 1.15f;
+                default:
+                    return 0.95f;
+            }
+        }
+
+        private RtsProjectileKind GetProjectileKind()
+        {
+            return StructureKind == StructureKind.AdvancedGunTower ? RtsProjectileKind.Rocket : RtsProjectileKind.DefenseShell;
         }
     }
 }

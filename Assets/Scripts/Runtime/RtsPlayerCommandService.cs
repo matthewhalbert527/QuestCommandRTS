@@ -330,13 +330,13 @@ namespace QuestCommandRTS
             {
                 if (RtsBalance.IsInfantry(kind))
                 {
-                    return selectedProducer.CanTrain(kind) ? string.Empty : "Select Barracks or Command Center";
+                    return selectedProducer.CanTrain(kind) ? string.Empty : "Select Barracks";
                 }
 
                 switch (kind)
                 {
                     case UnitKind.Harvester:
-                        return selectedProducer.CanTrain(kind) ? string.Empty : "Select Refinery, War Factory, or Command Center";
+                        return selectedProducer.CanTrain(kind) ? string.Empty : "Select War Factory";
                     case UnitKind.Tank:
                     case UnitKind.LightTank:
                     case UnitKind.MediumTank:
@@ -353,9 +353,9 @@ namespace QuestCommandRTS
                 case UnitKind.HeavyTank:
                     return HasAnyPlayerProducerFor(kind) ? "Select War Factory" : "Needs War Factory";
                 case UnitKind.Harvester:
-                    return HasAnyPlayerProducerFor(kind) ? "Select producer" : "Needs Refinery or War Factory";
+                    return HasAnyPlayerProducerFor(kind) ? "Select War Factory" : "Needs War Factory";
                 default:
-                    return HasAnyPlayerProducerFor(kind) ? "Select producer" : "Needs Barracks";
+                    return HasAnyPlayerProducerFor(kind) ? "Select Barracks" : "Needs Barracks";
             }
         }
 

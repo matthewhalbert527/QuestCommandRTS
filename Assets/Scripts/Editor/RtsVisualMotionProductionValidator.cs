@@ -48,7 +48,7 @@ namespace QuestCommandRTS.Editor
             RtsUnitVisualAnimator harvesterAnimator = RequireAnimator(harvester, "Harvester animator");
 
             Require(infantryAnimator.HasLegRigForTests, "Infantry leg rig", "Infantry should have procedural walk legs.");
-            Require(tankAnimator.HasWheelRigForTests && tankAnimator.HasTurretRigForTests, "Tank rig", "Tanks should have procedural wheels and turret.");
+            Require(tankAnimator.HasTrackRigForTests && tankAnimator.HasTurretRigForTests, "Tank rig", "Tanks should have procedural tracks and turret.");
             Require(harvesterAnimator.HasWheelRigForTests && !harvesterAnimator.HasTurretRigForTests, "Harvester wheel rig", "Harvesters should roll without a turret rig.");
         }
 
@@ -65,14 +65,14 @@ namespace QuestCommandRTS.Editor
             RtsUnit tank = game.CreateUnit(RtsTeam.Player, UnitKind.MediumTank, new Vector3(-50f, 0f, -56f));
             RtsUnit enemy = game.CreateUnit(RtsTeam.Enemy, UnitKind.Rifleman, tank.transform.position + tank.transform.right * 6f);
             RtsUnitVisualAnimator tankAnimator = RequireAnimator(tank, "Tank animation");
-            Transform wheel = tankAnimator.FirstWheelForTests;
+            Transform track = tankAnimator.FirstTrackPadForTests;
             Transform turret = tankAnimator.TurretPivotForTests;
-            Quaternion wheelStart = wheel.localRotation;
+            Vector3 trackStart = track.localPosition;
             Quaternion turretStart = turret.localRotation;
             tank.transform.position += tank.transform.forward * 1.5f;
             tank.IssueAttack(enemy);
             tankAnimator.TickVisualsForTests(0.2f);
-            Require(Quaternion.Angle(wheelStart, wheel.localRotation) > 1f, "Wheel animation", "Tank wheels should rotate when the unit moves.");
+            Require((track.localPosition - trackStart).sqrMagnitude > 0.0001f, "Track animation", "Tank treads should move when the unit moves.");
             Require(Quaternion.Angle(turretStart, turret.localRotation) > 1f, "Turret animation", "Tank turret should yaw toward an attack target.");
         }
 
@@ -94,7 +94,7 @@ namespace QuestCommandRTS.Editor
 
         private static void ValidateProductionExit(RtsGame game)
         {
-            ProductionStructure barracks = FindPlayerProducer(game, StructureKind.Barracks);
+            ProductionStructure barracks = game.CreateStructure(RtsTeam.Player, StructureKind.Barracks, new Vector3(-76f, 0f, -62f)) as ProductionStructure;
             RtsUnit produced = barracks.SpawnProducedUnit(UnitKind.Rifleman, null);
             Require(produced != null, "Produced unit", "Producer should spawn a unit.");
 

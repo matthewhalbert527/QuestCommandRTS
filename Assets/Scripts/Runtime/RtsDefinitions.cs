@@ -42,6 +42,16 @@ namespace QuestCommandRTS
         AdvancedGunTower
     }
 
+    public enum RtsProjectileKind
+    {
+        RifleRound,
+        TankShell,
+        Grenade,
+        Rocket,
+        FlameBolt,
+        DefenseShell
+    }
+
     public struct UnitStats
     {
         public string Name;

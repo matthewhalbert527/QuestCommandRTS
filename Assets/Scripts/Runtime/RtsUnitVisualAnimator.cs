@@ -6,30 +6,39 @@ namespace QuestCommandRTS
     [DisallowMultipleComponent]
     public sealed class RtsUnitVisualAnimator : MonoBehaviour
     {
+        public const float TankTurretAimToleranceDegrees = 7.5f;
+
         private const float InfantryStrideFrequency = 8.8f;
         private const float InfantryLegSwingDegrees = 18f;
         private const float WheelRollDegreesPerUnit = 155f;
-        private const float TurretYawDegreesPerSecond = 260f;
+        private const float TrackScrollUnitsPerWorldUnit = 0.42f;
+        private const float TurretYawDegreesPerSecond = 300f;
 
         private readonly List<Transform> legParts = new List<Transform>();
         private readonly List<Transform> wheelParts = new List<Transform>();
+        private readonly List<Transform> trackPads = new List<Transform>();
         private readonly List<Quaternion> legBaseRotations = new List<Quaternion>();
         private readonly List<Vector3> legBasePositions = new List<Vector3>();
         private readonly List<Quaternion> wheelBaseRotations = new List<Quaternion>();
+        private readonly List<Vector3> trackBasePositions = new List<Vector3>();
 
         private RtsUnit owner;
         private UnitKind unitKind;
         private Transform turretPivot;
+        private Transform turretMuzzle;
         private Quaternion turretBaseRotation;
         private Vector3 lastPosition;
         private float stridePhase;
         private float wheelRollDegrees;
+        private float trackScroll;
 
         public bool HasLegRigForTests => legParts.Count > 0;
-        public bool HasWheelRigForTests => wheelParts.Count > 0;
+        public bool HasWheelRigForTests => wheelParts.Count > 0 || trackPads.Count > 0;
+        public bool HasTrackRigForTests => trackPads.Count > 0;
         public bool HasTurretRigForTests => turretPivot != null;
         public Transform FirstLegForTests => legParts.Count > 0 ? legParts[0] : null;
-        public Transform FirstWheelForTests => wheelParts.Count > 0 ? wheelParts[0] : null;
+        public Transform FirstWheelForTests => wheelParts.Count > 0 ? wheelParts[0] : FirstTrackPadForTests;
+        public Transform FirstTrackPadForTests => trackPads.Count > 0 ? trackPads[0] : null;
         public Transform TurretPivotForTests => turretPivot;
 
         public void Initialize(RtsUnit unit, UnitKind kind)
@@ -38,6 +47,44 @@ namespace QuestCommandRTS
             unitKind = RtsBalance.NormalizeUnitKind(kind);
             lastPosition = transform.position;
             CollectRigParts();
+        }
+
+        public bool AimTurretAt(Vector3 worldPosition, float deltaTime)
+        {
+            if (turretPivot == null)
+            {
+                return true;
+            }
+
+            Quaternion targetRotation = GetTurretTargetRotation(worldPosition);
+            float safeDelta = Mathf.Max(0.0001f, deltaTime);
+            turretPivot.localRotation = Quaternion.RotateTowards(turretPivot.localRotation, targetRotation, TurretYawDegreesPerSecond * safeDelta);
+            return Quaternion.Angle(turretPivot.localRotation, targetRotation) <= TankTurretAimToleranceDegrees;
+        }
+
+        public bool IsTurretAimedAt(Vector3 worldPosition)
+        {
+            if (turretPivot == null)
+            {
+                return true;
+            }
+
+            return Quaternion.Angle(turretPivot.localRotation, GetTurretTargetRotation(worldPosition)) <= TankTurretAimToleranceDegrees;
+        }
+
+        public Vector3 GetTurretMuzzleWorldPosition()
+        {
+            if (turretMuzzle != null)
+            {
+                return turretMuzzle.position;
+            }
+
+            if (turretPivot != null)
+            {
+                return turretPivot.TransformPoint(new Vector3(0f, 0f, 0.75f));
+            }
+
+            return transform.position + transform.forward * 0.8f + Vector3.up;
         }
 
         private void LateUpdate()
@@ -68,10 +115,13 @@ namespace QuestCommandRTS
         {
             legParts.Clear();
             wheelParts.Clear();
+            trackPads.Clear();
             legBaseRotations.Clear();
             legBasePositions.Clear();
             wheelBaseRotations.Clear();
+            trackBasePositions.Clear();
             turretPivot = null;
+            turretMuzzle = null;
 
             Transform[] children = GetComponentsInChildren<Transform>(true);
             for (int i = 0; i < children.Length; i++)
@@ -93,10 +143,19 @@ namespace QuestCommandRTS
                     wheelParts.Add(child);
                     wheelBaseRotations.Add(child.localRotation);
                 }
+                else if (child.name.StartsWith("Track Tread", System.StringComparison.Ordinal))
+                {
+                    trackPads.Add(child);
+                    trackBasePositions.Add(child.localPosition);
+                }
                 else if (child.name == "Animated Turret Pivot")
                 {
                     turretPivot = child;
                     turretBaseRotation = child.localRotation;
+                }
+                else if (child.name == "Animated Turret Muzzle")
+                {
+                    turretMuzzle = child;
                 }
             }
         }
@@ -116,10 +175,12 @@ namespace QuestCommandRTS
             {
                 stridePhase += moved * InfantryStrideFrequency;
                 wheelRollDegrees += moved * WheelRollDegreesPerUnit;
+                trackScroll += moved * TrackScrollUnitsPerWorldUnit;
             }
 
             AnimateLegs(movementBlend);
             AnimateWheels();
+            AnimateTracks();
             AnimateTurret(safeDelta);
             lastPosition = currentPosition;
         }
@@ -161,6 +222,29 @@ namespace QuestCommandRTS
             }
         }
 
+        private void AnimateTracks()
+        {
+            if (trackPads.Count == 0)
+            {
+                return;
+            }
+
+            for (int i = 0; i < trackPads.Count; i++)
+            {
+                Transform pad = trackPads[i];
+                if (pad == null)
+                {
+                    continue;
+                }
+
+                Vector3 basePosition = trackBasePositions[i];
+                float sideDirection = basePosition.x < 0f ? -1f : 1f;
+                float phase = Mathf.Repeat(trackScroll + i * 0.135f, 1f);
+                float loopOffset = (phase - 0.5f) * 0.34f;
+                pad.localPosition = basePosition + new Vector3(0f, Mathf.Sin(phase * Mathf.PI * 2f) * 0.015f, loopOffset * sideDirection);
+            }
+        }
+
         private void AnimateTurret(float deltaTime)
         {
             if (turretPivot == null || owner == null || !RtsBalance.IsTank(unitKind))
@@ -168,21 +252,28 @@ namespace QuestCommandRTS
                 return;
             }
 
-            float desiredYaw = 0f;
             RtsEntity target = owner.CurrentAttackTargetForVisuals;
             if (target != null)
             {
-                Vector3 direction = target.GroundPosition - transform.position;
-                direction.y = 0f;
-                if (direction.sqrMagnitude > 0.001f)
-                {
-                    Vector3 localDirection = transform.InverseTransformDirection(direction.normalized);
-                    desiredYaw = Mathf.Atan2(localDirection.x, localDirection.z) * Mathf.Rad2Deg;
-                }
+                AimTurretAt(target.GroundPosition, deltaTime);
+                return;
             }
 
-            Quaternion targetRotation = turretBaseRotation * Quaternion.Euler(0f, desiredYaw, 0f);
-            turretPivot.localRotation = Quaternion.RotateTowards(turretPivot.localRotation, targetRotation, TurretYawDegreesPerSecond * deltaTime);
+            turretPivot.localRotation = Quaternion.RotateTowards(turretPivot.localRotation, turretBaseRotation, TurretYawDegreesPerSecond * deltaTime);
+        }
+
+        private Quaternion GetTurretTargetRotation(Vector3 worldPosition)
+        {
+            Vector3 direction = worldPosition - transform.position;
+            direction.y = 0f;
+            if (direction.sqrMagnitude < 0.001f)
+            {
+                return turretBaseRotation;
+            }
+
+            Vector3 localDirection = transform.InverseTransformDirection(direction.normalized);
+            float desiredYaw = Mathf.Atan2(localDirection.x, localDirection.z) * Mathf.Rad2Deg;
+            return turretBaseRotation * Quaternion.Euler(0f, desiredYaw, 0f);
         }
     }
 }

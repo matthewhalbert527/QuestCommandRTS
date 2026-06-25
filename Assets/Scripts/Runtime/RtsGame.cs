@@ -423,7 +423,7 @@ namespace QuestCommandRTS
             StatusMessage = "Destroy the enemy base.";
             Clock.SetSimulationTime(0f);
             MatchTime = 0f;
-            Resources = new ResourceBank(3400);
+            Resources = new ResourceBank(6200);
 
             CreateResourceFields();
             SpawnStartingForces();
@@ -1098,6 +1098,173 @@ namespace QuestCommandRTS
             timedDestroy.Lifetime = 0.09f;
         }
 
+        public RtsProjectile SpawnProjectile(
+            RtsProjectileKind kind,
+            RtsTeam team,
+            RtsEntity attacker,
+            RtsEntity target,
+            Vector3 from,
+            float damage,
+            float splashRadius,
+            float splashDamage)
+        {
+            if (target == null || !target.IsAlive)
+            {
+                return null;
+            }
+
+            Vector3 impactPoint = target.GroundPosition + Vector3.up * GetProjectileTargetHeight(target);
+            GameObject projectileObject = GameObject.CreatePrimitive(GetProjectilePrimitive(kind));
+            projectileObject.name = kind + " Projectile";
+            projectileObject.transform.SetParent(effectsRoot, true);
+            projectileObject.transform.position = from;
+            projectileObject.transform.localScale = GetProjectileScale(kind);
+
+            Collider collider = projectileObject.GetComponent<Collider>();
+            if (collider != null)
+            {
+                DestroyRuntimeObject(collider);
+            }
+
+            Renderer renderer = projectileObject.GetComponent<Renderer>();
+            if (renderer != null)
+            {
+                renderer.sharedMaterial = CreateMaterial(GetProjectileColor(kind, team));
+            }
+
+            RtsProjectile projectile = projectileObject.AddComponent<RtsProjectile>();
+            projectile.Initialize(
+                team,
+                attacker,
+                target,
+                from,
+                impactPoint,
+                damage,
+                GetProjectileSpeed(kind),
+                splashRadius,
+                splashDamage,
+                GetProjectileArcHeight(kind));
+
+            return projectile;
+        }
+
+        public void SpawnImpactPulse(Vector3 position, RtsTeam team, float radius)
+        {
+            GameObject pulse = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+            pulse.name = "Projectile Impact Pulse";
+            pulse.transform.SetParent(effectsRoot, true);
+            pulse.transform.position = position + Vector3.up * 0.035f;
+            float safeRadius = Mathf.Max(0.35f, radius);
+            pulse.transform.localScale = new Vector3(safeRadius, 0.025f, safeRadius);
+
+            Collider collider = pulse.GetComponent<Collider>();
+            if (collider != null)
+            {
+                DestroyRuntimeObject(collider);
+            }
+
+            Renderer renderer = pulse.GetComponent<Renderer>();
+            if (renderer != null)
+            {
+                Color color = team == RtsTeam.Enemy ? new Color(1f, 0.28f, 0.16f, 0.62f) : new Color(0.42f, 0.9f, 1f, 0.62f);
+                renderer.sharedMaterial = CreateTransparentMaterial(color);
+            }
+
+            RtsTimedDestroy timedDestroy = pulse.AddComponent<RtsTimedDestroy>();
+            timedDestroy.Lifetime = 0.28f;
+        }
+
+        private static PrimitiveType GetProjectilePrimitive(RtsProjectileKind kind)
+        {
+            switch (kind)
+            {
+                case RtsProjectileKind.RifleRound:
+                case RtsProjectileKind.Rocket:
+                case RtsProjectileKind.FlameBolt:
+                    return PrimitiveType.Capsule;
+                default:
+                    return PrimitiveType.Sphere;
+            }
+        }
+
+        private static Vector3 GetProjectileScale(RtsProjectileKind kind)
+        {
+            switch (kind)
+            {
+                case RtsProjectileKind.RifleRound:
+                    return new Vector3(0.08f, 0.2f, 0.08f);
+                case RtsProjectileKind.Grenade:
+                    return new Vector3(0.2f, 0.2f, 0.2f);
+                case RtsProjectileKind.Rocket:
+                    return new Vector3(0.13f, 0.34f, 0.13f);
+                case RtsProjectileKind.FlameBolt:
+                    return new Vector3(0.18f, 0.28f, 0.18f);
+                case RtsProjectileKind.DefenseShell:
+                    return new Vector3(0.2f, 0.2f, 0.2f);
+                default:
+                    return new Vector3(0.18f, 0.18f, 0.18f);
+            }
+        }
+
+        private static float GetProjectileSpeed(RtsProjectileKind kind)
+        {
+            switch (kind)
+            {
+                case RtsProjectileKind.RifleRound:
+                    return 34f;
+                case RtsProjectileKind.Grenade:
+                    return 13.5f;
+                case RtsProjectileKind.Rocket:
+                    return 22f;
+                case RtsProjectileKind.FlameBolt:
+                    return 15f;
+                case RtsProjectileKind.DefenseShell:
+                    return 26f;
+                default:
+                    return 24f;
+            }
+        }
+
+        private static float GetProjectileArcHeight(RtsProjectileKind kind)
+        {
+            return kind == RtsProjectileKind.Grenade ? 2.6f : 0f;
+        }
+
+        private static Color GetProjectileColor(RtsProjectileKind kind, RtsTeam team)
+        {
+            switch (kind)
+            {
+                case RtsProjectileKind.Grenade:
+                    return new Color(0.25f, 0.3f, 0.2f);
+                case RtsProjectileKind.Rocket:
+                    return new Color(1f, 0.32f, 0.18f);
+                case RtsProjectileKind.FlameBolt:
+                    return new Color(1f, 0.48f, 0.12f);
+                case RtsProjectileKind.TankShell:
+                case RtsProjectileKind.DefenseShell:
+                    return team == RtsTeam.Enemy ? new Color(1f, 0.32f, 0.18f) : new Color(0.45f, 0.88f, 1f);
+                default:
+                    return team == RtsTeam.Enemy ? new Color(1f, 0.48f, 0.32f) : new Color(0.62f, 0.9f, 1f);
+            }
+        }
+
+        private static float GetProjectileTargetHeight(RtsEntity entity)
+        {
+            RtsUnit unit = entity as RtsUnit;
+            if (unit != null)
+            {
+                return RtsBalance.IsTank(unit.UnitKind) || unit.UnitKind == UnitKind.Harvester ? 0.85f : 0.8f;
+            }
+
+            RtsStructure structure = entity as RtsStructure;
+            if (structure != null)
+            {
+                return Mathf.Clamp(structure.FootprintRadius * 0.45f, 0.8f, 2.4f);
+            }
+
+            return 0.8f;
+        }
+
         public void SpawnFloatingText(string message, Vector3 position, Color color)
         {
             GameObject textObject = new GameObject("Floating Text");
@@ -1149,7 +1316,7 @@ namespace QuestCommandRTS
             PlayerCommands.Initialize(this);
             CommandDispatcher = new RtsCommandDispatcher();
             CommandDispatcher.Initialize(this);
-            Resources = new ResourceBank(3400);
+            Resources = new ResourceBank(6200);
             CreateMaterials();
             CreateRoots();
             if (RuntimeMode == RtsRuntimeMode.Desktop)
@@ -1865,29 +2032,10 @@ namespace QuestCommandRTS
         private void SpawnStartingForces()
         {
             RtsStructure command = CreateStructure(RtsTeam.Player, StructureKind.CommandCenter, new Vector3(-84f, 0f, -78f));
-            RtsStructure refinery = CreateStructure(RtsTeam.Player, StructureKind.Refinery, new Vector3(-70f, 0f, -80f));
-            CreateStructure(RtsTeam.Player, StructureKind.PowerPlant, new Vector3(-92f, 0f, -62f));
-            CreateStructure(RtsTeam.Player, StructureKind.Barracks, new Vector3(-76f, 0f, -62f));
-
-            RtsUnit rifleOne = CreateUnit(RtsTeam.Player, UnitKind.Rifleman, new Vector3(-70f, 0f, -56f));
-            CreateUnit(RtsTeam.Player, UnitKind.Rifleman, new Vector3(-73f, 0f, -54f));
-            HarvesterUnit harvester = CreateUnit(RtsTeam.Player, UnitKind.Harvester, new Vector3(-64f, 0f, -84f)) as HarvesterUnit;
-
-            if (harvester != null)
-            {
-                harvester.IssueHarvest(FindNearestResource(harvester.transform.position), refinery as RefineryStructure);
-            }
 
             CreateStructure(RtsTeam.Enemy, StructureKind.CommandCenter, new Vector3(86f, 0f, 78f));
-            CreateStructure(RtsTeam.Enemy, StructureKind.PowerPlant, new Vector3(96f, 0f, 62f));
-            CreateStructure(RtsTeam.Enemy, StructureKind.Barracks, new Vector3(74f, 0f, 64f));
-            CreateStructure(RtsTeam.Enemy, StructureKind.Turret, new Vector3(66f, 0f, 84f));
-            CreateUnit(RtsTeam.Enemy, UnitKind.Rifleman, new Vector3(66f, 0f, 62f));
-            CreateUnit(RtsTeam.Enemy, UnitKind.Rifleman, new Vector3(70f, 0f, 66f));
-            CreateUnit(RtsTeam.Enemy, UnitKind.HeavyTank, new Vector3(84f, 0f, 58f));
 
             SelectEntity(command, false);
-            SelectEntity(rifleOne, true);
         }
 
         private ProductionStructure FindProducer(UnitKind kind, bool selectedOnly)
@@ -2132,7 +2280,7 @@ namespace QuestCommandRTS
 
             if (RtsBalance.IsTank(kind))
             {
-                CreateVehicleWheelRig(root, kind);
+                CreateVehicleTrackRig(root, kind);
                 CreateTankTurretMotionRig(root, kind);
                 return;
             }
@@ -2158,6 +2306,43 @@ namespace QuestCommandRTS
             CreateWheel(root, "Roll Wheel RR", new Vector3(sideOffset, centerY, -forwardZ), wheelRadius, wheelThickness);
         }
 
+        private void CreateVehicleTrackRig(Transform root, UnitKind kind)
+        {
+            GetVehicleTrackLayout(kind, out float sideOffset, out float centerY, out float trackLength, out float trackHeight, out float trackWidth);
+            for (int side = -1; side <= 1; side += 2)
+            {
+                string suffix = side < 0 ? "L" : "R";
+                float x = sideOffset * side;
+                CreatePrimitive(
+                    PrimitiveType.Cube,
+                    root,
+                    "Track Belt " + suffix,
+                    new Vector3(x, centerY, 0f),
+                    new Vector3(trackWidth, trackHeight, trackLength),
+                    darkMaterial);
+
+                CreatePrimitive(
+                    PrimitiveType.Cube,
+                    root,
+                    "Track Guard " + suffix,
+                    new Vector3(x, centerY + trackHeight * 0.58f, 0f),
+                    new Vector3(trackWidth * 1.08f, trackHeight * 0.18f, trackLength * 0.92f),
+                    vehicleDetailMaterial);
+
+                for (int i = 0; i < 8; i++)
+                {
+                    float z = Mathf.Lerp(-trackLength * 0.38f, trackLength * 0.38f, i / 7f);
+                    CreatePrimitive(
+                        PrimitiveType.Cube,
+                        root,
+                        "Track Tread " + suffix + " " + i,
+                        new Vector3(x, centerY - trackHeight * 0.04f, z),
+                        new Vector3(trackWidth * 1.18f, trackHeight * 0.22f, trackLength * 0.07f),
+                        structureDetailMaterial);
+                }
+            }
+        }
+
         private void CreateWheel(Transform root, string name, Vector3 localPosition, float radius, float thickness)
         {
             GameObject wheel = CreatePrimitive(PrimitiveType.Cylinder, root, name, localPosition, new Vector3(radius, thickness, radius), darkMaterial);
@@ -2175,6 +2360,9 @@ namespace QuestCommandRTS
             CreatePrimitive(PrimitiveType.Cube, pivot.transform, "Animated Turret Cap", Vector3.zero, capSize, vehicleDetailMaterial);
             GameObject barrel = CreatePrimitive(PrimitiveType.Cylinder, pivot.transform, "Animated Turret Barrel", barrelPosition, barrelScale, darkMaterial);
             barrel.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
+            GameObject muzzle = new GameObject("Animated Turret Muzzle");
+            muzzle.transform.SetParent(pivot.transform, false);
+            muzzle.transform.localPosition = barrelPosition + new Vector3(0f, 0f, barrelScale.y * 0.96f);
         }
 
         private static void GetVehicleWheelLayout(UnitKind kind, out float sideOffset, out float centerY, out float forwardZ, out float wheelRadius, out float wheelThickness)
@@ -2208,6 +2396,34 @@ namespace QuestCommandRTS
                     forwardZ = 0.86f;
                     wheelRadius = 0.24f;
                     wheelThickness = 0.16f;
+                    return;
+            }
+        }
+
+        private static void GetVehicleTrackLayout(UnitKind kind, out float sideOffset, out float centerY, out float trackLength, out float trackHeight, out float trackWidth)
+        {
+            switch (RtsBalance.NormalizeUnitKind(kind))
+            {
+                case UnitKind.LightTank:
+                    sideOffset = 0.62f;
+                    centerY = 0.31f;
+                    trackLength = 1.65f;
+                    trackHeight = 0.34f;
+                    trackWidth = 0.28f;
+                    return;
+                case UnitKind.HeavyTank:
+                    sideOffset = 1.02f;
+                    centerY = 0.42f;
+                    trackLength = 2.75f;
+                    trackHeight = 0.48f;
+                    trackWidth = 0.42f;
+                    return;
+                default:
+                    sideOffset = 0.78f;
+                    centerY = 0.35f;
+                    trackLength = 2.12f;
+                    trackHeight = 0.4f;
+                    trackWidth = 0.34f;
                     return;
             }
         }
@@ -2386,6 +2602,11 @@ namespace QuestCommandRTS
             Transform importedHead;
             if (TryBuildImportedStructureVisual(root, kind, teamMaterial, out importedHead))
             {
+                if (IsDefenseStructure(kind))
+                {
+                    return CreateDefenseTurretRig(root, kind, teamMaterial);
+                }
+
                 return importedHead;
             }
 
@@ -2432,6 +2653,54 @@ namespace QuestCommandRTS
             }
 
             return null;
+        }
+
+        private Transform CreateDefenseTurretRig(Transform root, StructureKind kind, Material teamMaterial)
+        {
+            GetDefenseTurretRigLayout(kind, out Vector3 pivotPosition, out Vector3 headSize, out Vector3 barrelPosition, out Vector3 barrelScale);
+            GameObject pivot = new GameObject("Animated Defense Head");
+            pivot.transform.SetParent(root, false);
+            pivot.transform.localPosition = pivotPosition;
+            pivot.transform.localRotation = Quaternion.identity;
+
+            CreatePrimitive(PrimitiveType.Cube, pivot.transform, "Animated Defense Turret Cap", Vector3.zero, headSize, teamMaterial);
+            if (kind == StructureKind.AdvancedGunTower)
+            {
+                CreatePrimitive(PrimitiveType.Cube, pivot.transform, "Animated Defense Missile Pod L", barrelPosition + new Vector3(-0.28f, 0f, 0f), new Vector3(0.28f, 0.24f, 0.55f), darkMaterial);
+                CreatePrimitive(PrimitiveType.Cube, pivot.transform, "Animated Defense Missile Pod R", barrelPosition + new Vector3(0.28f, 0f, 0f), new Vector3(0.28f, 0.24f, 0.55f), darkMaterial);
+            }
+            else
+            {
+                GameObject barrel = CreatePrimitive(PrimitiveType.Cylinder, pivot.transform, "Animated Defense Barrel", barrelPosition, barrelScale, darkMaterial);
+                barrel.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
+            }
+
+            return pivot.transform;
+        }
+
+        private static void GetDefenseTurretRigLayout(StructureKind kind, out Vector3 pivotPosition, out Vector3 headSize, out Vector3 barrelPosition, out Vector3 barrelScale)
+        {
+            switch (kind)
+            {
+                case StructureKind.GunTower:
+                    pivotPosition = new Vector3(0f, 2.85f, 0f);
+                    headSize = new Vector3(1.25f, 0.38f, 0.95f);
+                    barrelPosition = new Vector3(0f, 0f, 0.82f);
+                    barrelScale = new Vector3(0.1f, 0.74f, 0.1f);
+                    return;
+                case StructureKind.AdvancedGunTower:
+                    pivotPosition = new Vector3(0f, 3.65f, 0f);
+                    headSize = new Vector3(1.45f, 0.46f, 1.05f);
+                    barrelPosition = new Vector3(0f, 0f, 0.72f);
+                    barrelScale = new Vector3(0.12f, 0.7f, 0.12f);
+                    return;
+                default:
+                    pivotPosition = new Vector3(0f, 1.16f, 0f);
+                    headSize = new Vector3(1.1f, 0.32f, 0.9f);
+                    barrelPosition = new Vector3(0f, 0f, 0.78f);
+                    barrelScale = new Vector3(0.12f, 0.68f, 0.12f);
+                    return;
+            }
         }
 
         private bool TryBuildImportedStructureVisual(Transform root, StructureKind kind, Material teamMaterial, out Transform head)

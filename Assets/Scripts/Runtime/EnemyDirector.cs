@@ -4,14 +4,17 @@ namespace QuestCommandRTS
 {
     public sealed class EnemyDirector : MonoBehaviour
     {
-        private const int StartingEnemyCredits = 1800;
+        private const int StartingEnemyCredits = 2600;
         private const int MaximumEnemyCredits = 12000;
         private const int BaseIncome = 180;
         private const int RefineryIncomeBonus = 160;
         private const float IncomeInterval = 7.5f;
-        private const float BuildInterval = 8.5f;
-        private const float ProductionInterval = 5.5f;
+        private const float BuildInterval = 12f;
+        private const float ProductionInterval = 8f;
         private const float IdleOrderInterval = 3.5f;
+        private const float OpeningAttackGraceSeconds = 180f;
+        private const float OpeningBuildDelaySeconds = 28f;
+        private const float OpeningProductionDelaySeconds = 70f;
 
         private RtsGame game;
         private float nextWaveTime;
@@ -97,8 +100,8 @@ namespace QuestCommandRTS
             nextWaveTime = Mathf.Max(now + 1f, data.nextWaveTime);
             nextIdleOrderTime = Mathf.Max(now + 0.5f, data.nextIdleOrderTime);
             nextIncomeTime = data.hasEconomyState ? Mathf.Max(now + 0.5f, data.nextIncomeTime) : now + 5f;
-            nextBuildTime = data.hasEconomyState ? Mathf.Max(now + 0.5f, data.nextBuildTime) : now + 8f;
-            nextProductionTime = data.hasEconomyState ? Mathf.Max(now + 0.5f, data.nextProductionTime) : now + 4f;
+            nextBuildTime = data.hasEconomyState ? Mathf.Max(now + 0.5f, data.nextBuildTime) : now + OpeningBuildDelaySeconds;
+            nextProductionTime = data.hasEconomyState ? Mathf.Max(now + 0.5f, data.nextProductionTime) : now + OpeningProductionDelaySeconds;
         }
 
         public void ResetForNewMatch()
@@ -139,7 +142,7 @@ namespace QuestCommandRTS
         private void SpawnWave()
         {
             RtsEntity target = game.FindPlayerPrimaryTarget();
-            if (target == null)
+            if (target == null || IsOpeningGraceActive())
             {
                 nextWaveTime = game.Clock.SimulationTime + 8f;
                 return;
@@ -203,11 +206,11 @@ namespace QuestCommandRTS
         {
             enemyCredits = StartingEnemyCredits;
             waveIndex = 0;
-            nextWaveTime = now + 22f;
-            nextIdleOrderTime = now + 3f;
+            nextWaveTime = now + OpeningAttackGraceSeconds;
+            nextIdleOrderTime = now + OpeningAttackGraceSeconds;
             nextIncomeTime = now + 5f;
-            nextBuildTime = now + 8f;
-            nextProductionTime = now + 4f;
+            nextBuildTime = now + OpeningBuildDelaySeconds;
+            nextProductionTime = now + OpeningProductionDelaySeconds;
         }
 
         private void GrantIncome()
@@ -263,7 +266,7 @@ namespace QuestCommandRTS
 
             RtsUnit unit = producer.SpawnProducedUnit(kind, null);
             RtsEntity target = game.FindPlayerPrimaryTarget();
-            if (unit != null && target != null)
+            if (unit != null && target != null && !IsOpeningGraceActive())
             {
                 unit.IssueAttackMove(target.transform.position + new Vector3(Random.Range(-6f, 6f), 0f, Random.Range(-6f, 6f)));
             }
@@ -426,6 +429,11 @@ namespace QuestCommandRTS
         private bool HasLivingEnemyStructure(StructureKind kind)
         {
             return CountLivingEnemyStructures(kind) > 0;
+        }
+
+        private bool IsOpeningGraceActive()
+        {
+            return game != null && game.Clock != null && game.Clock.SimulationTime < OpeningAttackGraceSeconds;
         }
 
         private int EnemyPowerProvided()

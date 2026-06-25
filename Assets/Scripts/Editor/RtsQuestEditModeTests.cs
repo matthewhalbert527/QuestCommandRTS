@@ -237,7 +237,7 @@ namespace QuestCommandRTS.Editor
             hud.RefreshForTests(false);
             string afterCredits = hud.StatusTextForTests.text;
             Assert.AreNotSame(initial, afterCredits);
-            StringAssert.Contains("Credits 3300", afterCredits);
+            StringAssert.Contains("Credits 6100", afterCredits);
 
             game.ClearSelection();
             hud.RefreshForTests(false);
@@ -417,7 +417,7 @@ namespace QuestCommandRTS.Editor
             Assert.IsTrue(infantryAnimator.HasLegRigForTests);
             Assert.IsFalse(infantryAnimator.HasTurretRigForTests);
             Assert.IsNotNull(tankAnimator);
-            Assert.IsTrue(tankAnimator.HasWheelRigForTests);
+            Assert.IsTrue(tankAnimator.HasTrackRigForTests);
             Assert.IsTrue(tankAnimator.HasTurretRigForTests);
             Assert.IsNotNull(harvesterAnimator);
             Assert.IsTrue(harvesterAnimator.HasWheelRigForTests);
@@ -441,16 +441,16 @@ namespace QuestCommandRTS.Editor
             RtsUnit tank = game.CreateUnit(RtsTeam.Player, UnitKind.MediumTank, new Vector3(-48f, 0f, -52f));
             RtsUnit enemy = game.CreateUnit(RtsTeam.Enemy, UnitKind.Rifleman, tank.transform.position + tank.transform.right * 6f);
             RtsUnitVisualAnimator tankAnimator = tank.GetComponent<RtsUnitVisualAnimator>();
-            Transform wheel = tankAnimator.FirstWheelForTests;
+            Transform track = tankAnimator.FirstTrackPadForTests;
             Transform turret = tankAnimator.TurretPivotForTests;
-            Quaternion wheelStart = wheel.localRotation;
+            Vector3 trackStart = track.localPosition;
             Quaternion turretStart = turret.localRotation;
 
             tank.transform.position += tank.transform.forward * 1.5f;
             tank.IssueAttack(enemy);
             tankAnimator.TickVisualsForTests(0.2f);
 
-            Assert.Greater(Quaternion.Angle(wheelStart, wheel.localRotation), 1f);
+            Assert.Greater((track.localPosition - trackStart).sqrMagnitude, 0.0001f);
             Assert.Greater(Quaternion.Angle(turretStart, turret.localRotation), 1f);
         }
 
@@ -477,7 +477,7 @@ namespace QuestCommandRTS.Editor
         public void ProducedUnitsStartInsideProductionBuildingAndExit()
         {
             RtsGame game = CreateInitializedGame(RtsRuntimeMode.Desktop);
-            ProductionStructure barracks = FindPlayerProduction(game, StructureKind.Barracks);
+            ProductionStructure barracks = game.CreateStructure(RtsTeam.Player, StructureKind.Barracks, new Vector3(-76f, 0f, -62f)) as ProductionStructure;
             Assert.IsNotNull(barracks);
 
             RtsUnit produced = barracks.SpawnProducedUnitForTests(UnitKind.Rifleman, null);
