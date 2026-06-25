@@ -156,6 +156,7 @@ Open the console with X/left primary.
 - Default `SimulationUnitsPerMeter` is 126.
 - The 224-unit board should appear roughly 1.78 meters wide.
 - Default `BoardHeightMeters` is 0.82, which offsets the rig root so the battlefield plane sits at physical tabletop height above the tracking origin.
+- Forced Quest mode without live headset tracking seeds fallback head and controller poses from `QuestTabletopSettings`; live XR tracking should replace those poses as soon as device position and rotation features are available.
 - If the board appears on the floor, verify the project includes the `BoardHeightMeters` setting and that `QuestTabletopRig` uses `QuestTabletopSettings.GetRigRootPosition()`.
 
 ### Desktop Camera Incorrectly Appearing

@@ -25,7 +25,7 @@ namespace QuestCommandRTS
             RigRoot.rotation = Quaternion.Euler(0f, settings.InitialYawDegrees, 0f);
             RigRoot.localScale = Vector3.one * settings.SimulationUnitsPerMeter;
 
-            Head = CreateTrackedNode("XR Head", XRNode.Head);
+            Head = CreateTrackedNode("XR Head", XRNode.Head, settings.FallbackHeadLocalPositionMeters, settings.FallbackHeadEulerDegrees);
             HeadCamera = Head.gameObject.AddComponent<Camera>();
             HeadCamera.clearFlags = CameraClearFlags.SolidColor;
             HeadCamera.backgroundColor = new Color(0.035f, 0.04f, 0.05f);
@@ -40,8 +40,8 @@ namespace QuestCommandRTS
                 Head.gameObject.AddComponent<AudioListener>();
             }
 
-            LeftController = CreateTrackedNode("Left Controller", XRNode.LeftHand);
-            RightController = CreateTrackedNode("Right Controller", XRNode.RightHand);
+            LeftController = CreateTrackedNode("Left Controller", XRNode.LeftHand, settings.FallbackLeftControllerLocalPositionMeters, settings.FallbackControllerEulerDegrees);
+            RightController = CreateTrackedNode("Right Controller", XRNode.RightHand, settings.FallbackRightControllerLocalPositionMeters, settings.FallbackControllerEulerDegrees);
 
             LineRenderer pointerLine = CreatePointerLine();
             GameObject reticle = CreateReticle();
@@ -58,11 +58,13 @@ namespace QuestCommandRTS
             input.SetCommandConsole(CommandConsole);
         }
 
-        private Transform CreateTrackedNode(string nodeName, XRNode node)
+        private Transform CreateTrackedNode(string nodeName, XRNode node, Vector3 fallbackLocalPosition, Vector3 fallbackEulerDegrees)
         {
             GameObject nodeObject = new GameObject(nodeName);
             Transform nodeTransform = nodeObject.transform;
             nodeTransform.SetParent(RigRoot, false);
+            nodeTransform.localPosition = fallbackLocalPosition;
+            nodeTransform.localRotation = Quaternion.Euler(fallbackEulerDegrees);
 
             QuestTrackedNodePose trackedPose = nodeObject.AddComponent<QuestTrackedNodePose>();
             trackedPose.Node = node;

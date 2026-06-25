@@ -10,6 +10,11 @@ namespace QuestCommandRTS
         // Tracking-origin anchor in simulation units. The rig root is shifted down by BoardHeightMeters so the battlefield sits at tabletop height.
         public Vector3 InitialRigPosition = new Vector3(0f, 0f, -160f);
         public float InitialYawDegrees;
+        public Vector3 FallbackHeadLocalPositionMeters = new Vector3(0f, 1.55f, 0f);
+        public Vector3 FallbackHeadEulerDegrees = new Vector3(14f, 0f, 0f);
+        public Vector3 FallbackLeftControllerLocalPositionMeters = new Vector3(-0.24f, 1.08f, 0.28f);
+        public Vector3 FallbackRightControllerLocalPositionMeters = new Vector3(0.24f, 1.08f, 0.28f);
+        public Vector3 FallbackControllerEulerDegrees = new Vector3(15f, 0f, 0f);
         public float RayLengthMeters = 3.2f;
         public float RayWidthMeters = 0.006f;
         public float ReticleSizeMeters = 0.035f;
@@ -37,6 +42,9 @@ namespace QuestCommandRTS
         {
             SimulationUnitsPerMeter = Mathf.Clamp(SimulationUnitsPerMeter, 50f, 240f);
             BoardHeightMeters = Mathf.Clamp(BoardHeightMeters, 0.35f, 1.25f);
+            FallbackHeadLocalPositionMeters.y = Mathf.Clamp(FallbackHeadLocalPositionMeters.y, 0.9f, 2.2f);
+            FallbackLeftControllerLocalPositionMeters.y = Mathf.Clamp(FallbackLeftControllerLocalPositionMeters.y, 0.6f, 1.7f);
+            FallbackRightControllerLocalPositionMeters.y = Mathf.Clamp(FallbackRightControllerLocalPositionMeters.y, 0.6f, 1.7f);
             RayLengthMeters = Mathf.Clamp(RayLengthMeters, 0.25f, 8f);
             RayWidthMeters = Mathf.Clamp(RayWidthMeters, 0.001f, 0.03f);
             ReticleSizeMeters = Mathf.Clamp(ReticleSizeMeters, 0.01f, 0.12f);

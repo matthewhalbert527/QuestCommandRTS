@@ -141,6 +141,25 @@ namespace QuestCommandRTS.Editor
         }
 
         [Test]
+        public void QuestInitializationSeedsFallbackTrackedPoses()
+        {
+            RtsGame game = CreateInitializedGame(RtsRuntimeMode.QuestVr);
+            QuestTabletopSettings settings = game.GetComponent<QuestTabletopSettings>();
+
+            Assert.IsNotNull(settings);
+            AssertVectorNear(settings.FallbackHeadLocalPositionMeters, game.QuestRig.Head.localPosition);
+            AssertVectorNear(settings.FallbackLeftControllerLocalPositionMeters, game.QuestRig.LeftController.localPosition);
+            AssertVectorNear(settings.FallbackRightControllerLocalPositionMeters, game.QuestRig.RightController.localPosition);
+
+            Vector3 expectedHeadWorld = settings.GetRigRootPosition() + settings.FallbackHeadLocalPositionMeters * settings.SimulationUnitsPerMeter;
+            AssertVectorNear(expectedHeadWorld, game.QuestRig.HeadCamera.transform.position);
+            Assert.Greater(game.QuestRig.HeadCamera.transform.position.y, 80f);
+            Assert.Less(game.QuestRig.HeadCamera.transform.position.z, -140f);
+            Assert.Less(game.QuestRig.RightController.forward.y, -0.1f);
+            Assert.Greater(game.QuestRig.RightController.forward.z, 0.9f);
+        }
+
+        [Test]
         public void QuestValidatorReportsCorePackageAndAndroidSettings()
         {
             var report = QuestXrProjectValidator.BuildValidationReport();
