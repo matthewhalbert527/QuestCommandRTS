@@ -1,0 +1,1 @@
+Drag the Meshes and Textures folders into Unity together. Each *_Static.obj is a neutral-pose one-piece model. Use the full package for generated prefabs, articulated defenses, animated rotors, War Factory door, repair arms, sockets, colliders, and LODs.

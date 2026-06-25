@@ -595,6 +595,10 @@ namespace QuestCommandRTS
                     return HasPlayerStructure(StructureKind.Barracks) && HasPlayerStructure(StructureKind.Refinery);
                 case StructureKind.Turret:
                     return HasPlayerStructure(StructureKind.Barracks) && HasPlayerStructure(StructureKind.PowerPlant);
+                case StructureKind.GunTower:
+                    return HasPlayerStructure(StructureKind.WarFactory) && HasPlayerStructure(StructureKind.PowerPlant);
+                case StructureKind.AdvancedGunTower:
+                    return HasPlayerStructure(StructureKind.WarFactory) && HasPlayerStructure(StructureKind.PowerPlant) && HasPlayerStructure(StructureKind.Refinery);
                 default:
                     return false;
             }
@@ -620,6 +624,25 @@ namespace QuestCommandRTS
                     if (!HasPlayerStructure(StructureKind.Barracks))
                     {
                         return "Needs Barracks";
+                    }
+
+                    return HasPlayerStructure(StructureKind.PowerPlant) ? string.Empty : "Needs Power Plant";
+                case StructureKind.GunTower:
+                    if (!HasPlayerStructure(StructureKind.WarFactory))
+                    {
+                        return "Needs War Factory";
+                    }
+
+                    return HasPlayerStructure(StructureKind.PowerPlant) ? string.Empty : "Needs Power Plant";
+                case StructureKind.AdvancedGunTower:
+                    if (!HasPlayerStructure(StructureKind.WarFactory))
+                    {
+                        return "Needs War Factory";
+                    }
+
+                    if (!HasPlayerStructure(StructureKind.Refinery))
+                    {
+                        return "Needs Refinery";
                     }
 
                     return HasPlayerStructure(StructureKind.PowerPlant) ? string.Empty : "Needs Power Plant";
@@ -771,7 +794,7 @@ namespace QuestCommandRTS
             {
                 structure = root.AddComponent<RefineryStructure>();
             }
-            else if (kind == StructureKind.Turret)
+            else if (IsDefenseStructure(kind))
             {
                 structure = root.AddComponent<TurretStructure>();
             }
@@ -1900,6 +1923,11 @@ namespace QuestCommandRTS
 
             if (kind == UnitKind.Harvester)
             {
+                if (TryBuildImportedHarvesterVisual(root, teamMaterial))
+                {
+                    return;
+                }
+
                 CreatePrimitive(PrimitiveType.Cube, root, "Cab", new Vector3(0f, 0.75f, -0.35f), new Vector3(1.2f, 0.8f, 0.9f), teamMaterial);
                 CreatePrimitive(PrimitiveType.Cube, root, "Cargo", new Vector3(0f, 0.58f, 0.55f), new Vector3(1.35f, 0.55f, 1.3f), neutralMaterial);
                 CreatePrimitive(PrimitiveType.Cylinder, root, "Collector", new Vector3(0f, 0.3f, 1.35f), new Vector3(0.65f, 0.2f, 0.65f), resourceMaterial).transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
@@ -1952,6 +1980,35 @@ namespace QuestCommandRTS
             }
 
             CreatePrimitive(PrimitiveType.Cube, root, "Infantry Team Band", new Vector3(0f, 1.14f, -0.17f), new Vector3(0.42f, 0.07f, 0.08f), teamMaterial);
+            return true;
+        }
+
+        private bool TryBuildImportedHarvesterVisual(Transform root, Material teamMaterial)
+        {
+            GameObject modelPrefab = UnityEngine.Resources.Load<GameObject>("StructureModels/BastionStructures/Meshes/Bastion_Harvester_Static");
+            if (modelPrefab == null)
+            {
+                return false;
+            }
+
+            GameObject model = Instantiate(modelPrefab, root);
+            model.name = "Harvester Model";
+            model.transform.localPosition = Vector3.zero;
+            model.transform.localRotation = Quaternion.identity;
+            model.transform.localScale = Vector3.one * 0.34f;
+
+            foreach (Collider collider in model.GetComponentsInChildren<Collider>())
+            {
+                DestroyRuntimeObject(collider);
+            }
+
+            foreach (Renderer renderer in model.GetComponentsInChildren<Renderer>())
+            {
+                renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+                renderer.receiveShadows = false;
+            }
+
+            CreatePrimitive(PrimitiveType.Cube, root, "Harvester Team Strip", new Vector3(0f, 0.86f, -0.78f), new Vector3(0.92f, 0.08f, 0.14f), teamMaterial);
             return true;
         }
 
@@ -2126,6 +2183,12 @@ namespace QuestCommandRTS
             Material teamMaterial = GetTeamMaterial(team);
             StructureStats stats = RtsBalance.GetStructure(kind);
 
+            Transform importedHead;
+            if (TryBuildImportedStructureVisual(root, kind, teamMaterial, out importedHead))
+            {
+                return importedHead;
+            }
+
             switch (kind)
             {
                 case StructureKind.Refinery:
@@ -2150,6 +2213,18 @@ namespace QuestCommandRTS
                     GameObject head = CreatePrimitive(PrimitiveType.Cube, root, "Turret Head", new Vector3(0f, 1.03f, 0f), new Vector3(1.25f, 0.55f, 1.25f), teamMaterial);
                     CreatePrimitive(PrimitiveType.Cylinder, head.transform, "Turret Barrel", new Vector3(0f, 0f, 0.9f), new Vector3(0.18f, 0.75f, 0.18f), darkMaterial).transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
                     return head.transform;
+                case StructureKind.GunTower:
+                    CreatePrimitive(PrimitiveType.Cylinder, root, "Gun Tower Base", new Vector3(0f, 1.2f, 0f), new Vector3(1.45f, 1.2f, 1.45f), teamMaterial);
+                    GameObject gunHead = CreatePrimitive(PrimitiveType.Cube, root, "Gun Tower Head", new Vector3(0f, 2.65f, 0f), new Vector3(1.45f, 0.7f, 1.25f), teamMaterial);
+                    CreatePrimitive(PrimitiveType.Cylinder, gunHead.transform, "Gun Tower Barrel A", new Vector3(-0.22f, 0f, 0.95f), new Vector3(0.13f, 0.82f, 0.13f), darkMaterial).transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
+                    CreatePrimitive(PrimitiveType.Cylinder, gunHead.transform, "Gun Tower Barrel B", new Vector3(0.22f, 0f, 0.95f), new Vector3(0.13f, 0.82f, 0.13f), darkMaterial).transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
+                    return gunHead.transform;
+                case StructureKind.AdvancedGunTower:
+                    CreatePrimitive(PrimitiveType.Cylinder, root, "Advanced Gun Tower Base", new Vector3(0f, 1.6f, 0f), new Vector3(1.7f, 1.6f, 1.7f), teamMaterial);
+                    GameObject advancedHead = CreatePrimitive(PrimitiveType.Cube, root, "Advanced Gun Tower Head", new Vector3(0f, 3.5f, 0f), new Vector3(1.9f, 0.95f, 1.55f), teamMaterial);
+                    CreatePrimitive(PrimitiveType.Cube, advancedHead.transform, "Missile Pod A", new Vector3(-0.46f, 0f, 0.72f), new Vector3(0.42f, 0.42f, 0.52f), darkMaterial);
+                    CreatePrimitive(PrimitiveType.Cube, advancedHead.transform, "Missile Pod B", new Vector3(0.46f, 0f, 0.72f), new Vector3(0.42f, 0.42f, 0.52f), darkMaterial);
+                    return advancedHead.transform;
                 default:
                     CreatePrimitive(PrimitiveType.Cube, root, "Command Center", new Vector3(0f, 0.85f, 0f), new Vector3(stats.FootprintRadius * 1.65f, 1.7f, stats.FootprintRadius * 1.55f), teamMaterial);
                     CreatePrimitive(PrimitiveType.Cylinder, root, "Radar", new Vector3(0f, 2.25f, -0.2f), new Vector3(0.95f, 0.12f, 0.95f), neutralMaterial);
@@ -2157,6 +2232,122 @@ namespace QuestCommandRTS
             }
 
             return null;
+        }
+
+        private bool TryBuildImportedStructureVisual(Transform root, StructureKind kind, Material teamMaterial, out Transform head)
+        {
+            head = null;
+            string modelPath = GetStructureModelResourcePath(kind);
+            if (string.IsNullOrEmpty(modelPath))
+            {
+                return false;
+            }
+
+            GameObject modelPrefab = UnityEngine.Resources.Load<GameObject>(modelPath);
+            if (modelPrefab == null)
+            {
+                return false;
+            }
+
+            GameObject model = Instantiate(modelPrefab, root);
+            model.name = RtsBalance.GetStructure(kind).Name + " Model";
+            model.transform.localPosition = Vector3.zero;
+            model.transform.localRotation = Quaternion.identity;
+            model.transform.localScale = Vector3.one * GetStructureModelScale(kind);
+
+            foreach (Collider collider in model.GetComponentsInChildren<Collider>())
+            {
+                DestroyRuntimeObject(collider);
+            }
+
+            foreach (Renderer renderer in model.GetComponentsInChildren<Renderer>())
+            {
+                renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+                renderer.receiveShadows = false;
+            }
+
+            CreatePrimitive(PrimitiveType.Cube, root, "Structure Team Strip", GetStructureRecognitionStripPosition(kind), GetStructureRecognitionStripSize(kind), teamMaterial);
+            return true;
+        }
+
+        private static string GetStructureModelResourcePath(StructureKind kind)
+        {
+            switch (kind)
+            {
+                case StructureKind.Refinery:
+                    return "StructureModels/BastionStructures/Meshes/Bastion_Refinery_Static";
+                case StructureKind.Barracks:
+                    return "StructureModels/BastionStructures/Meshes/Bastion_Barracks_Static";
+                case StructureKind.WarFactory:
+                    return "StructureModels/BastionStructures/Meshes/Bastion_WarFactory_Static";
+                case StructureKind.PowerPlant:
+                    return "StructureModels/BastionStructures/Meshes/Bastion_PowerPlant_Static";
+                case StructureKind.Turret:
+                    return "StructureModels/BastionStructures/Meshes/Bastion_Turret_Static";
+                case StructureKind.GunTower:
+                    return "StructureModels/BastionStructures/Meshes/Bastion_GunTower_Static";
+                case StructureKind.AdvancedGunTower:
+                    return "StructureModels/BastionStructures/Meshes/Bastion_AdvancedGunTower_Static";
+                default:
+                    return "StructureModels/BastionStructures/Meshes/Bastion_CommunicationsCenter_Static";
+            }
+        }
+
+        private static float GetStructureModelScale(StructureKind kind)
+        {
+            switch (kind)
+            {
+                case StructureKind.Barracks:
+                    return 0.7f;
+                case StructureKind.Refinery:
+                    return 0.68f;
+                case StructureKind.WarFactory:
+                    return 0.68f;
+                case StructureKind.PowerPlant:
+                    return 0.72f;
+                case StructureKind.Turret:
+                    return 0.58f;
+                case StructureKind.GunTower:
+                    return 0.7f;
+                case StructureKind.AdvancedGunTower:
+                    return 0.95f;
+                default:
+                    return 0.95f;
+            }
+        }
+
+        private static Vector3 GetStructureRecognitionStripPosition(StructureKind kind)
+        {
+            switch (kind)
+            {
+                case StructureKind.GunTower:
+                    return new Vector3(0f, 2.5f, -0.75f);
+                case StructureKind.AdvancedGunTower:
+                    return new Vector3(0f, 3.2f, -0.9f);
+                case StructureKind.Turret:
+                    return new Vector3(0f, 0.72f, -0.65f);
+                default:
+                    return new Vector3(0f, 0.16f, -1.25f);
+            }
+        }
+
+        private static Vector3 GetStructureRecognitionStripSize(StructureKind kind)
+        {
+            switch (kind)
+            {
+                case StructureKind.GunTower:
+                case StructureKind.AdvancedGunTower:
+                    return new Vector3(1.15f, 0.1f, 0.16f);
+                case StructureKind.Turret:
+                    return new Vector3(0.75f, 0.08f, 0.12f);
+                default:
+                    return new Vector3(1.6f, 0.08f, 0.16f);
+            }
+        }
+
+        private static bool IsDefenseStructure(StructureKind kind)
+        {
+            return kind == StructureKind.Turret || kind == StructureKind.GunTower || kind == StructureKind.AdvancedGunTower;
         }
 
         private GameObject CreatePrimitive(PrimitiveType type, Transform parent, string name, Vector3 localPosition, Vector3 localScale, Material material)

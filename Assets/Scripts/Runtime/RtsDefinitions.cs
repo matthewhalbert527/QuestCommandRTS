@@ -37,7 +37,9 @@ namespace QuestCommandRTS
         Barracks,
         WarFactory,
         PowerPlant,
-        Turret
+        Turret,
+        GunTower,
+        AdvancedGunTower
     }
 
     public struct UnitStats
@@ -207,6 +209,10 @@ namespace QuestCommandRTS
                     return new StructureStats("Power Plant", 300, 3f, 360f, 2.0f, 24, 0);
                 case StructureKind.Turret:
                     return new StructureStats("Guard Turret", 600, 4.5f, 320f, 1.5f, 0, 6);
+                case StructureKind.GunTower:
+                    return new StructureStats("Gun Tower", 950, 6.5f, 460f, 1.9f, 0, 8);
+                case StructureKind.AdvancedGunTower:
+                    return new StructureStats("Advanced Gun Tower", 1400, 8.5f, 620f, 2.35f, 0, 12);
                 default:
                     return new StructureStats("Command Center", 2500, 0f, 1100f, 3.8f, 12, 0);
             }

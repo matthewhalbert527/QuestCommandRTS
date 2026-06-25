@@ -416,6 +416,30 @@ namespace QuestCommandRTS
             head = turretHead;
         }
 
+        public override void Initialize(RtsTeam team, StructureKind kind)
+        {
+            base.Initialize(team, kind);
+
+            switch (kind)
+            {
+                case StructureKind.GunTower:
+                    AttackRange = 14f;
+                    Damage = 34f;
+                    AttackCooldown = 0.85f;
+                    break;
+                case StructureKind.AdvancedGunTower:
+                    AttackRange = 18f;
+                    Damage = 58f;
+                    AttackCooldown = 1.2f;
+                    break;
+                default:
+                    AttackRange = 11f;
+                    Damage = 22f;
+                    AttackCooldown = 0.9f;
+                    break;
+            }
+        }
+
         private void Update()
         {
             if (!RtsGame.HasInstance || RtsGame.Instance.IsMatchOver || RtsGame.Instance.Clock.IsPaused || RtsGame.Instance.Clock.SimulationTime < nextAttackTime)

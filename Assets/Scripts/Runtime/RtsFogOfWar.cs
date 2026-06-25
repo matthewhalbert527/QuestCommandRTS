@@ -408,7 +408,17 @@ namespace QuestCommandRTS
             RtsStructure structure = entity as RtsStructure;
             if (structure != null)
             {
-                return structure.StructureKind == StructureKind.Turret ? 26f : 20f;
+                if (structure.StructureKind == StructureKind.AdvancedGunTower)
+                {
+                    return 30f;
+                }
+
+                if (structure.StructureKind == StructureKind.Turret || structure.StructureKind == StructureKind.GunTower)
+                {
+                    return 26f;
+                }
+
+                return 20f;
             }
 
             RtsUnit unit = entity as RtsUnit;

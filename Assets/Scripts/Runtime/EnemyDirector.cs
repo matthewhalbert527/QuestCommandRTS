@@ -303,6 +303,16 @@ namespace QuestCommandRTS
                 return StructureKind.Turret;
             }
 
+            if (CountLivingEnemyStructures(StructureKind.GunTower) < 1)
+            {
+                return StructureKind.GunTower;
+            }
+
+            if (CountLivingEnemyStructures(StructureKind.AdvancedGunTower) < 1)
+            {
+                return StructureKind.AdvancedGunTower;
+            }
+
             return null;
         }
 
@@ -474,6 +484,10 @@ namespace QuestCommandRTS
                     return new Vector3(100f, 0f, 82f);
                 case StructureKind.Turret:
                     return slotIndex == 0 ? new Vector3(66f, 0f, 84f) : new Vector3(96f, 0f, 48f);
+                case StructureKind.GunTower:
+                    return new Vector3(70f, 0f, 96f);
+                case StructureKind.AdvancedGunTower:
+                    return new Vector3(104f, 0f, 58f);
                 default:
                     return new Vector3(82f, 0f, 72f);
             }

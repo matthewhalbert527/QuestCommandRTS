@@ -325,8 +325,9 @@ namespace QuestCommandRTS.Editor
             Image powerIcon = AssertPanelImage("Build Row 1 Icon", 0.6f);
             Assert.AreNotEqual(commandCenterIcon.color, powerIcon.color);
             Assert.GreaterOrEqual(commandCenterIcon.rectTransform.rect.width, 120f);
-            Assert.GreaterOrEqual(commandCenterIcon.rectTransform.rect.height, 70f);
+            Assert.GreaterOrEqual(commandCenterIcon.rectTransform.rect.height, 40f);
             AssertPanelImage("Build Row 0 Tile Glow", 0.18f);
+            AssertPanelImage("Build Row 7 Icon", 0.6f);
 
             ClickConsoleButton(console, "Produce Tab");
 
@@ -372,6 +373,35 @@ namespace QuestCommandRTS.Editor
             Assert.IsNotNull(rocket.transform.Find("Rocket Soldier Model"));
             Assert.IsNotNull(flamer.transform.Find("Flame Trooper Model"));
             Assert.IsNotNull(engineer.transform.Find("Engineer Model"));
+        }
+
+        [Test]
+        public void StructuresUseImportedBastionModelPayloads()
+        {
+            RtsGame game = CreateInitializedGame(RtsRuntimeMode.Desktop);
+
+            RtsStructure command = game.CreateStructure(RtsTeam.Player, StructureKind.CommandCenter, new Vector3(-60f, 0f, -40f));
+            RtsStructure refinery = game.CreateStructure(RtsTeam.Player, StructureKind.Refinery, new Vector3(-52f, 0f, -40f));
+            RtsStructure barracks = game.CreateStructure(RtsTeam.Player, StructureKind.Barracks, new Vector3(-44f, 0f, -40f));
+            RtsStructure warFactory = game.CreateStructure(RtsTeam.Player, StructureKind.WarFactory, new Vector3(-36f, 0f, -40f));
+            RtsStructure powerPlant = game.CreateStructure(RtsTeam.Player, StructureKind.PowerPlant, new Vector3(-28f, 0f, -40f));
+            RtsStructure turret = game.CreateStructure(RtsTeam.Player, StructureKind.Turret, new Vector3(-20f, 0f, -40f));
+            RtsStructure gunTower = game.CreateStructure(RtsTeam.Player, StructureKind.GunTower, new Vector3(-12f, 0f, -40f));
+            RtsStructure advanced = game.CreateStructure(RtsTeam.Player, StructureKind.AdvancedGunTower, new Vector3(-4f, 0f, -40f));
+            RtsUnit harvester = game.CreateUnit(RtsTeam.Player, UnitKind.Harvester, new Vector3(4f, 0f, -40f));
+
+            Assert.IsNotNull(command.transform.Find("Command Center Model"));
+            Assert.IsNotNull(refinery.transform.Find("Refinery Model"));
+            Assert.IsNotNull(barracks.transform.Find("Barracks Model"));
+            Assert.IsNotNull(warFactory.transform.Find("War Factory Model"));
+            Assert.IsNotNull(powerPlant.transform.Find("Power Plant Model"));
+            Assert.IsNotNull(turret.transform.Find("Guard Turret Model"));
+            Assert.IsNotNull(gunTower.transform.Find("Gun Tower Model"));
+            Assert.IsNotNull(advanced.transform.Find("Advanced Gun Tower Model"));
+            Assert.IsNotNull(harvester.transform.Find("Harvester Model"));
+            Assert.IsInstanceOf<TurretStructure>(turret);
+            Assert.IsInstanceOf<TurretStructure>(gunTower);
+            Assert.IsInstanceOf<TurretStructure>(advanced);
         }
 
         [Test]

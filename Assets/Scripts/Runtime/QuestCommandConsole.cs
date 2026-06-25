@@ -286,7 +286,7 @@ namespace QuestCommandRTS
             {
                 int capturedIndex = i;
                 StructureKind kind = RtsCommandConsoleModel.BuildKinds[i];
-                ConsoleRow row = CreateSelectionTile(buildRoot, "Build Row " + i, i, new Vector2(220f, 160f), () => OnBuildClicked(kind));
+                ConsoleRow row = CreateSelectionTile(buildRoot, "Build Row " + i, i, new Vector2(220f, 116f), () => OnBuildClicked(kind));
                 AddStructureGlyph(row.Icon.rectTransform, kind);
                 buildRows[capturedIndex] = row;
             }
@@ -341,7 +341,7 @@ namespace QuestCommandRTS
             ConsoleButton button = CreateButton(parent, name, "", position, size, clicked);
 
             CreatePanelImage(button.Rect, name + " Tile Glow", new Color(0.2f, 0.84f, 1f, 0.22f), new Vector2(7f, -7f), new Vector2(size.x - 14f, 3f));
-            bool compact = size.y <= 100f;
+            bool compact = size.y <= 120f;
             float iconHeight = compact ? 42f : Mathf.Clamp(size.y * 0.46f, 50f, 74f);
             float iconTop = compact ? -14f : -20f;
             Image icon = CreatePanelImage(button.Rect, name + " Icon", new Color(0.2f, 0.75f, 0.9f, 0.92f), new Vector2(48f, iconTop), new Vector2(124f, iconHeight));
@@ -397,6 +397,12 @@ namespace QuestCommandRTS
             Color glyph = new Color(0.88f, 0.98f, 1f, 0.92f);
             Color dim = new Color(0.45f, 0.85f, 0.95f, 0.5f);
 
+            if (parent.rect.height <= 48f)
+            {
+                AddCompactStructureGlyph(parent, kind, glyph, dim);
+                return;
+            }
+
             switch (kind)
             {
                 case StructureKind.CommandCenter:
@@ -428,6 +434,67 @@ namespace QuestCommandRTS
                     CreatePanelImage(parent, "Turret Glyph Base", glyph, new Vector2(42f, -50f), new Vector2(44f, 14f));
                     CreatePanelImage(parent, "Turret Glyph Neck", glyph, new Vector2(56f, -34f), new Vector2(18f, 16f));
                     CreatePanelImage(parent, "Turret Glyph Barrel", dim, new Vector2(72f, -24f), new Vector2(34f, 8f));
+                    break;
+                case StructureKind.GunTower:
+                    CreatePanelImage(parent, "Gun Tower Glyph Pillar", glyph, new Vector2(44f, -24f), new Vector2(42f, 40f));
+                    CreatePanelImage(parent, "Gun Tower Glyph Head", glyph, new Vector2(36f, -14f), new Vector2(58f, 20f));
+                    CreatePanelImage(parent, "Gun Tower Glyph Barrel A", dim, new Vector2(82f, -16f), new Vector2(34f, 6f));
+                    CreatePanelImage(parent, "Gun Tower Glyph Barrel B", dim, new Vector2(82f, -28f), new Vector2(34f, 6f));
+                    break;
+                case StructureKind.AdvancedGunTower:
+                    CreatePanelImage(parent, "Advanced Tower Glyph Pillar", glyph, new Vector2(42f, -20f), new Vector2(46f, 44f));
+                    CreatePanelImage(parent, "Advanced Tower Glyph Head", glyph, new Vector2(28f, -8f), new Vector2(74f, 22f));
+                    CreatePanelImage(parent, "Advanced Tower Glyph Pod A", dim, new Vector2(82f, -14f), new Vector2(22f, 14f));
+                    CreatePanelImage(parent, "Advanced Tower Glyph Pod B", dim, new Vector2(82f, -34f), new Vector2(22f, 14f));
+                    break;
+            }
+        }
+
+        private static void AddCompactStructureGlyph(RectTransform parent, StructureKind kind, Color glyph, Color dim)
+        {
+            switch (kind)
+            {
+                case StructureKind.PowerPlant:
+                    CreatePanelImage(parent, "Power Compact Base", glyph, new Vector2(24f, -28f), new Vector2(76f, 9f));
+                    CreatePanelImage(parent, "Power Compact Stack A", glyph, new Vector2(38f, -8f), new Vector2(12f, 25f));
+                    CreatePanelImage(parent, "Power Compact Stack B", glyph, new Vector2(70f, -5f), new Vector2(12f, 29f));
+                    break;
+                case StructureKind.Barracks:
+                    CreatePanelImage(parent, "Barracks Compact Body", glyph, new Vector2(24f, -20f), new Vector2(76f, 18f));
+                    CreatePanelImage(parent, "Barracks Compact Roof", dim, new Vector2(36f, -8f), new Vector2(52f, 8f));
+                    CreatePanelImage(parent, "Barracks Compact Door", new Color(0.02f, 0.08f, 0.09f, 0.8f), new Vector2(56f, -29f), new Vector2(14f, 14f));
+                    break;
+                case StructureKind.Refinery:
+                    CreatePanelImage(parent, "Refinery Compact Body", glyph, new Vector2(20f, -22f), new Vector2(58f, 16f));
+                    CreatePanelImage(parent, "Refinery Compact Silo A", dim, new Vector2(84f, -6f), new Vector2(13f, 32f));
+                    CreatePanelImage(parent, "Refinery Compact Silo B", dim, new Vector2(104f, -14f), new Vector2(10f, 24f));
+                    break;
+                case StructureKind.WarFactory:
+                    CreatePanelImage(parent, "Factory Compact Body", glyph, new Vector2(20f, -19f), new Vector2(86f, 18f));
+                    CreatePanelImage(parent, "Factory Compact Door", new Color(0.02f, 0.08f, 0.09f, 0.8f), new Vector2(52f, -28f), new Vector2(28f, 14f));
+                    CreatePanelImage(parent, "Factory Compact Rail", dim, new Vector2(30f, -9f), new Vector2(66f, 5f));
+                    break;
+                case StructureKind.Turret:
+                    CreatePanelImage(parent, "Turret Compact Base", glyph, new Vector2(42f, -29f), new Vector2(44f, 9f));
+                    CreatePanelImage(parent, "Turret Compact Neck", glyph, new Vector2(56f, -19f), new Vector2(18f, 12f));
+                    CreatePanelImage(parent, "Turret Compact Barrel", dim, new Vector2(72f, -14f), new Vector2(34f, 5f));
+                    break;
+                case StructureKind.GunTower:
+                    CreatePanelImage(parent, "Gun Tower Compact Pillar", glyph, new Vector2(46f, -13f), new Vector2(38f, 27f));
+                    CreatePanelImage(parent, "Gun Tower Compact Head", glyph, new Vector2(38f, -6f), new Vector2(54f, 14f));
+                    CreatePanelImage(parent, "Gun Tower Compact Barrel A", dim, new Vector2(82f, -9f), new Vector2(32f, 4f));
+                    CreatePanelImage(parent, "Gun Tower Compact Barrel B", dim, new Vector2(82f, -18f), new Vector2(32f, 4f));
+                    break;
+                case StructureKind.AdvancedGunTower:
+                    CreatePanelImage(parent, "Advanced Tower Compact Pillar", glyph, new Vector2(44f, -12f), new Vector2(42f, 29f));
+                    CreatePanelImage(parent, "Advanced Tower Compact Head", glyph, new Vector2(30f, -5f), new Vector2(70f, 15f));
+                    CreatePanelImage(parent, "Advanced Tower Compact Pod A", dim, new Vector2(82f, -8f), new Vector2(20f, 10f));
+                    CreatePanelImage(parent, "Advanced Tower Compact Pod B", dim, new Vector2(82f, -24f), new Vector2(20f, 10f));
+                    break;
+                default:
+                    CreatePanelImage(parent, "Command Compact Base", glyph, new Vector2(22f, -24f), new Vector2(82f, 14f));
+                    CreatePanelImage(parent, "Command Compact Tower", glyph, new Vector2(46f, -7f), new Vector2(34f, 22f));
+                    CreatePanelImage(parent, "Command Compact Dish", dim, new Vector2(82f, -13f), new Vector2(24f, 6f));
                     break;
             }
         }
@@ -785,6 +852,10 @@ namespace QuestCommandRTS
                     return new Color(0.95f, 0.52f, 0.24f, 0.98f);
                 case StructureKind.Turret:
                     return new Color(1f, 0.35f, 0.32f, 0.98f);
+                case StructureKind.GunTower:
+                    return new Color(1f, 0.48f, 0.28f, 0.98f);
+                case StructureKind.AdvancedGunTower:
+                    return new Color(1f, 0.28f, 0.22f, 0.98f);
                 default:
                     return new Color(0.65f, 0.86f, 0.95f, 0.98f);
             }

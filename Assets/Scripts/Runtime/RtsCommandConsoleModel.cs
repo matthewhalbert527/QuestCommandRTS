@@ -58,7 +58,9 @@ namespace QuestCommandRTS
             StructureKind.Barracks,
             StructureKind.Refinery,
             StructureKind.WarFactory,
-            StructureKind.Turret
+            StructureKind.Turret,
+            StructureKind.GunTower,
+            StructureKind.AdvancedGunTower
         };
 
         public static readonly UnitKind[] UnitKinds =
