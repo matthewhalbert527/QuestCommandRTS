@@ -875,6 +875,37 @@ namespace QuestCommandRTS.Editor
         }
 
         [Test]
+        public void DesktopInputControllerDoesNotDuplicateContextCommandRules()
+        {
+            string source = File.ReadAllText("Assets/Scripts/Runtime/RtsInputController.cs");
+            string[] forbiddenPatterns =
+            {
+                "Physics.Raycast",
+                "GetComponentInParent<RtsEntity>",
+                "GetComponentInParent<ResourceNode>",
+                ".IssueMove(",
+                ".IssueAttack(",
+                ".IssueHarvest(",
+                ".IssueAttackMove(",
+                "FindNearestPlayerRefinery",
+                "SetSelectedRallyPoint",
+                "ResolveContextCommand"
+            };
+
+            for (int i = 0; i < forbiddenPatterns.Length; i++)
+            {
+                Assert.IsFalse(source.Contains(forbiddenPatterns[i]), "RtsInputController should delegate RTS target resolution to RtsCommandDispatcher and not contain " + forbiddenPatterns[i]);
+            }
+
+            Assert.IsTrue(source.Contains("dispatcher.SelectFromRay"), "Desktop selection clicks should delegate to RtsCommandDispatcher.");
+            Assert.IsTrue(source.Contains("dispatcher.CommandFromRay"), "Desktop context commands should delegate to RtsCommandDispatcher.");
+            Assert.IsTrue(source.Contains("dispatcher.AttackMoveFromRay"), "Desktop attack-move should delegate to RtsCommandDispatcher.");
+            Assert.IsTrue(source.Contains("dispatcher.UpdatePlacement"), "Desktop placement updates should delegate to RtsCommandDispatcher.");
+            Assert.IsTrue(source.Contains("dispatcher.ConfirmPlacement"), "Desktop placement confirmation should delegate to RtsCommandDispatcher.");
+            Assert.IsTrue(source.Contains("dispatcher.CancelPlacement"), "Desktop placement cancellation should delegate to RtsCommandDispatcher.");
+        }
+
+        [Test]
         public void ConsoleModelBuildAvailabilityReflectsCreditsTechnologyAndPower()
         {
             RtsGame lowCreditGame = CreateInitializedGame(RtsRuntimeMode.Desktop);
