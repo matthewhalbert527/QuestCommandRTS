@@ -1022,6 +1022,28 @@ namespace QuestCommandRTS.Editor
         }
 
         [Test]
+        public void QuestControllerDoesNotChangeActivePlacementWhilePaused()
+        {
+            RtsGame game = CreateInitializedGame(RtsRuntimeMode.QuestVr);
+            QuestRtsInputController controller = game.GetComponent<QuestRtsInputController>();
+            Assert.IsNotNull(controller);
+
+            Vector3 placementPoint = FindValidBuildPoint(game, StructureKind.PowerPlant);
+            Assert.IsTrue(game.PlayerCommands.RequestConstruction(StructureKind.PowerPlant));
+            game.BuildManager.UpdatePlacementAtPoint(placementPoint);
+            Assert.IsTrue(game.BuildManager.IsPlacing);
+            Assert.IsTrue(game.BuildManager.PlacementValid);
+
+            game.SetUserPaused(true);
+            Ray outsideMapRay = RayAtPoint(new Vector3(RtsBalance.MapHalfSize + 40f, 0f, RtsBalance.MapHalfSize + 40f));
+
+            Assert.AreEqual(RtsCommandResult.None, controller.ProcessInputFrameForTests(QuestFrame(outsideMapRay, false, false, true, true, false), false));
+            Assert.IsTrue(game.BuildManager.IsPlacing);
+            Assert.IsTrue(game.BuildManager.PlacementValid);
+            AssertVectorNear(placementPoint, game.BuildManager.PlacementPoint);
+        }
+
+        [Test]
         public void QuestControllerPrimaryButtonIssuesContextCommands()
         {
             RtsGame game = CreateInitializedGame(RtsRuntimeMode.QuestVr);
