@@ -175,6 +175,30 @@ namespace QuestCommandRTS.Editor
         }
 
         [Test]
+        public void QuestTrackedPoseAppliesOnlyAvailableDeviceFeatures()
+        {
+            Transform tracked = new GameObject("Tracked Pose Test").transform;
+            Vector3 fallbackPosition = new Vector3(0.1f, 1.4f, 0.25f);
+            Quaternion fallbackRotation = Quaternion.Euler(12f, 4f, -3f);
+            tracked.localPosition = fallbackPosition;
+            tracked.localRotation = fallbackRotation;
+
+            QuestTrackedNodePose.ApplyPoseForTests(tracked, false, new Vector3(8f, 8f, 8f), false, Quaternion.Euler(60f, 70f, 80f));
+            AssertVectorNear(fallbackPosition, tracked.localPosition);
+            AssertQuaternionNear(fallbackRotation, tracked.localRotation);
+
+            Vector3 livePosition = new Vector3(-0.2f, 1.2f, 0.45f);
+            QuestTrackedNodePose.ApplyPoseForTests(tracked, true, livePosition, false, Quaternion.Euler(40f, 50f, 60f));
+            AssertVectorNear(livePosition, tracked.localPosition);
+            AssertQuaternionNear(fallbackRotation, tracked.localRotation);
+
+            Quaternion liveRotation = Quaternion.Euler(1f, 88f, 5f);
+            QuestTrackedNodePose.ApplyPoseForTests(tracked, false, new Vector3(3f, 3f, 3f), true, liveRotation);
+            AssertVectorNear(livePosition, tracked.localPosition);
+            AssertQuaternionNear(liveRotation, tracked.localRotation);
+        }
+
+        [Test]
         public void QuestValidatorReportsCorePackageAndAndroidSettings()
         {
             var report = QuestXrProjectValidator.BuildValidationReport();
@@ -624,6 +648,11 @@ namespace QuestCommandRTS.Editor
             Assert.AreEqual(expected.x, actual.x, 0.001f);
             Assert.AreEqual(expected.y, actual.y, 0.001f);
             Assert.AreEqual(expected.z, actual.z, 0.001f);
+        }
+
+        private static void AssertQuaternionNear(Quaternion expected, Quaternion actual)
+        {
+            Assert.Greater(Mathf.Abs(Quaternion.Dot(expected, actual)), 0.9999f);
         }
 
         private static RtsEntity FindPlayerEntity(RtsGame game, System.Type type)

@@ -30,16 +30,33 @@ namespace QuestCommandRTS
                 return;
             }
 
+            ApplyDevicePose(transform, device);
+        }
+
+        private static void ApplyDevicePose(Transform target, InputDevice source)
+        {
             Vector3 position;
-            if (device.TryGetFeatureValue(CommonUsages.devicePosition, out position))
+            bool hasPosition = source.TryGetFeatureValue(CommonUsages.devicePosition, out position);
+            Quaternion rotation;
+            bool hasRotation = source.TryGetFeatureValue(CommonUsages.deviceRotation, out rotation);
+            ApplyPose(target, hasPosition, position, hasRotation, rotation);
+        }
+
+        private static void ApplyPose(Transform target, bool hasPosition, Vector3 position, bool hasRotation, Quaternion rotation)
+        {
+            if (target == null)
             {
-                transform.localPosition = position;
+                return;
             }
 
-            Quaternion rotation;
-            if (device.TryGetFeatureValue(CommonUsages.deviceRotation, out rotation))
+            if (hasPosition)
             {
-                transform.localRotation = rotation;
+                target.localPosition = position;
+            }
+
+            if (hasRotation)
+            {
+                target.localRotation = rotation;
             }
         }
 
@@ -58,6 +75,11 @@ namespace QuestCommandRTS
         public static bool ShouldRefreshDeviceForTests(bool isDeviceValid, float now, float nextRefreshTime)
         {
             return ShouldRefreshDevice(isDeviceValid, now, nextRefreshTime);
+        }
+
+        public static void ApplyPoseForTests(Transform target, bool hasPosition, Vector3 position, bool hasRotation, Quaternion rotation)
+        {
+            ApplyPose(target, hasPosition, position, hasRotation, rotation);
         }
 #endif
     }
