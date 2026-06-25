@@ -52,6 +52,8 @@ namespace QuestCommandRTS
             string tacticalMapDetail;
             Add(results, "Quest tactical map non-interactive", HasNonInteractiveTacticalMap(out tacticalMapDetail), tacticalMapDetail);
             Add(results, "Quest command console present", console != null && console.PanelRect != null, "Quest command console should exist under the tabletop rig.");
+            string uiAnchorDetail;
+            Add(results, "Quest world UI anchored to rig", HasQuestWorldUiAnchoredToRig(rig, console, out uiAnchorDetail), uiAnchorDetail);
             string consoleDetail;
             Add(results, "Quest command console panel ray", HasCommandConsolePanelRay(console, out consoleDetail), consoleDetail);
             Add(results, "View camera uses XR head", rig != null && rig.HeadCamera != null && game.GetViewCameraTransform() == rig.HeadCamera.transform, "Game view camera should resolve to the Quest head camera.");
@@ -163,6 +165,27 @@ namespace QuestCommandRTS
                 ", raycastTargets=" + raycastTargets +
                 ", graphics=" + graphics.Length;
             return raycasterDisabled && raycastTargets == 0;
+        }
+
+        private static bool HasQuestWorldUiAnchoredToRig(QuestTabletopRig rig, QuestCommandConsole console, out string detail)
+        {
+            if (rig == null || rig.RigRoot == null)
+            {
+                detail = "Quest rig root is missing.";
+                return false;
+            }
+
+            Transform status = FindDescendant(rig.RigRoot, "Quest World Status");
+            Transform tacticalMap = FindDescendant(rig.RigRoot, "Quest Tactical Map");
+            Transform commandConsole = console != null && console.PanelRect != null ? console.PanelRect.transform : FindDescendant(rig.RigRoot, "Quest Command Console");
+
+            bool statusAnchored = status != null && status.IsChildOf(rig.RigRoot);
+            bool tacticalMapAnchored = tacticalMap != null && tacticalMap.IsChildOf(rig.RigRoot);
+            bool commandConsoleAnchored = commandConsole != null && commandConsole.IsChildOf(rig.RigRoot);
+            detail = "status=" + (statusAnchored ? "anchored" : "missing-or-detached") +
+                ", tacticalMap=" + (tacticalMapAnchored ? "anchored" : "missing-or-detached") +
+                ", commandConsole=" + (commandConsoleAnchored ? "anchored" : "missing-or-detached");
+            return statusAnchored && tacticalMapAnchored && commandConsoleAnchored;
         }
 
         private static bool HasCommandConsolePanelRay(QuestCommandConsole console, out string detail)
