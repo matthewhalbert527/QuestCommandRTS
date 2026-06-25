@@ -50,13 +50,26 @@ namespace QuestCommandRTS
         public static bool IsXrRuntimeActive()
         {
             XRGeneralSettings settings = XRGeneralSettings.Instance;
-            if (settings != null && settings.Manager != null && settings.Manager.activeLoader != null)
+            bool hasActiveLoader = settings != null && settings.Manager != null && settings.Manager.activeLoader != null;
+            return IsXrRuntimeActiveForState(XRSettings.enabled, XRSettings.isDeviceActive, hasActiveLoader);
+        }
+
+        internal static bool IsXrRuntimeActiveForState(bool xrSettingsEnabled, bool xrDeviceActive, bool hasActiveLoader)
+        {
+            if (xrDeviceActive)
             {
                 return true;
             }
 
-            return XRSettings.enabled && XRSettings.isDeviceActive;
+            return xrSettingsEnabled && hasActiveLoader;
         }
+
+#if UNITY_EDITOR
+        public static bool EvaluateXrRuntimeStateForTests(bool xrSettingsEnabled, bool xrDeviceActive, bool hasActiveLoader)
+        {
+            return IsXrRuntimeActiveForState(xrSettingsEnabled, xrDeviceActive, hasActiveLoader);
+        }
+#endif
 
         private static bool TryGetCommandLineMode(out RtsRuntimeMode mode)
         {

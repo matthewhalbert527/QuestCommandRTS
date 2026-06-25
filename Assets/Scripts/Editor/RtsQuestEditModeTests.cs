@@ -29,6 +29,16 @@ namespace QuestCommandRTS.Editor
         }
 
         [Test]
+        public void RuntimeModeResolverRequiresEnabledOrActiveXrState()
+        {
+            Assert.IsFalse(RtsRuntimeModeResolver.EvaluateXrRuntimeStateForTests(false, false, false));
+            Assert.IsFalse(RtsRuntimeModeResolver.EvaluateXrRuntimeStateForTests(false, false, true));
+            Assert.IsFalse(RtsRuntimeModeResolver.EvaluateXrRuntimeStateForTests(true, false, false));
+            Assert.IsTrue(RtsRuntimeModeResolver.EvaluateXrRuntimeStateForTests(true, false, true));
+            Assert.IsTrue(RtsRuntimeModeResolver.EvaluateXrRuntimeStateForTests(false, true, false));
+        }
+
+        [Test]
         public void DesktopInitializationCreatesDesktopCameraInputAndHud()
         {
             RtsGame game = CreateInitializedGame(RtsRuntimeMode.Desktop);
