@@ -304,6 +304,26 @@ namespace QuestCommandRTS.Editor
         }
 
         [Test]
+        public void QuestConsoleReportsPanelPointerHitWithinRayLength()
+        {
+            RtsGame game = CreateInitializedGame(RtsRuntimeMode.QuestVr);
+            QuestCommandConsole console = game.GetComponent<QuestCommandConsole>();
+            QuestTabletopSettings settings = game.GetComponent<QuestTabletopSettings>();
+            Assert.IsNotNull(console);
+            Assert.IsNotNull(settings);
+
+            Ray closedRay = new Ray(console.PanelRect.position - console.PanelRect.forward * 8f, console.PanelRect.forward);
+            Assert.IsFalse(console.TryGetPanelHit(closedRay, out _));
+
+            console.SetOpen(true);
+            Assert.IsTrue(console.TryGetPanelHit(closedRay, out Vector3 point));
+            Assert.AreEqual(console.PanelRect.position.x, point.x, 0.001f);
+
+            Ray distantRay = new Ray(console.PanelRect.position - console.PanelRect.forward * (settings.RayLengthSimulationUnits + 1f), console.PanelRect.forward);
+            Assert.IsFalse(console.TryGetPanelHit(distantRay, out _));
+        }
+
+        [Test]
         public void ClosingMatchCancelsActivePlacement()
         {
             RtsGame game = CreateInitializedGame(RtsRuntimeMode.Desktop);

@@ -25,6 +25,7 @@ namespace QuestCommandRTS
         private readonly Color attackColor = new Color(1f, 0.32f, 0.22f, 0.95f);
         private readonly Color harvestColor = new Color(0.25f, 1f, 0.48f, 0.95f);
         private readonly Color rallyColor = new Color(0.55f, 0.95f, 1f, 0.95f);
+        private readonly Color uiColor = new Color(0.72f, 0.92f, 1f, 0.95f);
         private readonly Color invalidColor = new Color(0.55f, 0.6f, 0.62f, 0.65f);
 
         public void Initialize(RtsGame owner, RtsCommandDispatcher commandDispatcher, QuestTabletopSettings tabletopSettings, Transform rightHand, Transform leftHand, LineRenderer line, Transform hitReticle)
@@ -77,15 +78,6 @@ namespace QuestCommandRTS
             }
 
             Ray ray = new Ray(rightController.position, rightController.forward);
-            RaycastHit hit;
-            bool hasHit = dispatcher.TryGetPointerHit(ray, settings.RayLengthSimulationUnits, out hit);
-            UpdatePointer(ray, hasHit, hit);
-
-            if (game.BuildManager != null && game.BuildManager.IsPlacing)
-            {
-                dispatcher.UpdatePlacement(ray, settings.RayLengthSimulationUnits);
-            }
-
             bool leftTriggerHeld = ReadButton(leftDevice, CommonUsages.triggerButton, CommonUsages.trigger);
             bool rightTrigger = ReadButton(rightDevice, CommonUsages.triggerButton, CommonUsages.trigger);
             bool primaryButton = ReadButton(rightDevice, CommonUsages.primaryButton);
@@ -108,6 +100,23 @@ namespace QuestCommandRTS
             }
 
             bool uiCaptured = commandConsole != null && commandConsole.TryHandlePointer(ray, rightTriggerDown);
+            Vector3 panelPoint = Vector3.zero;
+            bool panelHit = commandConsole != null && commandConsole.TryGetPanelHit(ray, out panelPoint);
+            if (panelHit)
+            {
+                UpdatePointer(ray, true, panelPoint, uiColor);
+            }
+            else
+            {
+                RaycastHit hit;
+                bool hasHit = dispatcher.TryGetPointerHit(ray, settings.RayLengthSimulationUnits, out hit);
+                UpdatePointer(ray, hasHit, hit);
+            }
+
+            if (!uiCaptured && game.BuildManager != null && game.BuildManager.IsPlacing)
+            {
+                dispatcher.UpdatePlacement(ray, settings.RayLengthSimulationUnits);
+            }
 
             if (!game.AcceptsPlayerInput)
             {
@@ -190,6 +199,32 @@ namespace QuestCommandRTS
             reticle.position = hit.point;
             reticle.localScale = Vector3.one * settings.ReticleSizeMeters;
             SetPointerColor(GetPointerColor(dispatcher.ResolveContextCommand(hit)));
+        }
+
+        private void UpdatePointer(Ray ray, bool hasHit, Vector3 hitPoint, Color color)
+        {
+            if (pointerLine == null)
+            {
+                return;
+            }
+
+            Vector3 end = hasHit ? hitPoint : ray.GetPoint(settings.RayLengthSimulationUnits);
+            pointerLine.SetPosition(0, ray.origin);
+            pointerLine.SetPosition(1, end);
+
+            if (reticle == null)
+            {
+                return;
+            }
+
+            reticle.gameObject.SetActive(hasHit);
+            if (hasHit)
+            {
+                reticle.position = hitPoint;
+                reticle.localScale = Vector3.one * settings.ReticleSizeMeters;
+            }
+
+            SetPointerColor(color);
         }
 
         private void SetPointerVisible(bool visible)

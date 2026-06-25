@@ -191,6 +191,17 @@ namespace QuestCommandRTS
             return true;
         }
 
+        public bool TryGetPanelHit(Ray ray, out Vector3 point)
+        {
+            if (!IsOpen || panelRect == null)
+            {
+                point = Vector3.zero;
+                return false;
+            }
+
+            return TryGetPanelPoint(ray, out point);
+        }
+
         private void BuildCanvas(Transform rigRoot)
         {
             canvasObject = new GameObject("Quest Command Console");
