@@ -54,6 +54,7 @@ namespace QuestCommandRTS
             Add(results, "Quest rig present", rig != null && rig.RigRoot != null && rig.HeadCamera != null, "QuestTabletopRig should own the tabletop root and XR head camera.");
             Add(results, "Quest settings present", settings != null, "QuestTabletopSettings should own tabletop scale, height, ray, reticle, clip-plane, and world-space UI values.");
             Add(results, "Quest input present", input != null, "QuestRtsInputController should translate controller state into shared dispatcher calls.");
+            Add(results, "Quest input uses shared dispatcher", input != null && input.SharedDispatcher == game.CommandDispatcher, "Quest input should reference RtsGame.CommandDispatcher.");
             Add(results, "Quest world HUD present", worldHud != null && HasWorldSpaceCanvas("Quest World Status"), "Quest mode should expose a world-space status panel.");
             Add(results, "Quest world HUD control hints", HasWorldHudControlHints(), "World-space status panel should show trigger, A/B, and X command-console hints.");
             string worldHudDetail;

@@ -16,6 +16,8 @@ namespace QuestCommandRTS
         private const float DragThreshold = 8f;
         private const float PointerRayDistance = 250f;
 
+        public RtsCommandDispatcher SharedDispatcher => dispatcher;
+
         public void Initialize(RtsGame owner, RtsCommandDispatcher commandDispatcher)
         {
             game = owner;

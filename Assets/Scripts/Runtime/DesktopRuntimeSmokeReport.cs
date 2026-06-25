@@ -40,6 +40,7 @@ namespace QuestCommandRTS
             Add(results, "Command camera present", game.CommandCamera != null, "Desktop mode should create or use a command camera.");
             Add(results, "View camera uses command camera", game.CommandCamera != null && game.GetViewCameraTransform() == game.CommandCamera.transform, "Desktop view camera should resolve to the command camera.");
             Add(results, "Desktop input present", input != null, "Desktop mode should install RtsInputController.");
+            Add(results, "Desktop input uses shared dispatcher", input != null && input.SharedDispatcher == game.CommandDispatcher, "Desktop input should reference RtsGame.CommandDispatcher.");
             Add(results, "Desktop HUD present", hud != null && HasScreenSpaceHud(), "Desktop mode should install the Screen Space Overlay RTS HUD.");
             Add(results, "Desktop event system present", HasDesktopEventSystem(), "Desktop HUD should create an EventSystem for UI interaction.");
             Add(results, "Quest rig absent", game.QuestRig == null && game.GetComponent<QuestRtsInputController>() == null, "Desktop mode should not install the Quest rig or Quest input controller.");

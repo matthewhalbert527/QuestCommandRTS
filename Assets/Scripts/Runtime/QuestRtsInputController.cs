@@ -55,6 +55,8 @@ namespace QuestCommandRTS
         private readonly Color uiColor = new Color(0.72f, 0.92f, 1f, 0.95f);
         private readonly Color invalidColor = new Color(0.55f, 0.6f, 0.62f, 0.65f);
 
+        public RtsCommandDispatcher SharedDispatcher => dispatcher;
+
         public void Initialize(RtsGame owner, RtsCommandDispatcher commandDispatcher, QuestTabletopSettings tabletopSettings, Transform rightHand, Transform leftHand, LineRenderer line, Transform hitReticle)
         {
             game = owner;
