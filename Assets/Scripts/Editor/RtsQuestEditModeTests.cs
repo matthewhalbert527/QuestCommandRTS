@@ -998,6 +998,29 @@ namespace QuestCommandRTS.Editor
         }
 
         [Test]
+        public void QuestControllerConsoleToggleUsesLeftPrimaryButtonDownOnly()
+        {
+            RtsGame game = CreateInitializedGame(RtsRuntimeMode.QuestVr);
+            QuestRtsInputController controller = game.GetComponent<QuestRtsInputController>();
+            QuestCommandConsole console = game.GetComponent<QuestCommandConsole>();
+            Assert.IsNotNull(controller);
+            Assert.IsNotNull(console);
+            Assert.IsFalse(console.IsOpen);
+
+            Ray terrainRay = RayAtPoint(new Vector3(-24f, 0f, -34f));
+
+            controller.ProcessInputFrameForTests(QuestFrame(terrainRay, false, false, false, false, true), false);
+            Assert.IsTrue(console.IsOpen);
+
+            controller.ProcessInputFrameForTests(QuestFrame(terrainRay, false, false, false, false, true), false);
+            Assert.IsTrue(console.IsOpen, "Holding X/left primary should not toggle every frame.");
+
+            ReleaseButtons(controller, terrainRay);
+            controller.ProcessInputFrameForTests(QuestFrame(terrainRay, false, false, false, false, true), false);
+            Assert.IsFalse(console.IsOpen);
+        }
+
+        [Test]
         public void QuestControllerPrimaryButtonIssuesContextCommands()
         {
             RtsGame game = CreateInitializedGame(RtsRuntimeMode.QuestVr);
