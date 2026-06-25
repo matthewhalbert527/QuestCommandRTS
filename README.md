@@ -98,7 +98,7 @@ The full battlefield remains approximately 224 simulation units wide. The Quest 
 - Enemy structures can be rebuilt from fixed base slots while at least one enemy structure remains alive.
 - Timed enemy attacks still exist, but spawned attackers now spend commander credits instead of appearing for free.
 
-See `docs/SAVE_SYSTEM.md`, `docs/LIFECYCLE_TEST_MATRIX.md`, and `docs/PERFORMANCE_TESTING.md`.
+See `docs/SAVE_SYSTEM.md`, `docs/LIFECYCLE_TEST_MATRIX.md`, `docs/PERFORMANCE_TESTING.md`, and `docs/MILESTONE_STATUS.md`.
 
 ## Current VR Limitations
 
