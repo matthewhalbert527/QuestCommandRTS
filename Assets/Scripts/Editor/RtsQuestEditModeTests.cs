@@ -770,6 +770,35 @@ namespace QuestCommandRTS.Editor
         }
 
         [Test]
+        public void CommandDispatcherSourceStaysDeviceInputIndependent()
+        {
+            string source = File.ReadAllText("Assets/Scripts/Runtime/RtsCommandDispatcher.cs");
+            string[] forbiddenPatterns =
+            {
+                "Input.",
+                "InputSystem",
+                "InputDevice",
+                "UnityEngine.XR",
+                "XRNode",
+                "CommonUsages",
+                "KeyCode",
+                "mousePosition",
+                "GetMouseButton",
+                "GetKey",
+                "Screen.",
+                "ScreenPointToRay",
+                "Camera.main",
+                "OnGUI",
+                "GUI."
+            };
+
+            for (int i = 0; i < forbiddenPatterns.Length; i++)
+            {
+                Assert.IsFalse(source.Contains(forbiddenPatterns[i]), "RtsCommandDispatcher should stay device-independent and not contain " + forbiddenPatterns[i]);
+            }
+        }
+
+        [Test]
         public void ConsoleModelBuildAvailabilityReflectsCreditsTechnologyAndPower()
         {
             RtsGame lowCreditGame = CreateInitializedGame(RtsRuntimeMode.Desktop);
