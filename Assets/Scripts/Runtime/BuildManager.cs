@@ -16,6 +16,8 @@ namespace QuestCommandRTS
 
     public sealed class BuildManager : MonoBehaviour
     {
+        private const float DefaultProjectionDistance = 250f;
+
         public bool IsPlacing => preview != null;
         public StructureKind PendingKind => pendingKind;
         public bool PlacementValid => placementValid;
@@ -93,12 +95,17 @@ namespace QuestCommandRTS
 
         public void UpdatePlacement(Ray ray)
         {
+            UpdatePlacement(ray, DefaultProjectionDistance);
+        }
+
+        public void UpdatePlacement(Ray ray, float maxDistance)
+        {
             if (preview == null || placementSuspended)
             {
                 return;
             }
 
-            if (!TryProjectToGround(ray, out placementPoint))
+            if (!TryProjectToGround(ray, Mathf.Max(0.01f, maxDistance), out placementPoint))
             {
                 placementValid = false;
                 hasPlacementPoint = false;
@@ -292,9 +299,9 @@ namespace QuestCommandRTS
             return game.GetPlayerBaseCenter() + Vector3.up * 2f;
         }
 
-        private static bool TryProjectToGround(Ray ray, out Vector3 point)
+        private static bool TryProjectToGround(Ray ray, float maxDistance, out Vector3 point)
         {
-            if (Physics.Raycast(ray, out RaycastHit hit, 250f))
+            if (Physics.Raycast(ray, out RaycastHit hit, maxDistance))
             {
                 point = hit.point;
                 point.y = 0f;
@@ -302,7 +309,7 @@ namespace QuestCommandRTS
             }
 
             Plane ground = new Plane(Vector3.up, Vector3.zero);
-            if (ground.Raycast(ray, out float distance))
+            if (ground.Raycast(ray, out float distance) && distance >= 0f && distance <= maxDistance)
             {
                 point = ray.GetPoint(distance);
                 point.y = 0f;

@@ -201,6 +201,24 @@ namespace QuestCommandRTS.Editor
         }
 
         [Test]
+        public void PlacementProjectionHonorsProvidedRayLength()
+        {
+            RtsGame game = CreateInitializedGame(RtsRuntimeMode.QuestVr);
+            Vector3 validPoint = FindValidBuildPoint(game, StructureKind.PowerPlant);
+            Ray ray = new Ray(validPoint + Vector3.up * 100f, Vector3.down);
+
+            Assert.IsTrue(game.PlayerCommands.RequestConstruction(StructureKind.PowerPlant));
+
+            game.CommandDispatcher.UpdatePlacement(ray, 40f);
+            Assert.IsFalse(game.BuildManager.HasPlacementPoint);
+            Assert.AreEqual(BuildPlacementFailureReason.NoGroundHit, game.BuildManager.LastFailureReason);
+
+            game.CommandDispatcher.UpdatePlacement(ray, 120f);
+            Assert.IsTrue(game.BuildManager.HasPlacementPoint);
+            Assert.AreEqual(validPoint, game.BuildManager.PlacementPoint);
+        }
+
+        [Test]
         public void ProductionQueueSpendsOnceAndCancelRefundsQueuedItem()
         {
             RtsGame game = CreateInitializedGame(RtsRuntimeMode.Desktop);

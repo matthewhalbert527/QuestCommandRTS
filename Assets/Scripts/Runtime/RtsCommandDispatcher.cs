@@ -67,12 +67,17 @@ namespace QuestCommandRTS
 
         public RtsCommandResult UpdatePlacement(Ray ray)
         {
+            return UpdatePlacement(ray, 250f);
+        }
+
+        public RtsCommandResult UpdatePlacement(Ray ray, float maxDistance)
+        {
             if (game == null || game.PlayerCommands == null)
             {
                 return RtsCommandResult.None;
             }
 
-            return game.PlayerCommands.UpdateConstructionPlacement(ray) ? RtsCommandResult.PlacementUpdated : RtsCommandResult.None;
+            return game.PlayerCommands.UpdateConstructionPlacement(ray, maxDistance) ? RtsCommandResult.PlacementUpdated : RtsCommandResult.None;
         }
 
         public RtsCommandResult ConfirmPlacement()

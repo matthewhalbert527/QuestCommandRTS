@@ -83,7 +83,7 @@ namespace QuestCommandRTS
 
             if (game.BuildManager != null && game.BuildManager.IsPlacing)
             {
-                dispatcher.UpdatePlacement(ray);
+                dispatcher.UpdatePlacement(ray, settings.RayLengthSimulationUnits);
             }
 
             bool leftTriggerHeld = ReadButton(leftDevice, CommonUsages.triggerButton, CommonUsages.trigger);

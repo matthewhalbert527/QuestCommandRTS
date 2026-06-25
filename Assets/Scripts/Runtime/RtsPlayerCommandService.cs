@@ -23,12 +23,17 @@ namespace QuestCommandRTS
 
         public bool UpdateConstructionPlacement(Ray ray)
         {
+            return UpdateConstructionPlacement(ray, 250f);
+        }
+
+        public bool UpdateConstructionPlacement(Ray ray, float maxDistance)
+        {
             if (!CanAcceptCommands() || game.BuildManager == null || !game.BuildManager.IsPlacing)
             {
                 return false;
             }
 
-            game.BuildManager.UpdatePlacement(ray);
+            game.BuildManager.UpdatePlacement(ray, maxDistance);
             return true;
         }
 
