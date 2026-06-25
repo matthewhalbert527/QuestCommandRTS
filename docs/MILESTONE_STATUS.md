@@ -18,7 +18,7 @@ This document records what has been implemented and what has actually been verif
 - `RtsGame` owns runtime bootstrap and installs only the components for the resolved mode.
 - `RtsCommandDispatcher` centralizes ray/hit based RTS command semantics shared by desktop and Quest input. EditMode source checks guard it from directly reading mouse, keyboard, screen, or XR device APIs.
 - `RtsInputController` keeps desktop-only input, camera movement, drag selection, hotkeys, and control groups. Source checks guard it from duplicating context-command target resolution that belongs in `RtsCommandDispatcher`.
-- `QuestTabletopRig`, `QuestTabletopSettings`, `QuestTrackedNodePose`, `QuestRtsInputController`, `QuestWorldHud`, and `QuestCommandConsole` contain Quest-specific rigging, tracked pose, controller input, pointer, and world-space UI behavior.
+- `QuestTabletopRig`, `QuestTabletopSettings`, `QuestTrackedNodePose`, `QuestRtsInputController`, `QuestWorldHud`, and `QuestCommandConsole` contain Quest-specific rigging, tracked pose, controller input, pointer, and world-space UI behavior. Source checks guard the Quest path from adding artificial locomotion, board grabbing, or continuous tracked-pose overrides.
 - `QuestXrProjectValidator` validates package and project settings, and separates automated checks from manual headset/setup checks.
 - `QuestRuntimeSmokeReport` validates the generated Quest runtime object graph locally while keeping physical headset behavior marked manual.
 - `DesktopRuntimeSmokeReport` validates the generated desktop runtime object graph locally while keeping hands-on desktop controls marked manual.
@@ -34,7 +34,7 @@ This document records what has been implemented and what has actually been verif
 
 Automated verification last run locally:
 
-- EditMode tests: `75` total, `75` passed, `0` failed.
+- EditMode tests: `77` total, `77` passed, `0` failed.
 - XR setup validator: automated package/project-setting checks pass except for local Android Build Support, which is missing from this Unity install; manual headset and Android OpenXR UI verification remain manual.
 - Generated Quest runtime smoke report: automated object-graph checks pass in EditMode; physical headset behavior remains manual.
 - Generated desktop runtime smoke report: automated object-graph checks pass in EditMode; hands-on desktop control regression remains manual.
@@ -49,7 +49,7 @@ Automated verification last run locally:
 | --- | --- | --- |
 | Project resolves packages and compiles in Unity 2022.3.62f3 with zero C# compilation errors | Pass | Full EditMode test run completed with no compiler failures. |
 | Desktop version remains playable with prior controls | Strong simulated pass, manual playthrough still recommended | Desktop generated-runtime smoke checks, dispatcher behavior, production/building, save/load, and lifecycle are covered by EditMode tests. Manual camera/control regression remains recommended. |
-| Quest runtime uses an OpenXR-tracked camera and controllers | Implemented, physical device unverified | Quest rig creates XR head/hand nodes and applies Unity XR device pose data. No physical headset run has been performed from this environment. |
+| Quest runtime uses an OpenXR-tracked camera and controllers | Implemented, physical device unverified | Quest rig creates XR head/hand nodes and applies Unity XR device pose data. Source checks assert Quest input does not add artificial locomotion or board manipulation and that the tabletop rig does not continuously overwrite tracked head/hand poses. No physical headset run has been performed from this environment. |
 | Right controller can select and command existing units | Simulated pass, physical device unverified | EditMode tests cover trigger selection, additive selection, A/right-primary context commands, cancel/clear, attack-move, stop, pointer feedback geometry and context colors, build placement through the Quest console, selected production queuing/canceling through the Quest console, Selected tab repair/sell actions, System tab pause/save/load/New Match activation, selected/damaged health-bar readability, and panel-ray capture. |
 | Desktop and Quest input share the same RTS command dispatcher | Pass | Desktop and Quest controllers both delegate selection, placement, context commands, attack-move, stop, and clear/cancel through `RtsCommandDispatcher` and `RtsPlayerCommandService`; source checks assert the dispatcher does not read device input APIs directly and desktop input does not duplicate context-target rules. |
 | Quest path does not create, reposition, or rotate the desktop command camera | Pass | Forced Quest initialization tests assert no `Command Camera`, no `RtsInputController`, and no `RtsHud`; the view camera is the Quest head camera. |

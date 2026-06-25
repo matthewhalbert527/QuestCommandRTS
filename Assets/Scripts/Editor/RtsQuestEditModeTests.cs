@@ -906,6 +906,72 @@ namespace QuestCommandRTS.Editor
         }
 
         [Test]
+        public void QuestInputControllerDoesNotImplementArtificialLocomotionOrBoardManipulation()
+        {
+            string source = File.ReadAllText("Assets/Scripts/Runtime/QuestRtsInputController.cs");
+            string updateBody = ExtractMethodBody("Assets/Scripts/Runtime/QuestRtsInputController.cs", "private void Update(");
+            string processBody = ExtractMethodBody("Assets/Scripts/Runtime/QuestRtsInputController.cs", "private RtsCommandResult ProcessInputFrame(");
+            string[] forbiddenSourcePatterns =
+            {
+                "primary2DAxis",
+                "secondary2DAxis",
+                "CommonUsages.gripButton",
+                "CommonUsages.grip",
+                "thumbstick",
+                "joystick",
+                "Teleport",
+                "Locomotion",
+                "SnapTurn",
+                "ContinuousTurn",
+                "RigRoot",
+                "HeadCamera",
+                "QuestTabletopRig"
+            };
+
+            for (int i = 0; i < forbiddenSourcePatterns.Length; i++)
+            {
+                Assert.IsFalse(source.Contains(forbiddenSourcePatterns[i]), "QuestRtsInputController should stay command-only and not contain " + forbiddenSourcePatterns[i]);
+            }
+
+            string[] forbiddenPoseWrites =
+            {
+                ".position =",
+                ".rotation =",
+                ".localPosition =",
+                ".localRotation =",
+                ".Translate(",
+                ".Rotate(",
+                "SetParent("
+            };
+
+            for (int i = 0; i < forbiddenPoseWrites.Length; i++)
+            {
+                Assert.IsFalse(updateBody.Contains(forbiddenPoseWrites[i]), "QuestRtsInputController.Update should not move the rig, board, camera, or controller transforms with " + forbiddenPoseWrites[i]);
+                Assert.IsFalse(processBody.Contains(forbiddenPoseWrites[i]), "QuestRtsInputController.ProcessInputFrame should only issue commands and not move transforms with " + forbiddenPoseWrites[i]);
+            }
+        }
+
+        [Test]
+        public void QuestTabletopRigDoesNotContinuouslyOverwriteTrackedHeadOrHands()
+        {
+            string source = File.ReadAllText("Assets/Scripts/Runtime/QuestTabletopRig.cs");
+            string initializeBody = ExtractMethodBody("Assets/Scripts/Runtime/QuestTabletopRig.cs", "public void Initialize(");
+
+            Assert.IsFalse(source.Contains("void Update("), "QuestTabletopRig should not run a per-frame pose override loop.");
+            Assert.IsFalse(source.Contains("void LateUpdate("), "QuestTabletopRig should not late-override tracked poses.");
+            Assert.IsFalse(source.Contains("HeadCamera.transform.position ="), "Head camera position should come from the tracked head node.");
+            Assert.IsFalse(source.Contains("HeadCamera.transform.rotation ="), "Head camera rotation should come from the tracked head node.");
+            Assert.IsFalse(source.Contains("Head.position ="), "Head world position should not be overwritten after the tracked node is created.");
+            Assert.IsFalse(source.Contains("Head.rotation ="), "Head world rotation should not be overwritten after the tracked node is created.");
+            Assert.IsFalse(source.Contains("LeftController.position ="), "Left controller world position should not be overwritten after the tracked node is created.");
+            Assert.IsFalse(source.Contains("RightController.position ="), "Right controller world position should not be overwritten after the tracked node is created.");
+
+            Assert.IsTrue(initializeBody.Contains("RigRoot.position = settings.GetRigRootPosition();"), "Rig root tabletop height should be applied during initialization.");
+            Assert.IsTrue(initializeBody.Contains("RigRoot.rotation = Quaternion.Euler(0f, settings.InitialYawDegrees, 0f);"), "Rig root initial yaw should be applied during initialization.");
+            Assert.IsTrue(initializeBody.Contains("RigRoot.localScale = Vector3.one * settings.SimulationUnitsPerMeter;"), "Rig root scale should be applied during initialization.");
+        }
+
+        [Test]
         public void ConsoleModelBuildAvailabilityReflectsCreditsTechnologyAndPower()
         {
             RtsGame lowCreditGame = CreateInitializedGame(RtsRuntimeMode.Desktop);
