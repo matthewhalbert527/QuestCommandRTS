@@ -1,8 +1,10 @@
 #if UNITY_EDITOR
+using System;
 using System.IO;
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.UI;
+using Object = UnityEngine.Object;
 
 namespace QuestCommandRTS.Editor
 {
@@ -539,6 +541,41 @@ namespace QuestCommandRTS.Editor
         }
 
         [Test]
+        public void QuestPerFrameCodeAvoidsObviousAllocatingPatterns()
+        {
+            string[] hotLoops =
+            {
+                "Assets/Scripts/Runtime/QuestRtsInputController.cs|private void Update(",
+                "Assets/Scripts/Runtime/QuestRtsInputController.cs|private RtsCommandResult ProcessInputFrame(",
+                "Assets/Scripts/Runtime/QuestTrackedNodePose.cs|private void Update(",
+                "Assets/Scripts/Runtime/QuestWorldHud.cs|private void Update(",
+                "Assets/Scripts/Runtime/QuestCommandConsole.cs|private void Update("
+            };
+
+            string[] forbiddenPatterns =
+            {
+                "new GameObject",
+                "GameObject.CreatePrimitive",
+                "new Material",
+                "FindObjectOfType",
+                "FindObjectsOfType",
+                ".Select(",
+                ".Where(",
+                ".ToList("
+            };
+
+            for (int i = 0; i < hotLoops.Length; i++)
+            {
+                string[] parts = hotLoops[i].Split('|');
+                string body = ExtractMethodBody(parts[0], parts[1]);
+                for (int j = 0; j < forbiddenPatterns.Length; j++)
+                {
+                    Assert.IsFalse(body.Contains(forbiddenPatterns[j]), hotLoops[i] + " should not contain " + forbiddenPatterns[j]);
+                }
+            }
+        }
+
+        [Test]
         public void ConsoleModelBuildAvailabilityReflectsCreditsTechnologyAndPower()
         {
             RtsGame lowCreditGame = CreateInitializedGame(RtsRuntimeMode.Desktop);
@@ -781,6 +818,37 @@ namespace QuestCommandRTS.Editor
         private static void AssertQuaternionNear(Quaternion expected, Quaternion actual)
         {
             Assert.Greater(Mathf.Abs(Quaternion.Dot(expected, actual)), 0.9999f);
+        }
+
+        private static string ExtractMethodBody(string path, string signature)
+        {
+            Assert.IsTrue(File.Exists(path), "Missing source file " + path);
+            string text = File.ReadAllText(path);
+            int signatureIndex = text.IndexOf(signature, StringComparison.Ordinal);
+            Assert.GreaterOrEqual(signatureIndex, 0, "Missing method signature " + signature + " in " + path);
+
+            int openBrace = text.IndexOf('{', signatureIndex);
+            Assert.GreaterOrEqual(openBrace, 0, "Missing method body for " + signature + " in " + path);
+
+            int depth = 0;
+            for (int i = openBrace; i < text.Length; i++)
+            {
+                if (text[i] == '{')
+                {
+                    depth++;
+                }
+                else if (text[i] == '}')
+                {
+                    depth--;
+                    if (depth == 0)
+                    {
+                        return text.Substring(openBrace, i - openBrace + 1);
+                    }
+                }
+            }
+
+            Assert.Fail("Unclosed method body for " + signature + " in " + path);
+            return string.Empty;
         }
 
         private static RtsEntity FindPlayerEntity(RtsGame game, System.Type type)
