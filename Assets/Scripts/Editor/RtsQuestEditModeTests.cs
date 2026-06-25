@@ -468,6 +468,9 @@ namespace QuestCommandRTS.Editor
             Assert.AreEqual(1, snapshot.enabledLightCount);
             Assert.GreaterOrEqual(snapshot.worldSpaceCanvasCount, 2);
             Assert.AreEqual(0, snapshot.screenSpaceOverlayCanvasCount);
+            Assert.AreEqual(1, snapshot.fogOverlayObjectCount);
+            Assert.AreEqual(1, snapshot.fogOverlayRendererCount);
+            Assert.AreEqual(0, snapshot.fogCellObjectCount);
             Assert.Greater(snapshot.visualSetDressingObjectCount, 0);
             Assert.AreEqual(0, snapshot.visualSetDressingColliderCount);
 
@@ -479,6 +482,7 @@ namespace QuestCommandRTS.Editor
             AssertBudgetPassed(report, "Light budget");
             AssertBudgetPassed(report, "Camera budget");
             AssertBudgetPassed(report, "World-space Quest UI");
+            AssertBudgetPassed(report, "Fog overlay budget");
             AssertBudgetPassed(report, "Visual set dressing colliders");
         }
 
@@ -489,6 +493,7 @@ namespace QuestCommandRTS.Editor
 
             AssertBudgetPassed(report, "Runtime mode");
             AssertBudgetPassed(report, "World-space Quest UI");
+            AssertBudgetPassed(report, "Fog overlay budget");
             AssertBudgetPassed(report, "Visual set dressing colliders");
         }
 

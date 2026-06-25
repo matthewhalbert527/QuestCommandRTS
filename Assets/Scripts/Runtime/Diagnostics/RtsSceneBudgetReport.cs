@@ -30,6 +30,9 @@ namespace QuestCommandRTS
         public int rendererCount;
         public int enabledRendererCount;
         public int lineRendererCount;
+        public int fogOverlayObjectCount;
+        public int fogOverlayRendererCount;
+        public int fogCellObjectCount;
         public int uniqueSharedMaterialCount;
         public int colliderCount;
         public int enabledColliderCount;
@@ -94,6 +97,16 @@ namespace QuestCommandRTS
                         snapshot.visualSetDressingColliderCount++;
                     }
                 }
+
+                if (sceneObject.name == "Fog Overlay")
+                {
+                    snapshot.fogOverlayObjectCount++;
+                }
+
+                if (sceneObject.name.StartsWith("Fog Cell", StringComparison.Ordinal))
+                {
+                    snapshot.fogCellObjectCount++;
+                }
             }
         }
 
@@ -118,6 +131,11 @@ namespace QuestCommandRTS
                 if (renderer is LineRenderer)
                 {
                     snapshot.lineRendererCount++;
+                }
+
+                if (renderer.gameObject.name == "Fog Overlay")
+                {
+                    snapshot.fogOverlayRendererCount++;
                 }
 
                 Material[] materials = renderer.sharedMaterials;
@@ -235,6 +253,7 @@ namespace QuestCommandRTS
             Add(results, "Light budget", snapshot.enabledLightCount <= MaxQuestEnabledLights, snapshot.enabledLightCount + "/" + MaxQuestEnabledLights);
             Add(results, "Camera budget", snapshot.enabledCameraCount == MaxQuestEnabledCameras, snapshot.enabledCameraCount + "/" + MaxQuestEnabledCameras);
             Add(results, "World-space Quest UI", snapshot.worldSpaceCanvasCount >= 2 && snapshot.screenSpaceOverlayCanvasCount == 0, "world=" + snapshot.worldSpaceCanvasCount + ", overlay=" + snapshot.screenSpaceOverlayCanvasCount);
+            Add(results, "Fog overlay budget", snapshot.fogOverlayObjectCount == 1 && snapshot.fogOverlayRendererCount == 1 && snapshot.fogCellObjectCount == 0, "overlays=" + snapshot.fogOverlayObjectCount + ", renderers=" + snapshot.fogOverlayRendererCount + ", cells=" + snapshot.fogCellObjectCount);
             Add(results, "Visual set dressing colliders", snapshot.visualSetDressingObjectCount > 0 && snapshot.visualSetDressingColliderCount == 0, "objects=" + snapshot.visualSetDressingObjectCount + ", colliders=" + snapshot.visualSetDressingColliderCount);
             return results;
         }

@@ -29,7 +29,7 @@ This document records what has been implemented and what has actually been verif
 - `RtsLifecycleCoordinator` now performs configurable periodic autosaves during active play while suppressing periodic writes during pause, focus loss, save, and load states.
 - `RtsGame.TryRestartMatch` provides a New Match system command that clears dirty or restored state, resets match-ended/user pause reasons, and rebuilds the generated skirmish without changing runtime mode.
 - `RtsRuntimeDiagnosticsSnapshot` exports generated-match JSON counts for entities, teams, production, resources, fog, save slots, and tabletop scale to support larger-board profiling.
-- `RtsSceneBudgetSnapshot` exports generated Quest object, renderer, material, collider, light, camera, and UI counts. `RtsFogOfWar` now uses one texture-backed overlay for the same 56 x 56 logical fog grid instead of per-cell renderers and materials.
+- `RtsSceneBudgetSnapshot` exports generated Quest object, renderer, material, collider, light, camera, UI, and fog overlay counts. `RtsFogOfWar` now uses one texture-backed overlay for the same 56 x 56 logical fog grid instead of per-cell renderers and materials, and the Quest budget validator explicitly fails if legacy `Fog Cell` objects return.
 - `RtsSoakScenarioExporter` creates a repeatable populated desktop diagnostics baseline with more units, active production queues, attack-move orders, and an active placement preview for profiler/device comparisons.
 
 ## Verification Run
