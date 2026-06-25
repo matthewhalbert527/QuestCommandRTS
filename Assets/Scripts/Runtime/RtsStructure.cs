@@ -53,6 +53,7 @@ namespace QuestCommandRTS
         public UnitKind ActiveProductionKind => activeKind.HasValue ? activeKind.Value : UnitKind.Rifleman;
         public float ActiveProductionProgress => activeDuration <= 0f || !activeKind.HasValue ? 0f : 1f - Mathf.Clamp01(activeRemaining / activeDuration);
         public bool CanCancelLastQueuedUnit => queue.Count > 0;
+        public bool CanCancelProduction => queue.Count > 0 || activeKind.HasValue;
         public bool HasRallyPoint { get; private set; }
         public Vector3 RallyPoint { get; private set; }
 
@@ -151,6 +152,33 @@ namespace QuestCommandRTS
             int index = queue.Count - 1;
             canceledKind = queue[index];
             queue.RemoveAt(index);
+
+            UnitStats stats = RtsBalance.GetUnit(canceledKind);
+            refund = stats.Cost;
+            RtsGame.Instance.Resources.Add(refund);
+            RtsGame.Instance.SpawnFloatingText("Canceled +" + refund, transform.position + Vector3.up * 2.2f, new Color(0.75f, 1f, 0.82f));
+            return true;
+        }
+
+        public bool TryCancelProduction(out UnitKind canceledKind, out int refund)
+        {
+            if (TryCancelLastQueuedUnit(out canceledKind, out refund))
+            {
+                return true;
+            }
+
+            canceledKind = UnitKind.Rifleman;
+            refund = 0;
+
+            if (!activeKind.HasValue || !RtsGame.HasInstance)
+            {
+                return false;
+            }
+
+            canceledKind = activeKind.Value;
+            activeKind = null;
+            activeRemaining = 0f;
+            activeDuration = 0f;
 
             UnitStats stats = RtsBalance.GetUnit(canceledKind);
             refund = stats.Cost;

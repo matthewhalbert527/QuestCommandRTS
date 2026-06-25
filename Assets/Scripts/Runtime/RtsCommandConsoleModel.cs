@@ -210,7 +210,7 @@ namespace QuestCommandRTS
                 view.HasRallyPoint = producer.HasRallyPoint;
                 view.RallyText = producer.HasRallyPoint ? "Rally set" : "No rally set";
                 view.QueueSummary = producer.GetQueueSummary();
-                view.CanCancelQueue = producer.CanCancelLastQueuedUnit;
+                view.CanCancelQueue = producer.CanCancelProduction;
             }
 
             return view;

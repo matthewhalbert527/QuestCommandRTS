@@ -200,22 +200,27 @@ namespace QuestCommandRTS
 
         public bool CancelLastQueuedProduction()
         {
+            return CancelProduction();
+        }
+
+        public bool CancelProduction()
+        {
             if (!CanAcceptCommands())
             {
                 return false;
             }
 
-            ProductionStructure producer = FindSelectedProductionWithQueuedItem();
+            ProductionStructure producer = FindSelectedProductionWithCancelableItem();
             if (producer == null)
             {
-                producer = FindAnyProductionWithQueuedItem();
+                producer = FindAnyProductionWithCancelableItem();
             }
 
             if (producer == null)
             {
                 if (game != null)
                 {
-                    game.SpawnFloatingText("No queued unit", game.GetPlayerBaseCenter() + Vector3.up * 2f, Color.yellow);
+                    game.SpawnFloatingText("No production", game.GetPlayerBaseCenter() + Vector3.up * 2f, Color.yellow);
                 }
 
                 return false;
@@ -223,7 +228,7 @@ namespace QuestCommandRTS
 
             UnitKind canceled;
             int refund;
-            return producer.TryCancelLastQueuedUnit(out canceled, out refund);
+            return producer.TryCancelProduction(out canceled, out refund);
         }
 
         public bool RepairSelectedStructures()
@@ -350,7 +355,7 @@ namespace QuestCommandRTS
             return FindProducerForUnit(kind, false) != null;
         }
 
-        private ProductionStructure FindSelectedProductionWithQueuedItem()
+        private ProductionStructure FindSelectedProductionWithCancelableItem()
         {
             if (game == null)
             {
@@ -360,7 +365,7 @@ namespace QuestCommandRTS
             for (int i = 0; i < game.Selection.Count; i++)
             {
                 ProductionStructure producer = game.Selection[i] as ProductionStructure;
-                if (producer != null && producer.Team == RtsTeam.Player && producer.IsAlive && producer.CanCancelLastQueuedUnit)
+                if (producer != null && producer.Team == RtsTeam.Player && producer.IsAlive && producer.CanCancelProduction)
                 {
                     return producer;
                 }
@@ -369,7 +374,7 @@ namespace QuestCommandRTS
             return null;
         }
 
-        private ProductionStructure FindAnyProductionWithQueuedItem()
+        private ProductionStructure FindAnyProductionWithCancelableItem()
         {
             if (game == null)
             {
@@ -379,7 +384,7 @@ namespace QuestCommandRTS
             for (int i = 0; i < game.Entities.Count; i++)
             {
                 ProductionStructure producer = game.Entities[i] as ProductionStructure;
-                if (producer != null && producer.Team == RtsTeam.Player && producer.IsAlive && producer.CanCancelLastQueuedUnit)
+                if (producer != null && producer.Team == RtsTeam.Player && producer.IsAlive && producer.CanCancelProduction)
                 {
                     return producer;
                 }

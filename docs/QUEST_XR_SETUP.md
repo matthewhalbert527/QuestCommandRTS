@@ -102,7 +102,7 @@ If the validator reports a failure, rerun `Tools > Quest RTS > Apply Recommended
 Open the console with X/left primary.
 
 - Build tab: choose a structure. The row shows cost, power effect, availability, and any disabled reason. After choosing, aim at the battlefield with the right ray. A confirms a valid preview; B cancels.
-- Produce tab: select a Command Center, Barracks, Refinery, or War Factory first. The tab shows trainable units, cost, build time, queue state, active progress, and a Cancel Last control for the last queued unit.
+- Produce tab: select a Command Center, Barracks, Refinery, or War Factory first. The tab shows trainable units, cost, build time, queue state, active progress, and a Cancel Production control for queued or active units.
 - Selected tab: inspect health, selected counts, queue/rally status, and use Repair or Sell when a player structure is eligible. Rally points are set by selecting a production structure and pressing A on terrain.
 - System tab: pause/resume, save the manual slot, load the manual slot when one exists, and start a new match.
 
@@ -122,7 +122,7 @@ Open the console with X/left primary.
 - A confirms valid placement and spends credits once.
 - B cancels placement without spending credits.
 - Produce tab queues every supported unit from an eligible selected structure.
-- Cancel Last refunds the last queued unit.
+- Cancel Production refunds the last queued unit, or the active unit when no pending queue item exists.
 - Selected tab can repair or sell eligible player structures.
 - A moves selected units to terrain.
 - Left trigger + A issues attack-move to terrain.

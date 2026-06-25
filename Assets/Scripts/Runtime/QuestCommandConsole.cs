@@ -291,7 +291,7 @@ namespace QuestCommandRTS
                 queueLines[i] = CreateText(produceRoot, "Queue " + i, "", 15, TextAnchor.MiddleLeft, new Vector2(440f, -48f - i * 30f), new Vector2(260f, 28f));
             }
 
-            cancelQueueButton = CreateButton(produceRoot, "Cancel Queue Button", "Cancel Last", new Vector2(440f, -186f), new Vector2(260f, 40f), () => game.PlayerCommands.CancelLastQueuedProduction());
+            cancelQueueButton = CreateButton(produceRoot, "Cancel Queue Button", "Cancel Production", new Vector2(440f, -186f), new Vector2(260f, 40f), () => game.PlayerCommands.CancelProduction());
         }
 
         private void BuildSelectedTab()
@@ -299,7 +299,7 @@ namespace QuestCommandRTS
             selectedText = CreateText(selectedRoot, "Selected Details", "", 18, TextAnchor.UpperLeft, new Vector2(0f, -16f), new Vector2(460f, 230f));
             repairButton = CreateButton(selectedRoot, "Repair Button", "Repair", new Vector2(486f, -20f), new Vector2(218f, 44f), () => game.PlayerCommands.RepairSelectedStructures());
             sellButton = CreateButton(selectedRoot, "Sell Button", "Sell", new Vector2(486f, -74f), new Vector2(218f, 44f), () => game.PlayerCommands.SellSelectedStructures());
-            selectedCancelQueueButton = CreateButton(selectedRoot, "Cancel Queue Button Selected", "Cancel Last Queue", new Vector2(486f, -128f), new Vector2(218f, 44f), () => game.PlayerCommands.CancelLastQueuedProduction());
+            selectedCancelQueueButton = CreateButton(selectedRoot, "Cancel Queue Button Selected", "Cancel Production", new Vector2(486f, -128f), new Vector2(218f, 44f), () => game.PlayerCommands.CancelProduction());
             rallyHintButton = CreateButton(selectedRoot, "Rally Hint Button", "Set Rally: A on terrain", new Vector2(486f, -182f), new Vector2(218f, 44f), OnRallyHint);
             stopUnitsButton = CreateButton(selectedRoot, "Stop Units Button", "Stop Units", new Vector2(486f, -236f), new Vector2(218f, 44f), () => game.CommandDispatcher.StopSelectedUnits());
         }

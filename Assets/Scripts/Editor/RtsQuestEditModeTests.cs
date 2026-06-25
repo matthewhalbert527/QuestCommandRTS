@@ -1281,6 +1281,30 @@ namespace QuestCommandRTS.Editor
         }
 
         [Test]
+        public void ProductionCancelRefundsActiveItemWhenQueueIsEmpty()
+        {
+            RtsGame game = CreateInitializedGame(RtsRuntimeMode.Desktop);
+            ProductionStructure barracks = FindPlayerProduction(game, StructureKind.Barracks);
+            game.ClearSelection();
+            game.SelectEntity(barracks, false);
+
+            int startingCredits = game.Resources.Credits;
+            int cost = RtsBalance.GetUnit(UnitKind.Rifleman).Cost;
+
+            Assert.IsTrue(game.PlayerCommands.QueueProduction(UnitKind.Rifleman));
+            barracks.StartNextProductionForTests();
+
+            Assert.IsTrue(barracks.HasActiveProduction);
+            Assert.AreEqual(0, barracks.PendingQueueCount);
+            Assert.AreEqual(startingCredits - cost, game.Resources.Credits);
+
+            Assert.IsTrue(game.PlayerCommands.CancelProduction());
+            Assert.IsFalse(barracks.HasActiveProduction);
+            Assert.AreEqual(0, barracks.PendingQueueCount);
+            Assert.AreEqual(startingCredits, game.Resources.Credits);
+        }
+
+        [Test]
         public void RepairAndSellRejectEnemyStructures()
         {
             RtsGame game = CreateInitializedGame(RtsRuntimeMode.Desktop);
@@ -1378,6 +1402,33 @@ namespace QuestCommandRTS.Editor
 
             Assert.AreEqual(startingCredits, game.Resources.Credits);
             Assert.AreEqual(0, barracks.PendingQueueCount);
+        }
+
+        [Test]
+        public void QuestConsoleProduceTabCancelsActiveProductionThroughPointer()
+        {
+            RtsGame game = CreateInitializedGame(RtsRuntimeMode.QuestVr);
+            QuestCommandConsole console = game.GetComponent<QuestCommandConsole>();
+            Assert.IsNotNull(console);
+
+            ProductionStructure barracks = FindPlayerProduction(game, StructureKind.Barracks);
+            game.ClearSelection();
+            game.SelectEntity(barracks, false);
+
+            int startingCredits = game.Resources.Credits;
+            int cost = RtsBalance.GetUnit(UnitKind.Rifleman).Cost;
+
+            Assert.IsTrue(game.PlayerCommands.QueueProduction(UnitKind.Rifleman));
+            barracks.StartNextProductionForTests();
+            Assert.IsTrue(barracks.HasActiveProduction);
+            Assert.AreEqual(startingCredits - cost, game.Resources.Credits);
+
+            console.SetOpen(true);
+            ClickConsoleButton(console, "Produce Tab");
+            ClickConsoleButton(console, "Cancel Queue Button");
+
+            Assert.IsFalse(barracks.HasActiveProduction);
+            Assert.AreEqual(startingCredits, game.Resources.Credits);
         }
 
         [Test]
