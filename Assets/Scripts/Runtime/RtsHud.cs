@@ -27,7 +27,7 @@ namespace QuestCommandRTS
         public void Initialize(RtsGame owner)
         {
             game = owner;
-            font = Resources.GetBuiltinResource<Font>("Arial.ttf");
+            font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
             EnsureEventSystem();
             BuildCanvas();
         }

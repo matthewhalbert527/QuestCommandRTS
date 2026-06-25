@@ -209,7 +209,14 @@ namespace QuestCommandRTS
                 Collider markerCollider = rallyMarker.GetComponent<Collider>();
                 if (markerCollider != null)
                 {
-                    Destroy(markerCollider);
+                    if (Application.isPlaying)
+                    {
+                        Destroy(markerCollider);
+                    }
+                    else
+                    {
+                        DestroyImmediate(markerCollider);
+                    }
                 }
 
                 Renderer renderer = rallyMarker.GetComponent<Renderer>();

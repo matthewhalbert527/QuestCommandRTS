@@ -15,6 +15,7 @@ Unity prototype for a classic RTS inspired by Command and Conquer. The current b
 - Construction tech prerequisites plus repair and sell commands for player structures.
 - Lightweight fog of war with scouting reveal and hidden enemy minimap pips.
 - Editor menu item: `Command RTS > Open Battlefield Scene`.
+- Editor menu item: `Command RTS > Export Sample Screenshot`.
 
 ## Open and run
 

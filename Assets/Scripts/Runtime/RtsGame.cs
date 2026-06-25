@@ -1033,7 +1033,14 @@ namespace QuestCommandRTS
             Collider collider = primitive.GetComponent<Collider>();
             if (collider != null)
             {
-                Destroy(collider);
+                if (Application.isPlaying)
+                {
+                    Destroy(collider);
+                }
+                else
+                {
+                    DestroyImmediate(collider);
+                }
             }
 
             return primitive;

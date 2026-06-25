@@ -58,6 +58,17 @@ namespace QuestCommandRTS
 
         public virtual void Initialize(RtsTeam team, string displayName, float maxHealth, float selectionRadius)
         {
+            if (propertyBlock == null)
+            {
+                propertyBlock = new MaterialPropertyBlock();
+            }
+
+            EnsureCollider();
+            if (selectionRing == null)
+            {
+                EnsureSelectionRing();
+            }
+
             Team = team;
             DisplayName = displayName;
             MaxHealth = maxHealth;

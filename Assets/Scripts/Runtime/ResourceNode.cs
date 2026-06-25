@@ -52,7 +52,14 @@ namespace QuestCommandRTS
         {
             if (visualRoot != null)
             {
-                Destroy(visualRoot.gameObject);
+                if (Application.isPlaying)
+                {
+                    Destroy(visualRoot.gameObject);
+                }
+                else
+                {
+                    DestroyImmediate(visualRoot.gameObject);
+                }
             }
 
             GameObject root = new GameObject("Resource Crystals");
@@ -73,7 +80,14 @@ namespace QuestCommandRTS
                 Collider collider = crystal.GetComponent<Collider>();
                 if (collider != null)
                 {
-                    Destroy(collider);
+                    if (Application.isPlaying)
+                    {
+                        Destroy(collider);
+                    }
+                    else
+                    {
+                        DestroyImmediate(collider);
+                    }
                 }
             }
         }
