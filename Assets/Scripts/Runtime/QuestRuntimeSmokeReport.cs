@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
+using UnityEngine.XR;
 
 namespace QuestCommandRTS
 {
@@ -83,9 +84,12 @@ namespace QuestCommandRTS
             }
             if (rig != null)
             {
-                Add(results, "Head tracking node", HasTrackedPose(rig.Head), "XR Head should have QuestTrackedNodePose.");
-                Add(results, "Left controller node", HasTrackedPose(rig.LeftController), "Left Controller should have QuestTrackedNodePose.");
-                Add(results, "Right controller node", HasTrackedPose(rig.RightController), "Right Controller should have QuestTrackedNodePose.");
+                string headNodeDetail;
+                Add(results, "Head tracking node", HasTrackedPose(rig.Head, XRNode.Head, out headNodeDetail), headNodeDetail);
+                string leftNodeDetail;
+                Add(results, "Left controller node", HasTrackedPose(rig.LeftController, XRNode.LeftHand, out leftNodeDetail), leftNodeDetail);
+                string rightNodeDetail;
+                Add(results, "Right controller node", HasTrackedPose(rig.RightController, XRNode.RightHand, out rightNodeDetail), rightNodeDetail);
                 string pointerDetail;
                 Add(results, "Pointer visuals", HasPointerVisuals(rig, settings, out pointerDetail), pointerDetail);
             }
@@ -94,9 +98,23 @@ namespace QuestCommandRTS
             return results;
         }
 
-        private static bool HasTrackedPose(Transform target)
+        private static bool HasTrackedPose(Transform target, XRNode expectedNode, out string detail)
         {
-            return target != null && target.GetComponent<QuestTrackedNodePose>() != null;
+            if (target == null)
+            {
+                detail = "Tracked transform is missing; expected XRNode." + expectedNode;
+                return false;
+            }
+
+            QuestTrackedNodePose trackedPose = target.GetComponent<QuestTrackedNodePose>();
+            if (trackedPose == null)
+            {
+                detail = target.name + " is missing QuestTrackedNodePose; expected XRNode." + expectedNode;
+                return false;
+            }
+
+            detail = target.name + " node=" + trackedPose.Node + ", expected=" + expectedNode;
+            return trackedPose.Node == expectedNode;
         }
 
         private static bool HasWorldSpaceCanvas(string objectName)
