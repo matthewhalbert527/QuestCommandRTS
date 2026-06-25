@@ -232,6 +232,20 @@ namespace QuestCommandRTS
             }
         }
 
+        public bool HasSelectedControllableUnits()
+        {
+            for (int i = 0; i < selection.Count; i++)
+            {
+                RtsUnit unit = selection[i] as RtsUnit;
+                if (unit != null && unit.Team == RtsTeam.Player && unit.IsAlive)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
         public void ToggleUserPause()
         {
             SetUserPaused(!IsUserPaused);

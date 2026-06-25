@@ -9,6 +9,7 @@ Captured state includes:
 - player resources and power
 - stable IDs for units, structures, and resource nodes
 - unit position, health, move/attack orders, and harvester state
+- attack-move and stop-cleared order state
 - production queue state, active production progress, and rally points
 - resource node amounts
 - fog explored cells

@@ -9,6 +9,8 @@ namespace QuestCommandRTS
         SelectionChanged,
         SelectionCleared,
         MoveIssued,
+        AttackMoveIssued,
+        StopIssued,
         AttackIssued,
         HarvestIssued,
         RallyPointSet,
@@ -81,6 +83,28 @@ namespace QuestCommandRTS
             }
 
             return game.PlayerCommands.ConfirmConstructionPlacement() ? RtsCommandResult.PlacementConfirmed : RtsCommandResult.None;
+        }
+
+        public RtsCommandResult StopSelectedUnits()
+        {
+            if (game == null || !game.AcceptsPlayerInput)
+            {
+                return RtsCommandResult.None;
+            }
+
+            GatherSelectedControllableUnits(commandUnits);
+            if (commandUnits.Count <= 0)
+            {
+                return RtsCommandResult.None;
+            }
+
+            for (int i = 0; i < commandUnits.Count; i++)
+            {
+                commandUnits[i].IssueStop();
+            }
+
+            game.SpawnFloatingText("Stop", game.GetPlayerBaseCenter() + Vector3.up * 2.6f, Color.white);
+            return RtsCommandResult.StopIssued;
         }
 
         public RtsCommandResult SelectFromRay(Ray ray, bool additive, float maxDistance)
@@ -168,6 +192,45 @@ namespace QuestCommandRTS
             }
 
             return CommandFromHit(hit);
+        }
+
+        public RtsCommandResult AttackMoveFromRay(Ray ray, float maxDistance)
+        {
+            if (game == null || !game.AcceptsPlayerInput)
+            {
+                return RtsCommandResult.None;
+            }
+
+            RaycastHit hit;
+            if (!Physics.Raycast(ray, out hit, maxDistance))
+            {
+                return RtsCommandResult.None;
+            }
+
+            return AttackMoveToPoint(GetGroundPoint(hit));
+        }
+
+        public RtsCommandResult AttackMoveToPoint(Vector3 point)
+        {
+            if (game == null || !game.AcceptsPlayerInput)
+            {
+                return RtsCommandResult.None;
+            }
+
+            GatherSelectedControllableUnits(commandUnits);
+            int count = commandUnits.Count;
+            if (count <= 0)
+            {
+                return RtsCommandResult.None;
+            }
+
+            for (int i = 0; i < count; i++)
+            {
+                commandUnits[i].IssueAttackMove(point + FormationOffset(i, count));
+            }
+
+            game.SpawnFloatingText("Attack move", point + Vector3.up * 1.5f, new Color(1f, 0.55f, 0.32f));
+            return RtsCommandResult.AttackMoveIssued;
         }
 
         public RtsCommandResult CommandFromHit(RaycastHit hit)

@@ -136,6 +136,12 @@ namespace QuestCommandRTS
 
             if (secondaryDown)
             {
+                if (leftTriggerHeld)
+                {
+                    dispatcher.StopSelectedUnits();
+                    return;
+                }
+
                 dispatcher.CancelPlacementOrClearSelection();
                 return;
             }
@@ -147,7 +153,14 @@ namespace QuestCommandRTS
 
             if (primaryDown && !uiCaptured)
             {
-                dispatcher.CommandFromRay(ray, settings.RayLengthSimulationUnits);
+                if (leftTriggerHeld)
+                {
+                    dispatcher.AttackMoveFromRay(ray, settings.RayLengthSimulationUnits);
+                }
+                else
+                {
+                    dispatcher.CommandFromRay(ray, settings.RayLengthSimulationUnits);
+                }
             }
         }
 

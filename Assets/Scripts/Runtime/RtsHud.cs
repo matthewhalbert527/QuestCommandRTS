@@ -122,6 +122,8 @@ namespace QuestCommandRTS
 
             AddCommandButton(commandPanel, "Army", y, () => game.SelectCombatUnits(), () => game.AcceptsPlayerInput, () => "Select Army");
             y -= 48f;
+            AddCommandButton(commandPanel, "Stop", y, () => game.CommandDispatcher.StopSelectedUnits(), () => game.AcceptsPlayerInput && game.HasSelectedControllableUnits(), () => "Stop  S");
+            y -= 48f;
             AddCommandButton(commandPanel, "Repair", y, () => game.PlayerCommands.RepairSelectedStructures(), () => game.AcceptsPlayerInput && game.CanRepairSelectedStructures(), () => "Repair  Z");
             y -= 48f;
             AddCommandButton(commandPanel, "Sell", y, () => game.PlayerCommands.SellSelectedStructures(), () => game.AcceptsPlayerInput && game.CanSellSelectedStructures(), () => "Sell  X");

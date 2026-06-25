@@ -46,6 +46,8 @@ The scene is intentionally empty. `RtsBootstrap` creates the map, units, buildin
 - Middle click or Escape: cancel/clear.
 - Arrow keys or screen-edge mouse: pan camera.
 - Mouse wheel: zoom camera.
+- A: attack-move selected units toward the cursor.
+- S: stop selected units.
 - Number keys 1-3: train rifleman, harvester, and tank.
 - Q/W/E/R/T: place power plant, barracks, refinery, war factory, and turret.
 - Z: repair the most damaged selected structure.
@@ -62,9 +64,11 @@ The scene is intentionally empty. `RtsBootstrap` creates the map, units, buildin
 - Right trigger: select one friendly entity, or activate a command-console control when the console captures the ray.
 - Left trigger + right trigger: add the friendly entity to the current selection.
 - A/right primary: issue the shared context command: attack enemy, harvest resource, set rally point, or move.
+- Left trigger + A/right primary: attack-move selected units.
 - A/right primary while placing: confirm the current valid structure placement.
 - B/right secondary while placing: cancel placement.
 - B/right secondary while not placing: clear selection.
+- Left trigger + B/right secondary: stop selected units.
 - Command console `System` tab: pause/resume, save, and load.
 
 ## Quest Command Console
@@ -73,7 +77,7 @@ The Quest command console has three tabs:
 
 - `Build`: browse player structures, credit costs, power effects, prerequisites, affordability, and disabled reasons. Pick a structure to start controller-ray placement.
 - `Produce`: select a production building, browse trainable units, queue units, see the active item/progress, inspect queued items, and cancel the last queued item for a full queued-cost refund.
-- `Selected`: inspect selected health/counts, production/rally status, repair eligible player structures, sell selected player structures, and view the rally-point hint.
+- `Selected`: inspect selected health/counts, production/rally status, repair eligible player structures, sell selected player structures, stop selected units, and view the rally-point hint.
 - `System`: pause/resume the simulation, save the manual slot, and load the manual slot when one exists.
 
 Building placement follows the existing desktop build rules. The preview snaps to the map, turns green when valid, turns red when invalid, and reports concise invalid reasons such as outside map, outside build radius, blocked footprint, missing prerequisite, or insufficient credits.

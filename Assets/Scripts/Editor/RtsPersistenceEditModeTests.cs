@@ -155,6 +155,55 @@ namespace QuestCommandRTS.Editor
         }
 
         [Test]
+        public void DispatcherIssuesAttackMoveAndStopOrders()
+        {
+            RtsGame game = CreateInitializedGame();
+            RtsUnit unit = (RtsUnit)FindPlayerEntity(game, typeof(RtsUnit));
+            game.ClearSelection();
+            game.SelectEntity(unit, false);
+
+            Vector3 targetPoint = unit.transform.position + new Vector3(14f, 0f, 9f);
+            Assert.AreEqual(RtsCommandResult.AttackMoveIssued, game.CommandDispatcher.AttackMoveToPoint(targetPoint));
+
+            RtsUnitOrderSaveData attackMove = unit.CaptureOrderState();
+            Assert.AreEqual("AttackMove", attackMove.orderType);
+            Assert.AreEqual(targetPoint.x, attackMove.destination.x, 0.01f);
+
+            Assert.AreEqual(RtsCommandResult.StopIssued, game.CommandDispatcher.StopSelectedUnits());
+            Assert.IsTrue(unit.IsIdle());
+            Assert.AreEqual("None", unit.CaptureOrderState().orderType);
+        }
+
+        [Test]
+        public void AttackMoveAcquiresEnemyAndPersistsThroughRestore()
+        {
+            RtsGame game = CreateInitializedGame();
+            RtsUnit unit = (RtsUnit)FindPlayerEntity(game, typeof(RtsUnit));
+            RtsUnit enemy = game.CreateUnit(RtsTeam.Enemy, UnitKind.Rifleman, unit.transform.position + new Vector3(3.5f, 0f, 0f));
+            Physics.SyncTransforms();
+
+            int unitId = unit.PersistentId;
+            int enemyId = enemy.PersistentId;
+            float enemyHealth = enemy.Health;
+
+            unit.IssueAttackMove(unit.transform.position + new Vector3(18f, 0f, 0f));
+            unit.TickOrdersForTests(0.2f);
+
+            Assert.Less(enemy.Health, enemyHealth);
+            RtsUnitOrderSaveData acquired = unit.CaptureOrderState();
+            Assert.AreEqual("AttackMove", acquired.orderType);
+            Assert.AreEqual(enemyId, acquired.targetEntityId);
+
+            RtsMatchSaveData saved = game.CaptureSaveData();
+            Assert.IsTrue(game.RestoreSaveData(saved, out string error), error);
+
+            RtsUnit restoredUnit = (RtsUnit)FindEntityById(game, unitId);
+            RtsUnitOrderSaveData restoredOrder = restoredUnit.CaptureOrderState();
+            Assert.AreEqual("AttackMove", restoredOrder.orderType);
+            Assert.AreEqual(enemyId, restoredOrder.targetEntityId);
+        }
+
+        [Test]
         public void SaveRestoreRoundTripsCoreSkirmishState()
         {
             RtsGame game = CreateInitializedGame();

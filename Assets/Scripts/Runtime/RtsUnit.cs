@@ -14,7 +14,9 @@ namespace QuestCommandRTS
         public float AttackCooldown = 0.8f;
 
         protected Vector3 destination;
+        protected Vector3 attackMoveDestination;
         protected bool hasDestination;
+        protected bool hasAttackMoveDestination;
         protected RtsEntity attackTarget;
 
         private float nextAttackTime;
@@ -52,6 +54,7 @@ namespace QuestCommandRTS
         {
             attackTarget = null;
             hasDestination = true;
+            hasAttackMoveDestination = false;
             destination = ClampToMap(worldPosition);
         }
 
@@ -64,24 +67,49 @@ namespace QuestCommandRTS
 
             attackTarget = target;
             hasDestination = false;
+            hasAttackMoveDestination = false;
+        }
+
+        public virtual void IssueAttackMove(Vector3 worldPosition)
+        {
+            attackTarget = null;
+            hasDestination = false;
+            hasAttackMoveDestination = true;
+            attackMoveDestination = ClampToMap(worldPosition);
+        }
+
+        public virtual void IssueStop()
+        {
+            attackTarget = null;
+            hasDestination = false;
+            hasAttackMoveDestination = false;
+            destination = transform.position;
+            attackMoveDestination = transform.position;
         }
 
         public bool IsIdle()
         {
-            return !hasDestination && attackTarget == null;
+            return !hasDestination && !hasAttackMoveDestination && attackTarget == null;
         }
+
+#if UNITY_EDITOR
+        public void TickOrdersForTests(float deltaTime)
+        {
+            TickOrders(deltaTime);
+        }
+#endif
 
         public RtsUnitOrderSaveData CaptureOrderState()
         {
             RtsUnitOrderSaveData data = new RtsUnitOrderSaveData
             {
                 orderType = "None",
-                destination = new Vector3Data(destination)
+                destination = new Vector3Data(hasAttackMoveDestination ? attackMoveDestination : destination)
             };
 
             if (attackTarget != null && attackTarget.IsAlive)
             {
-                data.orderType = "Attack";
+                data.orderType = hasAttackMoveDestination ? "AttackMove" : "Attack";
                 data.targetEntityId = attackTarget.PersistentId;
                 return data;
             }
@@ -89,6 +117,12 @@ namespace QuestCommandRTS
             if (hasDestination)
             {
                 data.orderType = "Move";
+                return data;
+            }
+
+            if (hasAttackMoveDestination)
+            {
+                data.orderType = "AttackMove";
             }
 
             return data;
@@ -98,6 +132,7 @@ namespace QuestCommandRTS
         {
             attackTarget = null;
             hasDestination = false;
+            hasAttackMoveDestination = false;
 
             if (data == null)
             {
@@ -108,6 +143,18 @@ namespace QuestCommandRTS
             if (data.orderType == "Move")
             {
                 hasDestination = true;
+                return;
+            }
+
+            if (data.orderType == "AttackMove")
+            {
+                attackMoveDestination = ClampToMap(data.destination.ToVector3());
+                hasAttackMoveDestination = true;
+                if (entityById != null && entityById.TryGetValue(data.targetEntityId, out RtsEntity attackMoveTarget))
+                {
+                    attackTarget = attackMoveTarget;
+                }
+
                 return;
             }
 
@@ -127,6 +174,24 @@ namespace QuestCommandRTS
             if (attackTarget != null)
             {
                 TickAttackOrder(deltaTime);
+                return;
+            }
+
+            if (hasAttackMoveDestination)
+            {
+                RtsEntity acquired = Damage > 0f && RtsGame.HasInstance ? RtsGame.Instance.FindClosestEnemy(Team, transform.position, Mathf.Max(AttackRange * 1.25f, 8f)) : null;
+                if (acquired != null)
+                {
+                    attackTarget = acquired;
+                    TickAttackOrder(deltaTime);
+                    return;
+                }
+
+                if (MoveToward(attackMoveDestination, deltaTime, StopDistance))
+                {
+                    hasAttackMoveDestination = false;
+                }
+
                 return;
             }
 
@@ -242,6 +307,23 @@ namespace QuestCommandRTS
             state = HarvestState.Idle;
             targetNode = null;
             base.IssueMove(worldPosition);
+        }
+
+        public override void IssueAttackMove(Vector3 worldPosition)
+        {
+            state = HarvestState.Idle;
+            targetNode = null;
+            homeRefinery = null;
+            base.IssueAttackMove(worldPosition);
+        }
+
+        public override void IssueStop()
+        {
+            state = HarvestState.Idle;
+            targetNode = null;
+            homeRefinery = null;
+            harvestAccumulator = 0f;
+            base.IssueStop();
         }
 
         public void IssueHarvest(ResourceNode node, RefineryStructure refinery)

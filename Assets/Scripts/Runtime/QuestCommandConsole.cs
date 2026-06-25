@@ -101,6 +101,7 @@ namespace QuestCommandRTS
         private ConsoleButton repairButton;
         private ConsoleButton sellButton;
         private ConsoleButton rallyHintButton;
+        private ConsoleButton stopUnitsButton;
         private ConsoleButton pauseButton;
         private ConsoleButton saveButton;
         private ConsoleButton loadButton;
@@ -279,6 +280,7 @@ namespace QuestCommandRTS
             sellButton = CreateButton(selectedRoot, "Sell Button", "Sell", new Vector2(486f, -74f), new Vector2(218f, 44f), () => game.PlayerCommands.SellSelectedStructures());
             selectedCancelQueueButton = CreateButton(selectedRoot, "Cancel Queue Button Selected", "Cancel Last Queue", new Vector2(486f, -128f), new Vector2(218f, 44f), () => game.PlayerCommands.CancelLastQueuedProduction());
             rallyHintButton = CreateButton(selectedRoot, "Rally Hint Button", "Set Rally: A on terrain", new Vector2(486f, -182f), new Vector2(218f, 44f), OnRallyHint);
+            stopUnitsButton = CreateButton(selectedRoot, "Stop Units Button", "Stop Units", new Vector2(486f, -236f), new Vector2(218f, 44f), () => game.CommandDispatcher.StopSelectedUnits());
         }
 
         private void BuildSystemTab()
@@ -444,6 +446,7 @@ namespace QuestCommandRTS
             sellButton.Interactable = selected.CanSell;
             selectedCancelQueueButton.Interactable = selected.CanCancelQueue;
             rallyHintButton.Interactable = selected.HasProduction;
+            stopUnitsButton.Interactable = game.AcceptsPlayerInput && selected.UnitCount > 0;
         }
 
         private void RefreshSystemTab()

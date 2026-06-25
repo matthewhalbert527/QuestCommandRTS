@@ -89,6 +89,11 @@ namespace QuestCommandRTS
                 return;
             }
 
+            if (HandleTacticalHotkeys(ray))
+            {
+                return;
+            }
+
             if (cancelDown)
             {
                 dispatcher.ClearSelection();
@@ -185,6 +190,21 @@ namespace QuestCommandRTS
         private void CommandFromRay(Ray ray)
         {
             dispatcher.CommandFromRay(ray, PointerRayDistance);
+        }
+
+        private bool HandleTacticalHotkeys(Ray ray)
+        {
+            if (Input.GetKeyDown(KeyCode.S))
+            {
+                return dispatcher.StopSelectedUnits() == RtsCommandResult.StopIssued;
+            }
+
+            if (Input.GetKeyDown(KeyCode.A))
+            {
+                return dispatcher.AttackMoveFromRay(ray, PointerRayDistance) == RtsCommandResult.AttackMoveIssued;
+            }
+
+            return false;
         }
 
         private void HandleBuildHotkeys()

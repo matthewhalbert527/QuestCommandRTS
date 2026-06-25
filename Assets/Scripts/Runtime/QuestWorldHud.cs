@@ -108,7 +108,8 @@ namespace QuestCommandRTS
                 "\nSelected " + selectionCount +
                 "\n" + (paused ? "Paused" : status) +
                 "\nTrigger: Select   LT+Trigger: Add" +
-                "\nA: Command   B: Cancel/Clear" +
+                "\nA: Command   LT+A: Attack-move" +
+                "\nB: Cancel/Clear   LT+B: Stop" +
                 "\nX: Console/System";
         }
     }
