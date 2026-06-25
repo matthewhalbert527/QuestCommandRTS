@@ -49,6 +49,8 @@ namespace QuestCommandRTS
             Add(results, "Screen-space overlay canvases absent", HasNoScreenSpaceOverlayCanvases(out overlayDetail), overlayDetail);
             string eventSystemDetail;
             Add(results, "Desktop event system absent", HasNoDesktopEventSystem(out eventSystemDetail), eventSystemDetail);
+            string locomotionDetail;
+            Add(results, "Quest locomotion components absent", HasNoQuestLocomotionOrManipulationObjects(out locomotionDetail), locomotionDetail);
             Add(results, "Quest rig present", rig != null && rig.RigRoot != null && rig.HeadCamera != null, "QuestTabletopRig should own the tabletop root and XR head camera.");
             Add(results, "Quest settings present", settings != null, "QuestTabletopSettings should own tabletop scale, height, ray, reticle, clip-plane, and world-space UI values.");
             Add(results, "Quest input present", input != null, "QuestRtsInputController should translate controller state into shared dispatcher calls.");
@@ -156,6 +158,74 @@ namespace QuestCommandRTS
 
             detail = "eventSystems=" + eventSystems.Length + ", standaloneInputModules=" + standaloneModules;
             return eventSystems.Length == 0 && standaloneModules == 0;
+        }
+
+        private static bool HasNoQuestLocomotionOrManipulationObjects(out string detail)
+        {
+            int offendingComponents = 0;
+            int offendingObjects = 0;
+            string firstOffender = string.Empty;
+
+            MonoBehaviour[] components = Object.FindObjectsOfType<MonoBehaviour>(true);
+            for (int i = 0; i < components.Length; i++)
+            {
+                MonoBehaviour component = components[i];
+                if (component == null)
+                {
+                    continue;
+                }
+
+                string typeName = component.GetType().FullName;
+                if (ContainsStationaryQuestForbiddenPattern(typeName))
+                {
+                    offendingComponents++;
+                    if (firstOffender.Length == 0)
+                    {
+                        firstOffender = typeName;
+                    }
+                }
+            }
+
+            Transform[] transforms = Object.FindObjectsOfType<Transform>(true);
+            for (int i = 0; i < transforms.Length; i++)
+            {
+                Transform transform = transforms[i];
+                if (transform == null)
+                {
+                    continue;
+                }
+
+                if (ContainsStationaryQuestForbiddenPattern(transform.name))
+                {
+                    offendingObjects++;
+                    if (firstOffender.Length == 0)
+                    {
+                        firstOffender = transform.name;
+                    }
+                }
+            }
+
+            detail = "offendingComponents=" + offendingComponents +
+                ", offendingObjects=" + offendingObjects +
+                (firstOffender.Length > 0 ? ", first=" + firstOffender : string.Empty);
+            return offendingComponents == 0 && offendingObjects == 0;
+        }
+
+        private static bool ContainsStationaryQuestForbiddenPattern(string value)
+        {
+            if (string.IsNullOrEmpty(value))
+            {
+                return false;
+            }
+
+            return value.IndexOf("Locomotion", System.StringComparison.OrdinalIgnoreCase) >= 0 ||
+                value.IndexOf("Teleport", System.StringComparison.OrdinalIgnoreCase) >= 0 ||
+                value.IndexOf("SnapTurn", System.StringComparison.OrdinalIgnoreCase) >= 0 ||
+                value.IndexOf("ContinuousTurn", System.StringComparison.OrdinalIgnoreCase) >= 0 ||
+                value.IndexOf("TurnProvider", System.StringComparison.OrdinalIgnoreCase) >= 0 ||
+                value.IndexOf("GrabInteractable", System.StringComparison.OrdinalIgnoreCase) >= 0 ||
+                value.IndexOf("XRGrab", System.StringComparison.OrdinalIgnoreCase) >= 0 ||
+                value.IndexOf("Climb", System.StringComparison.OrdinalIgnoreCase) >= 0;
         }
 
         private static bool HasComfortableFallbackView(QuestTabletopRig rig, QuestTabletopSettings settings, out string detail)
