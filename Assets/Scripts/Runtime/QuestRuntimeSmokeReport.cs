@@ -47,6 +47,7 @@ namespace QuestCommandRTS
             Add(results, "Quest settings present", settings != null, "QuestTabletopSettings should own tabletop scale, height, ray, reticle, clip-plane, and world-space UI values.");
             Add(results, "Quest input present", input != null, "QuestRtsInputController should translate controller state into shared dispatcher calls.");
             Add(results, "Quest world HUD present", worldHud != null && HasWorldSpaceCanvas("Quest World Status"), "Quest mode should expose a world-space status panel.");
+            Add(results, "Quest world HUD control hints", HasWorldHudControlHints(), "World-space status panel should show trigger, A/B, and X command-console hints.");
             Add(results, "Quest tactical map present", tacticalMap != null && HasWorldSpaceCanvas("Quest Tactical Map"), "Quest mode should expose the battle map as world-space headset UI.");
             Add(results, "Quest command console present", console != null && console.PanelRect != null, "Quest command console should exist under the tabletop rig.");
             Add(results, "View camera uses XR head", rig != null && rig.HeadCamera != null && game.GetViewCameraTransform() == rig.HeadCamera.transform, "Game view camera should resolve to the Quest head camera.");
@@ -99,6 +100,36 @@ namespace QuestCommandRTS
 
             Canvas canvas = canvasObject.GetComponent<Canvas>();
             return canvas != null && canvas.renderMode == RenderMode.WorldSpace;
+        }
+
+        private static bool HasWorldHudControlHints()
+        {
+            GameObject canvasObject = GameObject.Find("Quest World Status");
+            if (canvasObject == null)
+            {
+                return false;
+            }
+
+            Text[] textBlocks = canvasObject.GetComponentsInChildren<Text>(true);
+            for (int i = 0; i < textBlocks.Length; i++)
+            {
+                Text text = textBlocks[i];
+                if (text == null || string.IsNullOrEmpty(text.text))
+                {
+                    continue;
+                }
+
+                string value = text.text;
+                if (value.Contains("Trigger: Select") &&
+                    value.Contains("A: Command") &&
+                    value.Contains("B: Cancel/Clear") &&
+                    value.Contains("X: Command Console"))
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         private static bool HasDescendant(Transform root, string objectName)
