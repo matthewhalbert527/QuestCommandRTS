@@ -16,7 +16,7 @@ This document records what has been implemented and what has actually been verif
 ## Architecture
 
 - `RtsRuntimeModeResolver` chooses `Desktop` or `QuestVr` from forced test settings, command-line/environment overrides, active XR device state, or an initialized Android OpenXR loader for Quest builds.
-- `RtsGame` owns runtime bootstrap and installs only the components for the resolved mode. Runtime-created camera and light objects are parented under the generated root so editor exporters can cleanly remove the generated runtime.
+- `RtsGame` owns runtime bootstrap and installs only the components for the resolved mode. Runtime-created camera, light, and desktop UI event-system objects are parented under the generated root so editor exporters can cleanly remove the generated runtime.
 - `RtsCommandDispatcher` centralizes ray/hit based RTS command semantics shared by desktop and Quest input. EditMode source checks guard it from directly reading mouse, keyboard, screen, or XR device APIs.
 - `RtsInputController` keeps desktop-only input, camera movement, drag selection, hotkeys, and control groups. Source checks guard it from duplicating context-command target resolution that belongs in `RtsCommandDispatcher`.
 - `QuestTabletopRig`, `QuestTabletopSettings`, `QuestTrackedNodePose`, `QuestRtsInputController`, `QuestWorldHud`, and `QuestCommandConsole` contain Quest-specific rigging, tracked pose, controller input, pointer, and world-space UI behavior. Source checks guard the Quest path from adding artificial locomotion, board grabbing, or continuous tracked-pose overrides.

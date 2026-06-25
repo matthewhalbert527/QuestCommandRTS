@@ -3,6 +3,7 @@ using System;
 using System.IO;
 using NUnit.Framework;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.UI;
 using Object = UnityEngine.Object;
 
@@ -74,17 +75,23 @@ namespace QuestCommandRTS.Editor
         }
 
         [Test]
-        public void DesktopInitializationParentsGeneratedCameraAndLightUnderRuntimeRoot()
+        public void DesktopInitializationParentsGeneratedCameraLightAndEventSystemUnderRuntimeRoot()
         {
             RtsGame game = CreateInitializedGame(RtsRuntimeMode.Desktop);
             GameObject sunObject = GameObject.Find("Sun");
+            GameObject eventSystemObject = GameObject.Find("EventSystem");
             Assert.IsNotNull(sunObject);
+            Assert.IsNotNull(eventSystemObject);
             Light sun = sunObject.GetComponent<Light>();
+            EventSystem eventSystem = eventSystemObject.GetComponent<EventSystem>();
 
             Assert.IsNotNull(game.CommandCamera);
             Assert.IsTrue(game.CommandCamera.transform.IsChildOf(game.transform), "Generated desktop camera should be cleaned up with the runtime root.");
             Assert.IsNotNull(sun);
             Assert.IsTrue(sun.transform.IsChildOf(game.transform), "Generated scene light should be cleaned up with the runtime root.");
+            Assert.IsNotNull(eventSystem);
+            Assert.IsNotNull(eventSystemObject.GetComponent<StandaloneInputModule>());
+            Assert.IsTrue(eventSystem.transform.IsChildOf(game.transform), "Generated desktop EventSystem should be cleaned up with the runtime root.");
         }
 
         [Test]

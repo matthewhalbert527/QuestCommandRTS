@@ -21,16 +21,6 @@ namespace QuestCommandRTS.Editor
             public float FieldOfView;
         }
 
-        private struct EventSystemState
-        {
-            public EventSystemState(GameObject gameObject)
-            {
-                GameObject = gameObject;
-            }
-
-            public GameObject GameObject;
-        }
-
         [MenuItem("Command RTS/Validate Generated Desktop Runtime")]
         public static void ValidateGeneratedDesktopRuntime()
         {
@@ -69,7 +59,6 @@ namespace QuestCommandRTS.Editor
         internal static List<DesktopRuntimeSmokeItem> BuildGeneratedDesktopRuntimeReport()
         {
             CameraState[] cameraStates = CaptureCameraStates();
-            EventSystemState existingEventSystem = new EventSystemState(UnityEngine.EventSystems.EventSystem.current != null ? UnityEngine.EventSystems.EventSystem.current.gameObject : null);
             GameObject existingSun = GameObject.Find("Sun");
             GameObject existingCommandCamera = GameObject.Find("Command Camera");
             RtsRuntimeModeResolver.ForceModeForTests(RtsRuntimeMode.Desktop);
@@ -85,7 +74,7 @@ namespace QuestCommandRTS.Editor
             {
                 RtsRuntimeModeResolver.ForceModeForTests(null);
                 RestoreCameraStates(cameraStates);
-                DestroyGeneratedObjects(root, existingSun, existingCommandCamera, existingEventSystem);
+                DestroyGeneratedObjects(root, existingSun, existingCommandCamera);
             }
         }
 
@@ -136,7 +125,7 @@ namespace QuestCommandRTS.Editor
             }
         }
 
-        private static void DestroyGeneratedObjects(GameObject root, GameObject existingSun, GameObject existingCommandCamera, EventSystemState existingEventSystem)
+        private static void DestroyGeneratedObjects(GameObject root, GameObject existingSun, GameObject existingCommandCamera)
         {
             if (root != null)
             {
@@ -153,12 +142,6 @@ namespace QuestCommandRTS.Editor
             if (generatedCommandCamera != null && generatedCommandCamera != existingCommandCamera)
             {
                 Object.DestroyImmediate(generatedCommandCamera);
-            }
-
-            GameObject generatedEventSystem = GameObject.Find("EventSystem");
-            if (generatedEventSystem != null && generatedEventSystem != existingEventSystem.GameObject)
-            {
-                Object.DestroyImmediate(generatedEventSystem);
             }
         }
     }

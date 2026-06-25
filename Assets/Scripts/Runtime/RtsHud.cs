@@ -28,7 +28,7 @@ namespace QuestCommandRTS
         {
             game = owner;
             font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
-            EnsureEventSystem();
+            EnsureEventSystem(transform);
             BuildCanvas();
         }
 
@@ -399,7 +399,7 @@ namespace QuestCommandRTS
             return text;
         }
 
-        private static void EnsureEventSystem()
+        private static void EnsureEventSystem(Transform owner)
         {
             if (EventSystem.current != null)
             {
@@ -407,6 +407,11 @@ namespace QuestCommandRTS
             }
 
             GameObject eventSystemObject = new GameObject("EventSystem");
+            if (owner != null)
+            {
+                eventSystemObject.transform.SetParent(owner, false);
+            }
+
             eventSystemObject.AddComponent<EventSystem>();
             eventSystemObject.AddComponent<StandaloneInputModule>();
         }
