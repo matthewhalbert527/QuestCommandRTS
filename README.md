@@ -36,14 +36,15 @@ Quest mode is selected from active XR device state, or from an initialized Andro
 3. Open `Assets/Scenes/Battlefield.unity`.
 4. Press Play.
 
-The scene is intentionally empty. `RtsBootstrap` creates the map, units, buildings, resources, managers, and runtime-specific input/HUD objects.
+The scene is intentionally empty. `RtsBootstrap` creates the map, units, buildings, resources, managers, and runtime-specific input/HUD objects. Desktop/player builds open on a main menu over the generated skirmish; start or load from there.
 
 ## Desktop Controls
 
 - Left click or drag: select.
 - Shift + left click: add to selection.
 - Right click: move, attack, harvest, or set a selected production building rally point.
-- Middle click or Escape: cancel/clear.
+- Middle click: cancel/clear.
+- Escape or P: pause/resume and show the pause menu.
 - Arrow keys or screen-edge mouse: pan camera.
 - Mouse wheel: zoom camera.
 - A: attack-move selected units toward the cursor.
@@ -52,9 +53,9 @@ The scene is intentionally empty. `RtsBootstrap` creates the map, units, buildin
 - Q/W/E/R/T: place power plant, barracks, refinery, war factory, and turret.
 - Z: repair the most damaged selected structure.
 - X: sell selected structures for a partial refund.
-- P: pause or resume the match.
 - F5: save the manual slot.
 - F9: load the manual slot.
+- Main/Pause menu: start, resume, restart skirmish, save, load, or quit.
 - New Match HUD button: reset the current skirmish without reloading the scene.
 - Ctrl + 6-0: assign control group; 6-0: recall control group.
 
@@ -114,6 +115,7 @@ The generated battlefield uses original primitive placeholder art with sandy ter
 - Enemy structures can be rebuilt from fixed base slots while at least one enemy structure remains alive, including upgraded defensive towers.
 - Timed enemy attacks still exist, but spawned attackers now spend commander credits instead of appearing for free and can include mixed gunner, grenadier, rocket, and flame infantry.
 - Player and enemy units/buildings use multiple colored recognition plates so teams are readable from the skirmish camera and Quest tabletop view.
+- Armed combat units automatically acquire nearby enemies while idle and retaliate against enemies that damage them.
 
 See `docs/SAVE_SYSTEM.md`, `docs/LIFECYCLE_TEST_MATRIX.md`, `docs/PERFORMANCE_TESTING.md`, and `docs/MILESTONE_STATUS.md`.
 

@@ -120,6 +120,26 @@ namespace QuestCommandRTS.Editor
         }
 
         [Test]
+        public void DesktopHudMainAndPauseMenusControlUserPause()
+        {
+            RtsGame game = CreateInitializedGame(RtsRuntimeMode.Desktop);
+            RtsHud hud = game.GetComponent<RtsHud>();
+            Assert.IsNotNull(hud);
+
+            hud.ShowMainMenuForTests();
+            Assert.IsTrue(hud.IsMainMenuVisibleForTests);
+            Assert.IsTrue(game.IsUserPaused);
+
+            hud.StartSkirmishFromMainMenuForTests();
+            Assert.IsFalse(hud.IsMainMenuVisibleForTests);
+            Assert.IsFalse(game.IsUserPaused);
+
+            game.SetUserPaused(true);
+            hud.RefreshMenuPanelsForTests();
+            Assert.IsTrue(hud.IsPauseMenuVisibleForTests);
+        }
+
+        [Test]
         public void DesktopInitializationParentsGeneratedCameraLightAndEventSystemUnderRuntimeRoot()
         {
             RtsGame game = CreateInitializedGame(RtsRuntimeMode.Desktop);
@@ -378,6 +398,38 @@ namespace QuestCommandRTS.Editor
             Assert.IsNotNull(engineer.transform.Find("Engineer Model"));
             Assert.IsNotNull(gunner.transform.Find("Infantry Team Top Plate"));
             Assert.IsNotNull(engineer.transform.Find("Infantry Kit Detail Plate"));
+        }
+
+        [Test]
+        public void IdleCombatUnitsAutoAttackNearbyEnemies()
+        {
+            RtsGame game = CreateInitializedGame(RtsRuntimeMode.Desktop);
+            RtsUnit gunner = game.CreateUnit(RtsTeam.Player, UnitKind.Rifleman, new Vector3(-12f, 0f, -12f));
+            RtsUnit enemy = game.CreateUnit(RtsTeam.Enemy, UnitKind.Rifleman, new Vector3(-8f, 0f, -12f));
+
+            float enemyHealth = enemy.Health;
+            gunner.TickOrdersForTests(0.1f);
+
+            Assert.Less(enemy.Health, enemyHealth);
+            Assert.AreEqual("Attack", gunner.CaptureOrderState().orderType);
+            Assert.AreEqual(enemy.PersistentId, gunner.CaptureOrderState().targetEntityId);
+        }
+
+        [Test]
+        public void CombatUnitsRetaliateAgainstAttackers()
+        {
+            RtsGame game = CreateInitializedGame(RtsRuntimeMode.Desktop);
+            RtsUnit gunner = game.CreateUnit(RtsTeam.Player, UnitKind.Rifleman, new Vector3(-16f, 0f, -16f));
+            RtsUnit enemy = game.CreateUnit(RtsTeam.Enemy, UnitKind.Rifleman, new Vector3(-12.5f, 0f, -16f));
+
+            gunner.IssueMove(new Vector3(-32f, 0f, -16f));
+            gunner.TakeDamage(1f, enemy);
+            float enemyHealth = enemy.Health;
+            gunner.TickOrdersForTests(0.1f);
+
+            Assert.Less(enemy.Health, enemyHealth);
+            Assert.AreEqual("Attack", gunner.CaptureOrderState().orderType);
+            Assert.AreEqual(enemy.PersistentId, gunner.CaptureOrderState().targetEntityId);
         }
 
         [Test]

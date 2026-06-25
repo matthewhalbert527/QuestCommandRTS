@@ -126,6 +126,7 @@ namespace QuestCommandRTS
 
             Health = Mathf.Max(0f, Health - amount);
             UpdateHealthBarVisual();
+            OnDamaged(amount, attacker);
 
             if (Health <= 0f)
             {
@@ -154,6 +155,10 @@ namespace QuestCommandRTS
             Destroyed?.Invoke(this);
             CreateDeathMarker();
             Destroy(gameObject);
+        }
+
+        protected virtual void OnDamaged(float amount, RtsEntity attacker)
+        {
         }
 
         private void EnsureCollider()

@@ -12,6 +12,7 @@ namespace QuestCommandRTS
         public float AttackRange = 6f;
         public float Damage = 8f;
         public float AttackCooldown = 0.8f;
+        public float SightRange = 10f;
 
         protected Vector3 destination;
         protected Vector3 attackMoveDestination;
@@ -22,6 +23,8 @@ namespace QuestCommandRTS
         protected RtsEntity repairTarget;
 
         private float nextAttackTime;
+        private float nextAwarenessScanTime;
+        private const float AwarenessScanInterval = 0.35f;
 
         protected override void Awake()
         {
@@ -47,6 +50,7 @@ namespace QuestCommandRTS
             AttackRange = stats.AttackRange;
             Damage = stats.Damage;
             AttackCooldown = stats.AttackCooldown;
+            SightRange = GetSightRange(UnitKind, AttackRange, Damage);
 
             float radius = GetSelectionRadius(UnitKind);
             Initialize(team, stats.Name, stats.Health, radius);
@@ -290,6 +294,12 @@ namespace QuestCommandRTS
                 return;
             }
 
+            if (!hasDestination && TryAcquireNearbyEnemy())
+            {
+                TickAttackOrder(deltaTime);
+                return;
+            }
+
             if (hasDestination)
             {
                 if (MoveToward(destination, deltaTime, StopDistance))
@@ -297,6 +307,64 @@ namespace QuestCommandRTS
                     hasDestination = false;
                 }
             }
+        }
+
+        protected override void OnDamaged(float amount, RtsEntity attacker)
+        {
+            if (!CanAutoEngage(attacker))
+            {
+                return;
+            }
+
+            if (attackTarget != null && attackTarget.IsAlive)
+            {
+                return;
+            }
+
+            attackTarget = attacker;
+        }
+
+        private bool TryAcquireNearbyEnemy()
+        {
+            if (!CanAutoEngage())
+            {
+                return false;
+            }
+
+            float currentTime = GetSimulationTime();
+            if (currentTime < nextAwarenessScanTime)
+            {
+                return false;
+            }
+
+            nextAwarenessScanTime = currentTime + AwarenessScanInterval;
+            RtsEntity acquired = RtsGame.Instance.FindClosestEnemy(Team, transform.position, SightRange);
+            if (acquired == null)
+            {
+                return false;
+            }
+
+            attackTarget = acquired;
+            return true;
+        }
+
+        private bool CanAutoEngage()
+        {
+            return Damage > 0f &&
+                RtsGame.HasInstance &&
+                IsAlive &&
+                Team != RtsTeam.Neutral &&
+                UnitKind != UnitKind.Harvester &&
+                !RtsBalance.IsEngineer(UnitKind);
+        }
+
+        private bool CanAutoEngage(RtsEntity target)
+        {
+            return CanAutoEngage() &&
+                target != null &&
+                target.IsAlive &&
+                target.Team != Team &&
+                target.Team != RtsTeam.Neutral;
         }
 
         private void TickBoardOrder(float deltaTime)
@@ -463,6 +531,29 @@ namespace QuestCommandRTS
                     return 1.45f;
                 default:
                     return 0.72f;
+            }
+        }
+
+        private static float GetSightRange(UnitKind kind, float attackRange, float damage)
+        {
+            if (damage <= 0f || kind == UnitKind.Harvester || RtsBalance.IsEngineer(kind))
+            {
+                return 0f;
+            }
+
+            switch (RtsBalance.NormalizeUnitKind(kind))
+            {
+                case UnitKind.RocketSoldier:
+                    return Mathf.Max(15f, attackRange * 1.35f);
+                case UnitKind.HeavyTank:
+                    return Mathf.Max(14f, attackRange * 1.3f);
+                case UnitKind.MediumTank:
+                case UnitKind.Tank:
+                    return Mathf.Max(13f, attackRange * 1.35f);
+                case UnitKind.LightTank:
+                    return Mathf.Max(12f, attackRange * 1.45f);
+                default:
+                    return Mathf.Max(10f, attackRange * 1.45f);
             }
         }
 

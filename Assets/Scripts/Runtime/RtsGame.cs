@@ -437,6 +437,16 @@ namespace QuestCommandRTS
             return true;
         }
 
+        public void RequestQuit()
+        {
+            StatusMessage = "Quitting...";
+#if UNITY_EDITOR
+            UnityEditor.EditorApplication.isPlaying = false;
+#else
+            Application.Quit();
+#endif
+        }
+
         public bool CanLoadManualSave()
         {
             return SaveService != null && SaveService.HasSlot("manual");

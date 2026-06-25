@@ -16,6 +16,22 @@ namespace QuestCommandRTS
             public Func<string> GetText;
         }
 
+        private sealed class MenuButtonSpec
+        {
+            public readonly string Name;
+            public readonly UnityEngine.Events.UnityAction Action;
+            public readonly Func<bool> IsEnabled;
+            public readonly Func<string> GetText;
+
+            public MenuButtonSpec(string name, UnityEngine.Events.UnityAction action, Func<bool> isEnabled, Func<string> getText)
+            {
+                Name = name;
+                Action = action;
+                IsEnabled = isEnabled;
+                GetText = getText;
+            }
+        }
+
         private readonly List<HudButton> buttons = new List<HudButton>();
         private RtsGame game;
         private Text resourcesText;
@@ -23,6 +39,9 @@ namespace QuestCommandRTS
         private Font font;
         private GUIStyle bannerStyle;
         private GUIStyle bannerSubStyle;
+        private RectTransform mainMenuPanel;
+        private RectTransform pauseMenuPanel;
+        private bool mainMenuVisible;
 
         public void Initialize(RtsGame owner)
         {
@@ -30,6 +49,11 @@ namespace QuestCommandRTS
             font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
             EnsureEventSystem(transform);
             BuildCanvas();
+
+            if (Application.isPlaying)
+            {
+                ShowMainMenu();
+            }
         }
 
         private void Update()
@@ -57,6 +81,8 @@ namespace QuestCommandRTS
                     hudButton.Label.text = hudButton.GetText();
                 }
             }
+
+            RefreshMenuPanels();
         }
 
         private void OnGUI()
@@ -148,12 +174,159 @@ namespace QuestCommandRTS
             selectionText = CreateText(selectionPanel, "Selection Text", "", 17, TextAnchor.UpperLeft);
             selectionText.rectTransform.offsetMin = new Vector2(16f, 10f);
             selectionText.rectTransform.offsetMax = new Vector2(-16f, -10f);
+
+            mainMenuPanel = BuildMenuPanel(
+                canvasObject.transform,
+                "Main Menu",
+                "Quest Command RTS",
+                "Desktop Skirmish",
+                new[]
+                {
+                    new MenuButtonSpec("Start Skirmish", () => StartSkirmishFromMainMenu(), () => true, () => "Start Skirmish"),
+                    new MenuButtonSpec("Load Game", () => LoadFromMainMenu(), () => game.CanLoadManualSave(), () => "Load Game  " + game.GetManualSaveSummary()),
+                    new MenuButtonSpec("Quit", () => game.RequestQuit(), () => true, () => "Quit")
+                });
+
+            pauseMenuPanel = BuildMenuPanel(
+                canvasObject.transform,
+                "Pause Menu",
+                "Paused",
+                "Skirmish Controls",
+                new[]
+                {
+                    new MenuButtonSpec("Resume", () => game.SetUserPaused(false), () => game.AcceptsSystemInput && !game.IsMatchOver, () => "Resume"),
+                    new MenuButtonSpec("Restart", () => game.TryRestartMatch(), () => game.AcceptsSystemInput, () => "Restart Skirmish"),
+                    new MenuButtonSpec("Save", () => game.TryManualSave(), () => game.AcceptsSystemInput && !game.IsMatchOver, () => "Save Game"),
+                    new MenuButtonSpec("Load", () => game.TryManualLoad(), () => game.AcceptsSystemInput && game.CanLoadManualSave(), () => "Load Game  " + game.GetManualSaveSummary()),
+                    new MenuButtonSpec("Quit", () => game.RequestQuit(), () => true, () => "Quit")
+                });
+
+            RefreshMenuPanels();
+        }
+
+        public void ShowMainMenu()
+        {
+            mainMenuVisible = true;
+            if (game != null && !game.IsMatchOver)
+            {
+                game.SetUserPaused(true);
+            }
+
+            RefreshMenuPanels();
+        }
+
+#if UNITY_EDITOR
+        public bool IsMainMenuVisibleForTests => mainMenuVisible && mainMenuPanel != null && mainMenuPanel.gameObject.activeSelf;
+        public bool IsPauseMenuVisibleForTests => pauseMenuPanel != null && pauseMenuPanel.gameObject.activeSelf;
+
+        public void ShowMainMenuForTests()
+        {
+            ShowMainMenu();
+        }
+
+        public void StartSkirmishFromMainMenuForTests()
+        {
+            StartSkirmishFromMainMenu();
+        }
+
+        public void RefreshMenuPanelsForTests()
+        {
+            RefreshMenuPanels();
+        }
+#endif
+
+        private void StartSkirmishFromMainMenu()
+        {
+            mainMenuVisible = false;
+            if (!game.TryRestartMatch())
+            {
+                game.SetUserPaused(false);
+            }
+
+            RefreshMenuPanels();
+        }
+
+        private void LoadFromMainMenu()
+        {
+            if (game.TryManualLoad())
+            {
+                mainMenuVisible = false;
+                game.SetUserPaused(false);
+            }
+
+            RefreshMenuPanels();
+        }
+
+        private void RefreshMenuPanels()
+        {
+            if (game == null)
+            {
+                return;
+            }
+
+            if (mainMenuVisible && !game.IsMatchOver && !game.IsUserPaused)
+            {
+                game.SetUserPaused(true);
+            }
+
+            if (mainMenuPanel != null)
+            {
+                mainMenuPanel.gameObject.SetActive(mainMenuVisible);
+            }
+
+            if (pauseMenuPanel != null)
+            {
+                pauseMenuPanel.gameObject.SetActive(!mainMenuVisible && game.IsUserPaused);
+            }
         }
 
         private void AddBuildButton(RectTransform parent, StructureKind kind, float y)
         {
             StructureStats stats = RtsBalance.GetStructure(kind);
             AddCommandButton(parent, stats.Name, y, () => game.PlayerCommands.RequestConstruction(kind), () => CanBuild(kind), () => GetBuildButtonText(kind, stats));
+        }
+
+        private RectTransform BuildMenuPanel(Transform parent, string name, string title, string subtitle, MenuButtonSpec[] specs)
+        {
+            RectTransform overlay = CreatePanel(
+                parent,
+                name,
+                Vector2.zero,
+                Vector2.one,
+                new Vector2(0.5f, 0.5f),
+                Vector2.zero,
+                Vector2.zero,
+                new Color(0.005f, 0.008f, 0.01f, 0.72f));
+
+            RectTransform panel = CreatePanel(
+                overlay,
+                name + " Panel",
+                new Vector2(0.5f, 0.5f),
+                new Vector2(0.5f, 0.5f),
+                new Vector2(0.5f, 0.5f),
+                Vector2.zero,
+                new Vector2(520f, 420f),
+                new Color(0.02f, 0.028f, 0.032f, 0.96f));
+
+            Image panelImage = panel.GetComponent<Image>();
+            if (panelImage != null)
+            {
+                panelImage.color = new Color(0.025f, 0.034f, 0.038f, 0.96f);
+            }
+
+            CreateText(panel, name + " Title", title, 34, TextAnchor.MiddleCenter, new Vector2(0f, -34f), new Vector2(-48f, 54f));
+            Text subtitleText = CreateText(panel, name + " Subtitle", subtitle, 17, TextAnchor.MiddleCenter, new Vector2(0f, -86f), new Vector2(-64f, 28f));
+            subtitleText.color = new Color(0.58f, 0.86f, 0.92f);
+
+            float y = -142f;
+            for (int i = 0; i < specs.Length; i++)
+            {
+                AddMenuButton(panel, specs[i], y);
+                y -= 54f;
+            }
+
+            overlay.gameObject.SetActive(false);
+            return overlay;
         }
 
         private void AddCommandButton(RectTransform parent, string name, float y, UnityEngine.Events.UnityAction action, Func<bool> enabled, Func<string> text)
@@ -185,6 +358,38 @@ namespace QuestCommandRTS
                 Label = label,
                 IsEnabled = enabled,
                 GetText = text
+            });
+        }
+
+        private void AddMenuButton(RectTransform parent, MenuButtonSpec spec, float y)
+        {
+            GameObject buttonObject = new GameObject(spec.Name + " Button");
+            buttonObject.transform.SetParent(parent, false);
+
+            RectTransform rect = buttonObject.AddComponent<RectTransform>();
+            rect.anchorMin = new Vector2(0.5f, 1f);
+            rect.anchorMax = new Vector2(0.5f, 1f);
+            rect.pivot = new Vector2(0.5f, 1f);
+            rect.anchoredPosition = new Vector2(0f, y);
+            rect.sizeDelta = new Vector2(340f, 42f);
+
+            Image image = buttonObject.AddComponent<Image>();
+            image.color = new Color(0.13f, 0.17f, 0.18f, 0.98f);
+
+            Button button = buttonObject.AddComponent<Button>();
+            button.targetGraphic = image;
+            button.onClick.AddListener(spec.Action);
+
+            Text label = CreateText(rect, spec.Name + " Text", spec.GetText(), 16, TextAnchor.MiddleCenter);
+            label.rectTransform.offsetMin = new Vector2(10f, 0f);
+            label.rectTransform.offsetMax = new Vector2(-10f, 0f);
+
+            buttons.Add(new HudButton
+            {
+                Button = button,
+                Label = label,
+                IsEnabled = spec.IsEnabled,
+                GetText = spec.GetText
             });
         }
 

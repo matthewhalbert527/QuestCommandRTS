@@ -40,7 +40,10 @@ namespace QuestCommandRTS
                 return;
             }
 
-            HandleSystemHotkeys();
+            if (HandleSystemHotkeys())
+            {
+                return;
+            }
 
             if (!game.AcceptsPlayerInput)
             {
@@ -269,22 +272,35 @@ namespace QuestCommandRTS
             }
         }
 
-        private void HandleSystemHotkeys()
+        private bool HandleSystemHotkeys()
         {
+            if (Input.GetKeyDown(KeyCode.Escape))
+            {
+                game.ToggleUserPause();
+                mouseSelectionActive = false;
+                mouseDragging = false;
+                return true;
+            }
+
             if (Input.GetKeyDown(KeyCode.P))
             {
                 game.ToggleUserPause();
+                return true;
             }
 
             if (Input.GetKeyDown(KeyCode.F5))
             {
                 game.TryManualSave();
+                return true;
             }
 
             if (Input.GetKeyDown(KeyCode.F9))
             {
                 game.TryManualLoad();
+                return true;
             }
+
+            return false;
         }
 
         private void HandleControlGroups()
