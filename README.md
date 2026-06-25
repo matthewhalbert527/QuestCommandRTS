@@ -5,6 +5,7 @@ Unity prototype for a classic RTS inspired by Command and Conquer. The current b
 ## What is included
 
 - Runtime bootstrap that creates a complete playable battlefield when `Assets/Scenes/Battlefield.unity` enters Play Mode.
+- Room-sized generated command board, roughly 224 x 224 Unity units, with a framed tabletop edge.
 - Selectable infantry, harvesters, tanks, buildings, health, attacks, production queues, power, and credits.
 - Resource harvesting loop with refineries and crystal fields.
 - Base construction with placement ghosts, footprint validation, build radius checks, and credit costs.

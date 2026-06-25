@@ -33,9 +33,9 @@ namespace QuestCommandRTS.Editor
             InvokePrivate(game, "Initialize");
 
             Camera camera = game.CommandCamera;
-            camera.transform.position = new Vector3(-4f, 31f, -33f);
+            camera.transform.position = new Vector3(-18f, 96f, -132f);
             camera.transform.rotation = Quaternion.Euler(58f, 0f, 0f);
-            camera.fieldOfView = 57f;
+            camera.fieldOfView = 62f;
 
             const int width = 1440;
             const int height = 900;

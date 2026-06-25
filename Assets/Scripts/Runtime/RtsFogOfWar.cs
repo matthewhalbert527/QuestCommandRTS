@@ -5,7 +5,7 @@ namespace QuestCommandRTS
 {
     public sealed class RtsFogOfWar : MonoBehaviour
     {
-        private const int GridSize = 24;
+        private const int GridSize = 56;
         private const float UpdateInterval = 0.22f;
 
         private readonly List<Renderer> rendererBuffer = new List<Renderer>();
@@ -131,13 +131,8 @@ namespace QuestCommandRTS
                 for (int z = 0; z < GridSize; z++)
                 {
                     FogCell cell = cells[x, z];
-                    bool wasExplored = cell.Explored;
                     cell.Explored = cell.Explored || cell.Visible;
-
-                    if (force || wasExplored != cell.Explored || cell.Visible)
-                    {
-                        ApplyCellVisual(cell);
-                    }
+                    ApplyCellVisual(cell);
                 }
             }
 
@@ -232,7 +227,7 @@ namespace QuestCommandRTS
             RtsStructure structure = entity as RtsStructure;
             if (structure != null)
             {
-                return structure.StructureKind == StructureKind.Turret ? 15f : 12f;
+                return structure.StructureKind == StructureKind.Turret ? 26f : 20f;
             }
 
             RtsUnit unit = entity as RtsUnit;
@@ -241,11 +236,11 @@ namespace QuestCommandRTS
                 switch (unit.UnitKind)
                 {
                     case UnitKind.Harvester:
-                        return 9f;
+                        return 17f;
                     case UnitKind.Tank:
-                        return 11f;
+                        return 20f;
                     default:
-                        return 8f;
+                        return 16f;
                 }
             }
 

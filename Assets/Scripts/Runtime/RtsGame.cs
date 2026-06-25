@@ -639,13 +639,13 @@ namespace QuestCommandRTS
         public Vector3 GetPlayerBaseCenter()
         {
             RtsEntity target = FindPlayerPrimaryTarget();
-            return target != null ? target.transform.position : new Vector3(-16f, 0f, -10f);
+            return target != null ? target.transform.position : new Vector3(-78f, 0f, -70f);
         }
 
         public Vector3 GetEnemyBaseCenter()
         {
             RtsEntity target = FindPrimaryTarget(RtsTeam.Enemy);
-            return target != null ? target.transform.position : new Vector3(22f, 0f, 16f);
+            return target != null ? target.transform.position : new Vector3(82f, 0f, 72f);
         }
 
         public void SpawnTracer(Vector3 from, Vector3 to, RtsTeam team)
@@ -828,13 +828,13 @@ namespace QuestCommandRTS
                 cameraObject.tag = "MainCamera";
             }
 
-            CommandCamera.transform.position = new Vector3(0f, 29f, -29f);
+            CommandCamera.transform.position = new Vector3(-72f, 48f, -104f);
             CommandCamera.transform.rotation = Quaternion.Euler(58f, 0f, 0f);
             CommandCamera.clearFlags = CameraClearFlags.SolidColor;
             CommandCamera.backgroundColor = new Color(0.035f, 0.04f, 0.05f);
             CommandCamera.nearClipPlane = 0.05f;
             CommandCamera.farClipPlane = 250f;
-            CommandCamera.fieldOfView = 58f;
+            CommandCamera.fieldOfView = 60f;
 
             if (Object.FindObjectOfType<Light>() == null)
             {
@@ -855,11 +855,13 @@ namespace QuestCommandRTS
             ground.transform.localScale = Vector3.one * (RtsBalance.MapHalfSize * 2f / 10f);
             ground.GetComponent<Renderer>().sharedMaterial = groundMaterial;
 
-            for (int i = -3; i <= 3; i++)
+            for (int i = -5; i <= 5; i++)
             {
-                CreateGridLine(new Vector3(i * 10f, 0.025f, -RtsBalance.MapHalfSize), new Vector3(i * 10f, 0.025f, RtsBalance.MapHalfSize));
-                CreateGridLine(new Vector3(-RtsBalance.MapHalfSize, 0.026f, i * 10f), new Vector3(RtsBalance.MapHalfSize, 0.026f, i * 10f));
+                CreateGridLine(new Vector3(i * 20f, 0.025f, -RtsBalance.MapHalfSize), new Vector3(i * 20f, 0.025f, RtsBalance.MapHalfSize));
+                CreateGridLine(new Vector3(-RtsBalance.MapHalfSize, 0.026f, i * 20f), new Vector3(RtsBalance.MapHalfSize, 0.026f, i * 20f));
             }
+
+            CreateBoardFrame();
         }
 
         private void CreateGridLine(Vector3 a, Vector3 b)
@@ -876,9 +878,14 @@ namespace QuestCommandRTS
 
         private void CreateResourceFields()
         {
-            CreateResourceField(new Vector3(-2f, 0f, -19f), 6);
-            CreateResourceField(new Vector3(16f, 0f, -3f), 5);
-            CreateResourceField(new Vector3(4f, 0f, 20f), 7);
+            CreateResourceField(new Vector3(-58f, 0f, -82f), 9);
+            CreateResourceField(new Vector3(-18f, 0f, -64f), 7);
+            CreateResourceField(new Vector3(-70f, 0f, -18f), 6);
+            CreateResourceField(new Vector3(0f, 0f, -18f), 8);
+            CreateResourceField(new Vector3(34f, 0f, 18f), 8);
+            CreateResourceField(new Vector3(-16f, 0f, 54f), 7);
+            CreateResourceField(new Vector3(62f, 0f, 42f), 7);
+            CreateResourceField(new Vector3(74f, 0f, 84f), 9);
         }
 
         private void CreateResourceField(Vector3 center, int count)
@@ -886,7 +893,7 @@ namespace QuestCommandRTS
             for (int i = 0; i < count; i++)
             {
                 float angle = (Mathf.PI * 2f * i) / count;
-                float radius = 2f + (i % 3) * 1.45f;
+                float radius = 3.2f + (i % 4) * 1.8f;
                 Vector3 position = center + new Vector3(Mathf.Cos(angle) * radius, 0f, Mathf.Sin(angle) * radius);
                 GameObject nodeObject = new GameObject("Flux Crystals");
                 nodeObject.transform.SetParent(resourcesRoot, true);
@@ -899,27 +906,27 @@ namespace QuestCommandRTS
 
         private void SpawnStartingForces()
         {
-            RtsStructure command = CreateStructure(RtsTeam.Player, StructureKind.CommandCenter, new Vector3(-20f, 0f, -14f));
-            RtsStructure refinery = CreateStructure(RtsTeam.Player, StructureKind.Refinery, new Vector3(-11f, 0f, -14f));
-            CreateStructure(RtsTeam.Player, StructureKind.PowerPlant, new Vector3(-24f, 0f, -5f));
-            CreateStructure(RtsTeam.Player, StructureKind.Barracks, new Vector3(-16f, 0f, -5f));
+            RtsStructure command = CreateStructure(RtsTeam.Player, StructureKind.CommandCenter, new Vector3(-84f, 0f, -78f));
+            RtsStructure refinery = CreateStructure(RtsTeam.Player, StructureKind.Refinery, new Vector3(-70f, 0f, -80f));
+            CreateStructure(RtsTeam.Player, StructureKind.PowerPlant, new Vector3(-92f, 0f, -62f));
+            CreateStructure(RtsTeam.Player, StructureKind.Barracks, new Vector3(-76f, 0f, -62f));
 
-            RtsUnit rifleOne = CreateUnit(RtsTeam.Player, UnitKind.Rifleman, new Vector3(-13f, 0f, -2f));
-            CreateUnit(RtsTeam.Player, UnitKind.Rifleman, new Vector3(-15f, 0f, -1f));
-            HarvesterUnit harvester = CreateUnit(RtsTeam.Player, UnitKind.Harvester, new Vector3(-8f, 0f, -17f)) as HarvesterUnit;
+            RtsUnit rifleOne = CreateUnit(RtsTeam.Player, UnitKind.Rifleman, new Vector3(-70f, 0f, -56f));
+            CreateUnit(RtsTeam.Player, UnitKind.Rifleman, new Vector3(-73f, 0f, -54f));
+            HarvesterUnit harvester = CreateUnit(RtsTeam.Player, UnitKind.Harvester, new Vector3(-64f, 0f, -84f)) as HarvesterUnit;
 
             if (harvester != null)
             {
                 harvester.IssueHarvest(FindNearestResource(harvester.transform.position), refinery as RefineryStructure);
             }
 
-            CreateStructure(RtsTeam.Enemy, StructureKind.CommandCenter, new Vector3(22f, 0f, 17f));
-            CreateStructure(RtsTeam.Enemy, StructureKind.PowerPlant, new Vector3(26f, 0f, 9f));
-            CreateStructure(RtsTeam.Enemy, StructureKind.Barracks, new Vector3(16f, 0f, 12f));
-            CreateStructure(RtsTeam.Enemy, StructureKind.Turret, new Vector3(13f, 0f, 20f));
-            CreateUnit(RtsTeam.Enemy, UnitKind.Rifleman, new Vector3(12f, 0f, 13f));
-            CreateUnit(RtsTeam.Enemy, UnitKind.Rifleman, new Vector3(14f, 0f, 15f));
-            CreateUnit(RtsTeam.Enemy, UnitKind.Tank, new Vector3(19f, 0f, 10f));
+            CreateStructure(RtsTeam.Enemy, StructureKind.CommandCenter, new Vector3(86f, 0f, 78f));
+            CreateStructure(RtsTeam.Enemy, StructureKind.PowerPlant, new Vector3(96f, 0f, 62f));
+            CreateStructure(RtsTeam.Enemy, StructureKind.Barracks, new Vector3(74f, 0f, 64f));
+            CreateStructure(RtsTeam.Enemy, StructureKind.Turret, new Vector3(66f, 0f, 84f));
+            CreateUnit(RtsTeam.Enemy, UnitKind.Rifleman, new Vector3(66f, 0f, 62f));
+            CreateUnit(RtsTeam.Enemy, UnitKind.Rifleman, new Vector3(70f, 0f, 66f));
+            CreateUnit(RtsTeam.Enemy, UnitKind.Tank, new Vector3(84f, 0f, 58f));
 
             SelectEntity(command, false);
             SelectEntity(rifleOne, true);
@@ -956,6 +963,25 @@ namespace QuestCommandRTS
                 capsule.height = 1.5f;
                 capsule.radius = 0.42f;
             }
+        }
+
+        private void CreateBoardFrame()
+        {
+            float edge = RtsBalance.MapHalfSize + 2.2f;
+            float span = RtsBalance.MapHalfSize * 2f + 7f;
+            Material frameMaterial = CreateMaterial(new Color(0.1f, 0.14f, 0.16f));
+            Material glowMaterial = CreateMaterial(new Color(0.2f, 0.82f, 0.92f));
+
+            CreatePrimitive(PrimitiveType.Cube, transform, "North Table Rail", new Vector3(0f, 0.42f, edge), new Vector3(span, 0.85f, 2.6f), frameMaterial);
+            CreatePrimitive(PrimitiveType.Cube, transform, "South Table Rail", new Vector3(0f, 0.42f, -edge), new Vector3(span, 0.85f, 2.6f), frameMaterial);
+            CreatePrimitive(PrimitiveType.Cube, transform, "East Table Rail", new Vector3(edge, 0.42f, 0f), new Vector3(2.6f, 0.85f, span), frameMaterial);
+            CreatePrimitive(PrimitiveType.Cube, transform, "West Table Rail", new Vector3(-edge, 0.42f, 0f), new Vector3(2.6f, 0.85f, span), frameMaterial);
+
+            float glowEdge = RtsBalance.MapHalfSize + 0.55f;
+            CreatePrimitive(PrimitiveType.Cube, transform, "North Board Glow", new Vector3(0f, 0.08f, glowEdge), new Vector3(span - 5f, 0.04f, 0.28f), glowMaterial);
+            CreatePrimitive(PrimitiveType.Cube, transform, "South Board Glow", new Vector3(0f, 0.08f, -glowEdge), new Vector3(span - 5f, 0.04f, 0.28f), glowMaterial);
+            CreatePrimitive(PrimitiveType.Cube, transform, "East Board Glow", new Vector3(glowEdge, 0.08f, 0f), new Vector3(0.28f, 0.04f, span - 5f), glowMaterial);
+            CreatePrimitive(PrimitiveType.Cube, transform, "West Board Glow", new Vector3(-glowEdge, 0.08f, 0f), new Vector3(0.28f, 0.04f, span - 5f), glowMaterial);
         }
 
         private void BuildUnitVisual(Transform root, UnitKind kind, RtsTeam team)

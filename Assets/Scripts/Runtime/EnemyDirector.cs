@@ -46,21 +46,22 @@ namespace QuestCommandRTS
                 return;
             }
 
+            Vector3 enemyBase = game.GetEnemyBaseCenter();
             int infantryCount = 2 + Mathf.Min(5, waveIndex);
             for (int i = 0; i < infantryCount; i++)
             {
-                Vector3 spawn = new Vector3(20f + Random.Range(-3f, 3f), 0f, 15f + Random.Range(-3f, 3f));
+                Vector3 spawn = enemyBase + new Vector3(Random.Range(-8f, 8f), 0f, Random.Range(-8f, 8f));
                 RtsUnit unit = game.CreateUnit(RtsTeam.Enemy, UnitKind.Rifleman, spawn);
                 unit.IssueAttack(target);
             }
 
             if (waveIndex % 2 == 0)
             {
-                RtsUnit tank = game.CreateUnit(RtsTeam.Enemy, UnitKind.Tank, new Vector3(23f + Random.Range(-2f, 2f), 0f, 12f + Random.Range(-2f, 2f)));
+                RtsUnit tank = game.CreateUnit(RtsTeam.Enemy, UnitKind.Tank, enemyBase + new Vector3(Random.Range(-7f, 7f), 0f, Random.Range(-7f, 7f)));
                 tank.IssueAttack(target);
             }
 
-            game.SpawnFloatingText("Enemy wave", new Vector3(20f, 0f, 16f) + Vector3.up * 3f, new Color(1f, 0.5f, 0.35f));
+            game.SpawnFloatingText("Enemy wave", enemyBase + Vector3.up * 3f, new Color(1f, 0.5f, 0.35f));
         }
 
         private void OrderIdleEnemies()

@@ -121,8 +121,8 @@ namespace QuestCommandRTS
 
     public static class RtsBalance
     {
-        public const float MapHalfSize = 34f;
-        public const float BuildRadius = 16f;
+        public const float MapHalfSize = 112f;
+        public const float BuildRadius = 28f;
 
         public static UnitStats GetUnit(UnitKind kind)
         {

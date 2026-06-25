@@ -468,20 +468,20 @@ namespace QuestCommandRTS
             Vector3 position = cameraTransform.position;
             if (move.sqrMagnitude > 0.01f)
             {
-                float speed = Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift) ? 25f : 15f;
+                float speed = Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift) ? 54f : 32f;
                 position += move.normalized * speed * Time.deltaTime;
             }
 
             float scroll = Input.mouseScrollDelta.y;
             if (Mathf.Abs(scroll) > 0.01f)
             {
-                position += cameraTransform.forward * scroll * 3.2f;
+                position += cameraTransform.forward * scroll * 5.6f;
             }
 
-            position.y = Mathf.Clamp(position.y, 16f, 42f);
-            float cameraLimit = RtsBalance.MapHalfSize - 6f;
+            position.y = Mathf.Clamp(position.y, 18f, 92f);
+            float cameraLimit = RtsBalance.MapHalfSize - 8f;
             position.x = Mathf.Clamp(position.x, -cameraLimit, cameraLimit);
-            position.z = Mathf.Clamp(position.z, -cameraLimit - 8f, cameraLimit);
+            position.z = Mathf.Clamp(position.z, -cameraLimit - 18f, cameraLimit);
             cameraTransform.position = position;
         }
 
