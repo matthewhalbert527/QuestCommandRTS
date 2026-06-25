@@ -261,9 +261,9 @@ namespace QuestCommandRTS
                 return false;
             }
 
-            RtsUnit unit = game.CreateUnit(RtsTeam.Enemy, kind, GetSpawnPoint(producer));
+            RtsUnit unit = producer.SpawnProducedUnit(kind, null);
             RtsEntity target = game.FindPlayerPrimaryTarget();
-            if (target != null)
+            if (unit != null && target != null)
             {
                 unit.IssueAttackMove(target.transform.position + new Vector3(Random.Range(-6f, 6f), 0f, Random.Range(-6f, 6f)));
             }
@@ -456,16 +456,6 @@ namespace QuestCommandRTS
             }
 
             return total;
-        }
-
-        private static Vector3 GetSpawnPoint(RtsStructure producer)
-        {
-            Vector3 forward = producer.transform.forward.sqrMagnitude > 0.01f ? producer.transform.forward : Vector3.back;
-            Vector3 point = producer.transform.position + forward * (producer.FootprintRadius + 2.4f);
-            point.x += Random.Range(-0.9f, 0.9f);
-            point.z += Random.Range(-0.9f, 0.9f);
-            point.y = 0f;
-            return point;
         }
 
         private static Vector3 GetEnemyBuildSlot(StructureKind kind, int slotIndex)

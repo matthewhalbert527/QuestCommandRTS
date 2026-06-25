@@ -401,6 +401,101 @@ namespace QuestCommandRTS.Editor
         }
 
         [Test]
+        public void GeneratedUnitsInstallProceduralMotionRigs()
+        {
+            RtsGame game = CreateInitializedGame(RtsRuntimeMode.Desktop);
+
+            RtsUnit rifleman = game.CreateUnit(RtsTeam.Player, UnitKind.Rifleman, new Vector3(-52f, 0f, -50f));
+            RtsUnit medium = game.CreateUnit(RtsTeam.Player, UnitKind.MediumTank, new Vector3(-48f, 0f, -50f));
+            RtsUnit harvester = game.CreateUnit(RtsTeam.Player, UnitKind.Harvester, new Vector3(-44f, 0f, -50f));
+
+            RtsUnitVisualAnimator infantryAnimator = rifleman.GetComponent<RtsUnitVisualAnimator>();
+            RtsUnitVisualAnimator tankAnimator = medium.GetComponent<RtsUnitVisualAnimator>();
+            RtsUnitVisualAnimator harvesterAnimator = harvester.GetComponent<RtsUnitVisualAnimator>();
+
+            Assert.IsNotNull(infantryAnimator);
+            Assert.IsTrue(infantryAnimator.HasLegRigForTests);
+            Assert.IsFalse(infantryAnimator.HasTurretRigForTests);
+            Assert.IsNotNull(tankAnimator);
+            Assert.IsTrue(tankAnimator.HasWheelRigForTests);
+            Assert.IsTrue(tankAnimator.HasTurretRigForTests);
+            Assert.IsNotNull(harvesterAnimator);
+            Assert.IsTrue(harvesterAnimator.HasWheelRigForTests);
+            Assert.IsFalse(harvesterAnimator.HasTurretRigForTests);
+        }
+
+        [Test]
+        public void ProceduralVisualRigsAnimateMovementAndTurretAim()
+        {
+            RtsGame game = CreateInitializedGame(RtsRuntimeMode.Desktop);
+
+            RtsUnit rifleman = game.CreateUnit(RtsTeam.Player, UnitKind.Rifleman, new Vector3(-52f, 0f, -52f));
+            RtsUnitVisualAnimator infantryAnimator = rifleman.GetComponent<RtsUnitVisualAnimator>();
+            Transform leg = infantryAnimator.FirstLegForTests;
+            Quaternion legStart = leg.localRotation;
+
+            rifleman.transform.position += rifleman.transform.forward * 1.2f;
+            infantryAnimator.TickVisualsForTests(0.2f);
+            Assert.Greater(Quaternion.Angle(legStart, leg.localRotation), 1f);
+
+            RtsUnit tank = game.CreateUnit(RtsTeam.Player, UnitKind.MediumTank, new Vector3(-48f, 0f, -52f));
+            RtsUnit enemy = game.CreateUnit(RtsTeam.Enemy, UnitKind.Rifleman, tank.transform.position + tank.transform.right * 6f);
+            RtsUnitVisualAnimator tankAnimator = tank.GetComponent<RtsUnitVisualAnimator>();
+            Transform wheel = tankAnimator.FirstWheelForTests;
+            Transform turret = tankAnimator.TurretPivotForTests;
+            Quaternion wheelStart = wheel.localRotation;
+            Quaternion turretStart = turret.localRotation;
+
+            tank.transform.position += tank.transform.forward * 1.5f;
+            tank.IssueAttack(enemy);
+            tankAnimator.TickVisualsForTests(0.2f);
+
+            Assert.Greater(Quaternion.Angle(wheelStart, wheel.localRotation), 1f);
+            Assert.Greater(Quaternion.Angle(turretStart, turret.localRotation), 1f);
+        }
+
+        [Test]
+        public void ImportedModelPalettesAreNotOverriddenByTeamTint()
+        {
+            RtsGame game = CreateInitializedGame(RtsRuntimeMode.Desktop);
+
+            RtsUnit tank = game.CreateUnit(RtsTeam.Player, UnitKind.LightTank, new Vector3(-52f, 0f, -54f));
+            Transform model = tank.transform.Find("Light Tank Model");
+            Transform teamPlate = tank.transform.Find("Tank Team Roof Plate");
+            Assert.IsNotNull(model);
+            Assert.IsNotNull(teamPlate);
+
+            Renderer modelRenderer = model.GetComponentInChildren<Renderer>();
+            Renderer teamRenderer = teamPlate.GetComponent<Renderer>();
+            Assert.IsNotNull(modelRenderer);
+            Assert.IsNotNull(teamRenderer);
+            Assert.IsNull(modelRenderer.GetComponent<RtsTeamTintTarget>(), "Imported model renderers should keep their Bastion palette instead of receiving team tint.");
+            Assert.IsNotNull(teamRenderer.GetComponent<RtsTeamTintTarget>(), "Only explicit team plates should receive the team tint property block.");
+        }
+
+        [Test]
+        public void ProducedUnitsStartInsideProductionBuildingAndExit()
+        {
+            RtsGame game = CreateInitializedGame(RtsRuntimeMode.Desktop);
+            ProductionStructure barracks = FindPlayerProduction(game, StructureKind.Barracks);
+            Assert.IsNotNull(barracks);
+
+            RtsUnit produced = barracks.SpawnProducedUnitForTests(UnitKind.Rifleman, null);
+            Assert.IsNotNull(produced);
+
+            Vector3 offset = produced.transform.position - barracks.transform.position;
+            offset.y = 0f;
+            Assert.Less(offset.magnitude, barracks.FootprintRadius, "Produced infantry should begin inside the producer footprint.");
+
+            RtsUnitOrderSaveData order = produced.CaptureOrderState();
+            Assert.AreEqual("Move", order.orderType);
+            Vector3 destination = order.destination.ToVector3();
+            Vector3 exitOffset = destination - barracks.transform.position;
+            exitOffset.y = 0f;
+            Assert.Greater(exitOffset.magnitude, barracks.FootprintRadius + 1.5f, "Produced units should receive an exit movement target outside the building.");
+        }
+
+        [Test]
         public void IdleCombatUnitsAutoAttackNearbyEnemies()
         {
             RtsGame game = CreateInitializedGame(RtsRuntimeMode.Desktop);

@@ -794,6 +794,9 @@ namespace QuestCommandRTS
             }
 
             BuildUnitVisual(root.transform, kind, team);
+            BuildUnitMotionRig(root.transform, kind);
+            RtsUnitVisualAnimator visualAnimator = root.AddComponent<RtsUnitVisualAnimator>();
+            visualAnimator.Initialize(unit, kind);
             unit.Initialize(team, kind);
             RegisterEntity(unit);
             return unit;
@@ -1600,7 +1603,7 @@ namespace QuestCommandRTS
         {
             playerMaterial = CreateTeamMaterial(RtsBalance.TeamColor(RtsTeam.Player));
             enemyMaterial = CreateTeamMaterial(RtsBalance.TeamColor(RtsTeam.Enemy));
-            neutralMaterial = CreateMaterial(new Color(0.42f, 0.4f, 0.34f));
+            neutralMaterial = CreateMaterial(new Color(0.62f, 0.6f, 0.5f));
 
             Texture2D sandGroundTexture = CreateTerrainTexture(
                 "Command RTS Sand Ground Texture",
@@ -1685,13 +1688,13 @@ namespace QuestCommandRTS
                 new Vector2(1.6f, 1.6f));
             resourceMaterial = CreateMaterial(new Color(0.2f, 0.95f, 0.62f));
             depletedResourceMaterial = CreateMaterial(new Color(0.11f, 0.18f, 0.14f));
-            darkMaterial = CreateMaterial(new Color(0.075f, 0.08f, 0.09f));
+            darkMaterial = CreateMaterial(new Color(0.16f, 0.18f, 0.17f));
             vehicleDetailMaterial = CreateTexturedMaterial(
-                new Color(0.28f, 0.32f, 0.27f),
+                new Color(0.42f, 0.47f, 0.39f),
                 armorPlateTexture,
                 new Vector2(2.2f, 2.2f));
             structureDetailMaterial = CreateTexturedMaterial(
-                new Color(0.22f, 0.26f, 0.22f),
+                new Color(0.38f, 0.43f, 0.36f),
                 armorPlateTexture,
                 new Vector2(3.2f, 3.2f));
         }
@@ -1731,7 +1734,8 @@ namespace QuestCommandRTS
         private void SetupLight()
         {
             RenderSettings.ambientMode = UnityEngine.Rendering.AmbientMode.Flat;
-            RenderSettings.ambientLight = new Color(0.34f, 0.36f, 0.38f);
+            RenderSettings.ambientLight = new Color(0.54f, 0.56f, 0.58f);
+            RenderSettings.reflectionIntensity = 0.42f;
 
             if (Object.FindObjectOfType<Light>() == null)
             {
@@ -1739,7 +1743,7 @@ namespace QuestCommandRTS
                 lightObject.transform.SetParent(transform, false);
                 Light light = lightObject.AddComponent<Light>();
                 light.type = LightType.Directional;
-                light.intensity = 1.35f;
+                light.intensity = 1.58f;
                 lightObject.transform.rotation = Quaternion.Euler(58f, -32f, 0f);
             }
         }
@@ -2013,11 +2017,7 @@ namespace QuestCommandRTS
                 DestroyRuntimeObject(collider);
             }
 
-            foreach (Renderer renderer in model.GetComponentsInChildren<Renderer>())
-            {
-                renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
-                renderer.receiveShadows = false;
-            }
+            ConfigureImportedRenderers(model, GetImportedUnitMaterialBoost(kind));
 
             CreateInfantryReadabilityPanels(root, teamMaterial);
             return true;
@@ -2042,11 +2042,7 @@ namespace QuestCommandRTS
                 DestroyRuntimeObject(collider);
             }
 
-            foreach (Renderer renderer in model.GetComponentsInChildren<Renderer>())
-            {
-                renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
-                renderer.receiveShadows = false;
-            }
+            ConfigureImportedRenderers(model, new Color(1.18f, 1.2f, 1.08f, 1f));
 
             CreateHarvesterReadabilityPanels(root, teamMaterial);
             return true;
@@ -2095,11 +2091,7 @@ namespace QuestCommandRTS
                 DestroyRuntimeObject(collider);
             }
 
-            foreach (Renderer renderer in model.GetComponentsInChildren<Renderer>())
-            {
-                renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
-                renderer.receiveShadows = false;
-            }
+            ConfigureImportedRenderers(model, GetImportedUnitMaterialBoost(kind));
 
             CreateTankReadabilityPanels(root, kind, teamMaterial);
             return true;
@@ -2126,6 +2118,122 @@ namespace QuestCommandRTS
                     CreatePrimitive(PrimitiveType.Cylinder, root, "Medium Barrel", new Vector3(0f, 0.9f, 0.9f), new Vector3(0.16f, 0.68f, 0.16f), darkMaterial).transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
                     CreatePrimitive(PrimitiveType.Cube, root, "Passenger Platform", new Vector3(0.62f, 0.72f, -0.28f), new Vector3(0.38f, 0.08f, 0.48f), darkMaterial);
                     break;
+            }
+        }
+
+        private void BuildUnitMotionRig(Transform root, UnitKind kind)
+        {
+            kind = RtsBalance.NormalizeUnitKind(kind);
+            if (RtsBalance.IsInfantry(kind))
+            {
+                CreateInfantryMotionRig(root);
+                return;
+            }
+
+            if (RtsBalance.IsTank(kind))
+            {
+                CreateVehicleWheelRig(root, kind);
+                CreateTankTurretMotionRig(root, kind);
+                return;
+            }
+
+            if (kind == UnitKind.Harvester)
+            {
+                CreateVehicleWheelRig(root, kind);
+            }
+        }
+
+        private void CreateInfantryMotionRig(Transform root)
+        {
+            CreatePrimitive(PrimitiveType.Cube, root, "Walk Leg L", new Vector3(-0.13f, 0.34f, -0.03f), new Vector3(0.12f, 0.52f, 0.12f), darkMaterial);
+            CreatePrimitive(PrimitiveType.Cube, root, "Walk Leg R", new Vector3(0.13f, 0.34f, -0.03f), new Vector3(0.12f, 0.52f, 0.12f), darkMaterial);
+        }
+
+        private void CreateVehicleWheelRig(Transform root, UnitKind kind)
+        {
+            GetVehicleWheelLayout(kind, out float sideOffset, out float centerY, out float forwardZ, out float wheelRadius, out float wheelThickness);
+            CreateWheel(root, "Roll Wheel LF", new Vector3(-sideOffset, centerY, forwardZ), wheelRadius, wheelThickness);
+            CreateWheel(root, "Roll Wheel RF", new Vector3(sideOffset, centerY, forwardZ), wheelRadius, wheelThickness);
+            CreateWheel(root, "Roll Wheel LR", new Vector3(-sideOffset, centerY, -forwardZ), wheelRadius, wheelThickness);
+            CreateWheel(root, "Roll Wheel RR", new Vector3(sideOffset, centerY, -forwardZ), wheelRadius, wheelThickness);
+        }
+
+        private void CreateWheel(Transform root, string name, Vector3 localPosition, float radius, float thickness)
+        {
+            GameObject wheel = CreatePrimitive(PrimitiveType.Cylinder, root, name, localPosition, new Vector3(radius, thickness, radius), darkMaterial);
+            wheel.transform.localRotation = Quaternion.Euler(0f, 0f, 90f);
+        }
+
+        private void CreateTankTurretMotionRig(Transform root, UnitKind kind)
+        {
+            GetTankTurretRigLayout(kind, out Vector3 pivotPosition, out Vector3 capSize, out Vector3 barrelPosition, out Vector3 barrelScale);
+            GameObject pivot = new GameObject("Animated Turret Pivot");
+            pivot.transform.SetParent(root, false);
+            pivot.transform.localPosition = pivotPosition;
+            pivot.transform.localRotation = Quaternion.identity;
+
+            CreatePrimitive(PrimitiveType.Cube, pivot.transform, "Animated Turret Cap", Vector3.zero, capSize, vehicleDetailMaterial);
+            GameObject barrel = CreatePrimitive(PrimitiveType.Cylinder, pivot.transform, "Animated Turret Barrel", barrelPosition, barrelScale, darkMaterial);
+            barrel.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
+        }
+
+        private static void GetVehicleWheelLayout(UnitKind kind, out float sideOffset, out float centerY, out float forwardZ, out float wheelRadius, out float wheelThickness)
+        {
+            switch (RtsBalance.NormalizeUnitKind(kind))
+            {
+                case UnitKind.LightTank:
+                    sideOffset = 0.68f;
+                    centerY = 0.32f;
+                    forwardZ = 0.68f;
+                    wheelRadius = 0.2f;
+                    wheelThickness = 0.14f;
+                    return;
+                case UnitKind.HeavyTank:
+                    sideOffset = 1.08f;
+                    centerY = 0.42f;
+                    forwardZ = 1.08f;
+                    wheelRadius = 0.28f;
+                    wheelThickness = 0.18f;
+                    return;
+                case UnitKind.Harvester:
+                    sideOffset = 0.78f;
+                    centerY = 0.34f;
+                    forwardZ = 0.76f;
+                    wheelRadius = 0.24f;
+                    wheelThickness = 0.16f;
+                    return;
+                default:
+                    sideOffset = 0.84f;
+                    centerY = 0.36f;
+                    forwardZ = 0.86f;
+                    wheelRadius = 0.24f;
+                    wheelThickness = 0.16f;
+                    return;
+            }
+        }
+
+        private static void GetTankTurretRigLayout(UnitKind kind, out Vector3 pivotPosition, out Vector3 capSize, out Vector3 barrelPosition, out Vector3 barrelScale)
+        {
+            switch (RtsBalance.NormalizeUnitKind(kind))
+            {
+                case UnitKind.LightTank:
+                    pivotPosition = new Vector3(0f, 0.9f, 0.05f);
+                    capSize = new Vector3(0.62f, 0.16f, 0.48f);
+                    barrelPosition = new Vector3(0f, 0f, 0.42f);
+                    barrelScale = new Vector3(0.075f, 0.48f, 0.075f);
+                    return;
+                case UnitKind.HeavyTank:
+                    pivotPosition = new Vector3(0f, 1.24f, 0.08f);
+                    capSize = new Vector3(1.05f, 0.22f, 0.78f);
+                    barrelPosition = new Vector3(0f, 0f, 0.68f);
+                    barrelScale = new Vector3(0.1f, 0.74f, 0.1f);
+                    return;
+                default:
+                    pivotPosition = new Vector3(0f, 1.02f, 0.08f);
+                    capSize = new Vector3(0.82f, 0.18f, 0.62f);
+                    barrelPosition = new Vector3(0f, 0f, 0.54f);
+                    barrelScale = new Vector3(0.088f, 0.6f, 0.088f);
+                    return;
             }
         }
 
@@ -2352,14 +2460,61 @@ namespace QuestCommandRTS
                 DestroyRuntimeObject(collider);
             }
 
-            foreach (Renderer renderer in model.GetComponentsInChildren<Renderer>())
-            {
-                renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
-                renderer.receiveShadows = false;
-            }
+            ConfigureImportedRenderers(model, GetImportedStructureMaterialBoost(kind));
 
             CreateStructureReadabilityPanels(root, kind, teamMaterial);
             return true;
+        }
+
+        private static void ConfigureImportedRenderers(GameObject model, Color materialBoost)
+        {
+            Renderer[] renderers = model.GetComponentsInChildren<Renderer>();
+            MaterialPropertyBlock block = new MaterialPropertyBlock();
+            for (int i = 0; i < renderers.Length; i++)
+            {
+                Renderer renderer = renderers[i];
+                renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+                renderer.receiveShadows = false;
+                renderer.GetPropertyBlock(block);
+                block.SetColor("_Color", materialBoost);
+                block.SetColor("_BaseColor", materialBoost);
+                renderer.SetPropertyBlock(block);
+                block.Clear();
+            }
+        }
+
+        private static Color GetImportedUnitMaterialBoost(UnitKind kind)
+        {
+            if (RtsBalance.IsInfantry(kind))
+            {
+                return new Color(1.24f, 1.25f, 1.12f, 1f);
+            }
+
+            switch (RtsBalance.NormalizeUnitKind(kind))
+            {
+                case UnitKind.HeavyTank:
+                    return new Color(1.28f, 1.28f, 1.14f, 1f);
+                case UnitKind.LightTank:
+                    return new Color(1.22f, 1.24f, 1.12f, 1f);
+                default:
+                    return new Color(1.25f, 1.26f, 1.13f, 1f);
+            }
+        }
+
+        private static Color GetImportedStructureMaterialBoost(StructureKind kind)
+        {
+            switch (kind)
+            {
+                case StructureKind.CommandCenter:
+                case StructureKind.WarFactory:
+                    return new Color(1.34f, 1.34f, 1.16f, 1f);
+                case StructureKind.Turret:
+                case StructureKind.GunTower:
+                case StructureKind.AdvancedGunTower:
+                    return new Color(1.3f, 1.3f, 1.14f, 1f);
+                default:
+                    return new Color(1.26f, 1.28f, 1.12f, 1f);
+            }
         }
 
         private void CreateStructureReadabilityPanels(Transform root, StructureKind kind, Material teamMaterial)
@@ -2605,6 +2760,10 @@ namespace QuestCommandRTS
             primitive.transform.localPosition = localPosition;
             primitive.transform.localScale = localScale;
             primitive.GetComponent<Renderer>().sharedMaterial = material;
+            if (material == playerMaterial || material == enemyMaterial)
+            {
+                primitive.AddComponent<RtsTeamTintTarget>();
+            }
 
             Collider collider = primitive.GetComponent<Collider>();
             if (collider != null)

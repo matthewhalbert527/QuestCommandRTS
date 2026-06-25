@@ -92,11 +92,8 @@ namespace QuestCommandRTS
                 {
                     UnitKind completed = activeKind.Value;
                     activeKind = null;
-                    RtsUnit unit = RtsGame.Instance.CreateUnit(Team, completed, GetSpawnPoint());
-                    if (unit != null && Team == RtsTeam.Player && HasRallyPoint)
-                    {
-                        unit.IssueMove(RallyPoint + Random.insideUnitSphere * 1.25f);
-                    }
+                    Vector3? rallyPoint = Team == RtsTeam.Player && HasRallyPoint ? RallyPoint + Random.insideUnitSphere * 1.25f : (Vector3?)null;
+                    SpawnProducedUnit(completed, rallyPoint);
 
                     StartNextItem();
                 }
@@ -213,6 +210,21 @@ namespace QuestCommandRTS
                 StartNextItem();
             }
         }
+
+        public RtsUnit SpawnProducedUnitForTests(UnitKind completed, Vector3? rallyPoint)
+        {
+            return SpawnProducedUnit(completed, rallyPoint);
+        }
+
+        public Vector3 GetProductionSpawnPointForTests(UnitKind kind)
+        {
+            return GetProductionSpawnPoint(kind);
+        }
+
+        public Vector3 GetProductionExitPointForTests(UnitKind kind)
+        {
+            return GetProductionExitPoint(kind);
+        }
 #endif
 
         public RtsProductionSaveData CaptureProductionState()
@@ -290,6 +302,26 @@ namespace QuestCommandRTS
             RefreshRallyVisual();
         }
 
+        public RtsUnit SpawnProducedUnit(UnitKind completed, Vector3? rallyPoint)
+        {
+            if (!RtsGame.HasInstance)
+            {
+                return null;
+            }
+
+            Vector3 spawnPoint = GetProductionSpawnPoint(completed);
+            RtsUnit unit = RtsGame.Instance.CreateUnit(Team, completed, spawnPoint);
+            if (unit == null)
+            {
+                return null;
+            }
+
+            Vector3 exitPoint = GetProductionExitPoint(completed);
+            Vector3 moveTarget = rallyPoint.HasValue ? RtsGame.Instance.ClampWorldPoint(rallyPoint.Value) : exitPoint;
+            unit.IssueMove(moveTarget);
+            return unit;
+        }
+
         public string GetQueueSummary()
         {
             if (activeKind == null)
@@ -326,14 +358,25 @@ namespace QuestCommandRTS
             activeRemaining = activeDuration;
         }
 
-        private Vector3 GetSpawnPoint()
+        private Vector3 GetProductionSpawnPoint(UnitKind kind)
         {
             Vector3 forward = transform.forward.sqrMagnitude > 0.01f ? transform.forward : Vector3.forward;
-            Vector3 point = transform.position + forward * (FootprintRadius + 2.2f);
-            point.x += Random.Range(-0.8f, 0.8f);
-            point.z += Random.Range(-0.8f, 0.8f);
+            Vector3 right = transform.right.sqrMagnitude > 0.01f ? transform.right : Vector3.right;
+            float interiorOffset = RtsBalance.IsInfantry(kind) ? FootprintRadius * 0.22f : FootprintRadius * 0.1f;
+            float lateralJitter = RtsBalance.IsInfantry(kind) ? 0.28f : 0.12f;
+            Vector3 point = transform.position + forward * interiorOffset + right * Random.Range(-lateralJitter, lateralJitter);
             point.y = 0f;
-            return point;
+            return RtsGame.HasInstance ? RtsGame.Instance.ClampWorldPoint(point) : point;
+        }
+
+        private Vector3 GetProductionExitPoint(UnitKind kind)
+        {
+            Vector3 forward = transform.forward.sqrMagnitude > 0.01f ? transform.forward : Vector3.forward;
+            Vector3 right = transform.right.sqrMagnitude > 0.01f ? transform.right : Vector3.right;
+            float clearance = RtsBalance.IsInfantry(kind) ? 2.4f : 3.4f;
+            Vector3 point = transform.position + forward * (FootprintRadius + clearance) + right * Random.Range(-0.45f, 0.45f);
+            point.y = 0f;
+            return RtsGame.HasInstance ? RtsGame.Instance.ClampWorldPoint(point) : point;
         }
 
         private void EnsureRallyVisual()

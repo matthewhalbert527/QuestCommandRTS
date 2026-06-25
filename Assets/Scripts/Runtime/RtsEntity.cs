@@ -323,11 +323,17 @@ namespace QuestCommandRTS
 
         protected void ApplyTeamTint()
         {
-            Renderer[] renderers = GetComponentsInChildren<Renderer>();
+            RtsTeamTintTarget[] tintTargets = GetComponentsInChildren<RtsTeamTintTarget>(true);
             Color color = RtsBalance.TeamColor(Team);
 
-            foreach (Renderer renderer in renderers)
+            for (int i = 0; i < tintTargets.Length; i++)
             {
+                Renderer renderer = tintTargets[i] != null ? tintTargets[i].GetComponent<Renderer>() : null;
+                if (renderer == null)
+                {
+                    continue;
+                }
+
                 if (renderer == selectionRing)
                 {
                     continue;

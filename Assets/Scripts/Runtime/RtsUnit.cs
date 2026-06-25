@@ -21,6 +21,7 @@ namespace QuestCommandRTS
         protected RtsEntity attackTarget;
         protected MediumTankUnit boardingTarget;
         protected RtsEntity repairTarget;
+        public RtsEntity CurrentAttackTargetForVisuals => attackTarget != null && attackTarget.IsAlive ? attackTarget : null;
 
         private float nextAttackTime;
         private float nextAwarenessScanTime;
