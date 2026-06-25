@@ -32,11 +32,8 @@ namespace QuestCommandRTS
             HeadCamera.nearClipPlane = settings.CameraNearClipSimulationUnits;
             HeadCamera.farClipPlane = settings.CameraFarClipSimulationUnits;
             HeadCamera.stereoTargetEye = StereoTargetEyeMask.Both;
-
-            if (Camera.main == null)
-            {
-                HeadCamera.gameObject.tag = "MainCamera";
-            }
+            HeadCamera.gameObject.tag = "MainCamera";
+            DisableCompetingCameras(HeadCamera);
 
             if (Head.GetComponent<AudioListener>() == null)
             {
@@ -114,6 +111,25 @@ namespace QuestCommandRTS
 
             reticle.SetActive(false);
             return reticle;
+        }
+
+        private static void DisableCompetingCameras(Camera activeCamera)
+        {
+            Camera[] cameras = Object.FindObjectsOfType<Camera>();
+            for (int i = 0; i < cameras.Length; i++)
+            {
+                Camera camera = cameras[i];
+                if (camera == null || camera == activeCamera)
+                {
+                    continue;
+                }
+
+                camera.enabled = false;
+                if (camera.CompareTag("MainCamera"))
+                {
+                    camera.gameObject.tag = "Untagged";
+                }
+            }
         }
     }
 }

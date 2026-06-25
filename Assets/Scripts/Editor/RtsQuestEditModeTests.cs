@@ -58,6 +58,21 @@ namespace QuestCommandRTS.Editor
         }
 
         [Test]
+        public void ForcedQuestInitializationMakesHeadCameraMainAndDisablesSceneCameras()
+        {
+            GameObject sceneCameraObject = new GameObject("Scene Main Camera");
+            sceneCameraObject.tag = "MainCamera";
+            Camera sceneCamera = sceneCameraObject.AddComponent<Camera>();
+
+            RtsGame game = CreateInitializedGame(RtsRuntimeMode.QuestVr);
+
+            Assert.IsFalse(sceneCamera.enabled);
+            Assert.AreEqual("Untagged", sceneCameraObject.tag);
+            Assert.AreEqual("MainCamera", game.QuestRig.HeadCamera.gameObject.tag);
+            Assert.AreSame(game.QuestRig.HeadCamera, Camera.main);
+        }
+
+        [Test]
         public void QuestInitializationScalesCameraClipPlanesWithTabletop()
         {
             RtsGame game = CreateInitializedGame(RtsRuntimeMode.QuestVr);
