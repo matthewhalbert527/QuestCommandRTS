@@ -121,6 +121,96 @@ namespace QuestCommandRTS.Editor
         }
 
         [Test]
+        public void ProfileSettingsClampInvalidValuesOnLoadAndSave()
+        {
+            string tempPath = Path.Combine(Path.GetTempPath(), "QuestCommandRTS-Profile-" + Guid.NewGuid().ToString("N"));
+            string settingsPath = Path.Combine(tempPath, "profile-settings.json");
+
+            try
+            {
+                Directory.CreateDirectory(tempPath);
+                File.WriteAllText(settingsPath, "{ \"schemaVersion\": 1, \"masterVolume\": 2.5, \"musicVolume\": -1, \"effectsVolume\": 4, \"pointerLength\": -9, \"tabletopScale\": 2, \"tabletopHeight\": -3, \"uiScale\": 0.1, \"qualityPreset\": \"Ultra\" }");
+
+                RtsProfileSettings settings = new RtsProfileSettings(settingsPath);
+                Assert.IsTrue(settings.TryLoad(out string error), error);
+                Assert.AreEqual(1f, settings.Data.masterVolume, 0.001f);
+                Assert.AreEqual(0f, settings.Data.musicVolume, 0.001f);
+                Assert.AreEqual(1f, settings.Data.effectsVolume, 0.001f);
+                Assert.AreEqual(3.2f, settings.Data.pointerLength, 0.001f);
+                Assert.AreEqual(1.5f, settings.Data.tabletopScale, 0.001f);
+                Assert.AreEqual(0.82f, settings.Data.tabletopHeight, 0.001f);
+                Assert.AreEqual(0.75f, settings.Data.uiScale, 0.001f);
+                Assert.AreEqual("Balanced", settings.Data.qualityPreset);
+
+                settings.Data.masterVolume = 7f;
+                settings.Data.qualityPreset = "quality";
+                Assert.IsTrue(settings.TrySave(out error), error);
+                Assert.IsFalse(File.Exists(settingsPath + ".tmp"));
+
+                RtsProfileSettings restored = new RtsProfileSettings(settingsPath);
+                Assert.IsTrue(restored.TryLoad(out error), error);
+                Assert.AreEqual(1f, restored.Data.masterVolume, 0.001f);
+                Assert.AreEqual("Quality", restored.Data.qualityPreset);
+            }
+            finally
+            {
+                if (Directory.Exists(tempPath))
+                {
+                    Directory.Delete(tempPath, true);
+                }
+            }
+        }
+
+        [Test]
+        public void ProfileSettingsRejectFutureSchemaWithoutCrashing()
+        {
+            string tempPath = Path.Combine(Path.GetTempPath(), "QuestCommandRTS-Profile-" + Guid.NewGuid().ToString("N"));
+            string settingsPath = Path.Combine(tempPath, "profile-settings.json");
+
+            try
+            {
+                Directory.CreateDirectory(tempPath);
+                File.WriteAllText(settingsPath, "{ \"schemaVersion\": 99, \"masterVolume\": 0.25 }");
+
+                RtsProfileSettings settings = new RtsProfileSettings(settingsPath);
+                Assert.IsFalse(settings.TryLoad(out string error));
+                Assert.IsTrue(error.Contains("newer"));
+                Assert.AreEqual(RtsProfileSettingsData.CurrentSchemaVersion, settings.Data.schemaVersion);
+                Assert.AreEqual(1f, settings.Data.masterVolume, 0.001f);
+            }
+            finally
+            {
+                if (Directory.Exists(tempPath))
+                {
+                    Directory.Delete(tempPath, true);
+                }
+            }
+        }
+
+        [Test]
+        public void QuestTabletopSettingsApplyProfileScaleHeightPointerAndUi()
+        {
+            GameObject root = new GameObject("Quest Settings Test");
+            QuestTabletopSettings settings = root.AddComponent<QuestTabletopSettings>();
+            RtsProfileSettingsData profile = new RtsProfileSettingsData
+            {
+                tabletopScale = 1.25f,
+                tabletopHeight = 1.1f,
+                pointerLength = 4.5f,
+                uiScale = 1.2f
+            };
+
+            settings.ApplyProfile(profile);
+
+            Assert.AreEqual(100.8f, settings.SimulationUnitsPerMeter, 0.001f);
+            Assert.AreEqual(1.1f, settings.BoardHeightMeters, 0.001f);
+            Assert.AreEqual(4.5f, settings.RayLengthMeters, 0.001f);
+            Assert.AreEqual(2.222f, settings.BattlefieldWidthMeters, 0.01f);
+            Assert.AreEqual(0.696f, settings.StatusPanelSizeMeters.x, 0.001f);
+            Assert.AreEqual(0.624f, settings.CommandConsoleSizeMeters.y, 0.001f);
+        }
+
+        [Test]
         public void SaveServiceWritesAndLoadsManualSlotFromFileStore()
         {
             string tempPath = Path.Combine(Path.GetTempPath(), "QuestCommandRTS-" + Guid.NewGuid().ToString("N"));

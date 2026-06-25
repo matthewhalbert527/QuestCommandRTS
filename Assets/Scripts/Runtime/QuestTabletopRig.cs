@@ -17,6 +17,7 @@ namespace QuestCommandRTS
         public void Initialize(RtsGame game, RtsCommandDispatcher dispatcher)
         {
             settings = gameObject.AddComponent<QuestTabletopSettings>();
+            settings.ApplyProfile(game != null && game.ProfileSettings != null ? game.ProfileSettings.Data : null);
 
             GameObject rigObject = new GameObject("Quest Tabletop Rig");
             RigRoot = rigObject.transform;

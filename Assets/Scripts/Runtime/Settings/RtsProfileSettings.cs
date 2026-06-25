@@ -7,19 +7,59 @@ namespace QuestCommandRTS
     [Serializable]
     public sealed class RtsProfileSettingsData
     {
-        public int schemaVersion = 1;
+        public const int CurrentSchemaVersion = 1;
+
+        public int schemaVersion = CurrentSchemaVersion;
         public float masterVolume = 1f;
         public float musicVolume = 0.7f;
         public float effectsVolume = 0.9f;
         public bool hapticsEnabled = true;
         public bool leftHandedMode;
-        public float pointerLength = 80f;
+        public float pointerLength = 3.2f;
         public float tabletopScale = 1f;
-        public float tabletopHeight = 0f;
+        public float tabletopHeight = 0.82f;
         public float uiScale = 1f;
         public bool highContrast;
         public bool reducedFlashing;
         public string qualityPreset = "Balanced";
+
+        public void Normalize()
+        {
+            schemaVersion = CurrentSchemaVersion;
+            masterVolume = Mathf.Clamp01(masterVolume);
+            musicVolume = Mathf.Clamp01(musicVolume);
+            effectsVolume = Mathf.Clamp01(effectsVolume);
+            pointerLength = NormalizePositiveRange(pointerLength, 3.2f, 0.25f, 8f);
+            tabletopScale = NormalizePositiveRange(tabletopScale, 1f, 0.75f, 1.5f);
+            tabletopHeight = NormalizePositiveRange(tabletopHeight, 0.82f, 0.35f, 1.25f);
+            uiScale = NormalizePositiveRange(uiScale, 1f, 0.75f, 1.35f);
+            qualityPreset = NormalizeQualityPreset(qualityPreset);
+        }
+
+        private static float NormalizePositiveRange(float value, float defaultValue, float min, float max)
+        {
+            if (float.IsNaN(value) || float.IsInfinity(value) || value <= 0f)
+            {
+                return defaultValue;
+            }
+
+            return Mathf.Clamp(value, min, max);
+        }
+
+        private static string NormalizeQualityPreset(string value)
+        {
+            if (string.Equals(value, "Performance", StringComparison.OrdinalIgnoreCase))
+            {
+                return "Performance";
+            }
+
+            if (string.Equals(value, "Quality", StringComparison.OrdinalIgnoreCase))
+            {
+                return "Quality";
+            }
+
+            return "Balanced";
+        }
     }
 
     public sealed class RtsProfileSettings
@@ -44,23 +84,38 @@ namespace QuestCommandRTS
             if (!File.Exists(path))
             {
                 Data = new RtsProfileSettingsData();
+                Data.Normalize();
                 return true;
             }
 
             try
             {
-                Data = JsonUtility.FromJson<RtsProfileSettingsData>(File.ReadAllText(path));
-                if (Data == null || Data.schemaVersion > 1)
+                RtsProfileSettingsData loaded = JsonUtility.FromJson<RtsProfileSettingsData>(File.ReadAllText(path));
+                if (loaded == null)
                 {
+                    error = "Profile settings file did not contain valid settings data.";
                     Data = new RtsProfileSettingsData();
+                    Data.Normalize();
+                    return false;
                 }
 
+                if (loaded.schemaVersion > RtsProfileSettingsData.CurrentSchemaVersion)
+                {
+                    error = "Profile settings schema " + loaded.schemaVersion + " is newer than this build supports.";
+                    Data = new RtsProfileSettingsData();
+                    Data.Normalize();
+                    return false;
+                }
+
+                Data = loaded;
+                Data.Normalize();
                 return true;
             }
             catch (Exception exception)
             {
                 error = exception.Message;
                 Data = new RtsProfileSettingsData();
+                Data.Normalize();
                 return false;
             }
         }
@@ -70,8 +125,23 @@ namespace QuestCommandRTS
             error = string.Empty;
             try
             {
-                Directory.CreateDirectory(Path.GetDirectoryName(path));
-                File.WriteAllText(path, JsonUtility.ToJson(Data, true));
+                Data.Normalize();
+                string directory = Path.GetDirectoryName(path);
+                if (!string.IsNullOrEmpty(directory))
+                {
+                    Directory.CreateDirectory(directory);
+                }
+
+                string tempPath = path + ".tmp";
+                string backupPath = path + ".bak";
+                File.WriteAllText(tempPath, JsonUtility.ToJson(Data, true));
+                if (File.Exists(path))
+                {
+                    File.Copy(path, backupPath, true);
+                    File.Delete(path);
+                }
+
+                File.Move(tempPath, path);
                 return true;
             }
             catch (Exception exception)

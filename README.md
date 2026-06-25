@@ -90,6 +90,7 @@ The full battlefield remains approximately 224 simulation units wide. The Quest 
 - `RtsSaveService` captures and restores the generated skirmish state through a versioned JSON envelope with checksum validation.
 - Saved state includes resources, health, orders, production queues, harvest state, fog exploration, active placement, and enemy commander economy/timers.
 - `RtsLifecycleCoordinator` pauses simulation on app pause/focus loss, blocks commands while suspended or saving/loading, hides Quest pointer visuals when input focus is gone, and attempts autosave on pause/focus loss.
+- `RtsProfileSettings` stores versioned player preferences separately from match saves and safely clamps Quest tabletop scale, tabletop height, pointer length, UI scale, volume, and quality preset values before use.
 - Desktop HUD and Quest command console controls expose manual save/load and user pause.
 
 ## Skirmish AI

@@ -33,12 +33,34 @@ namespace QuestCommandRTS
         public float CameraNearClipSimulationUnits => CameraNearClipMeters * SimulationUnitsPerMeter;
         public float CameraFarClipSimulationUnits => CameraFarClipMeters * SimulationUnitsPerMeter;
 
+        public void ApplyProfile(RtsProfileSettingsData profile)
+        {
+            if (profile == null)
+            {
+                ClampValues();
+                return;
+            }
+
+            profile.Normalize();
+            SimulationUnitsPerMeter = 126f / profile.tabletopScale;
+            BoardHeightMeters = profile.tabletopHeight;
+            RayLengthMeters = profile.pointerLength;
+            StatusPanelSizeMeters = new Vector2(0.58f, 0.22f) * profile.uiScale;
+            CommandConsoleSizeMeters = new Vector2(0.74f, 0.52f) * profile.uiScale;
+            ClampValues();
+        }
+
         public Vector3 GetRigRootPosition()
         {
             return InitialRigPosition - Vector3.up * BoardHeightSimulationUnits;
         }
 
         private void OnValidate()
+        {
+            ClampValues();
+        }
+
+        private void ClampValues()
         {
             SimulationUnitsPerMeter = Mathf.Clamp(SimulationUnitsPerMeter, 50f, 240f);
             BoardHeightMeters = Mathf.Clamp(BoardHeightMeters, 0.35f, 1.25f);
