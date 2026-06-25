@@ -16,18 +16,12 @@ namespace QuestCommandRTS
 
         private void Awake()
         {
-            SphereCollider collider = gameObject.GetComponent<SphereCollider>();
-            if (collider == null)
-            {
-                collider = gameObject.AddComponent<SphereCollider>();
-            }
-
-            collider.radius = 2.4f;
-            collider.center = new Vector3(0f, 0.7f, 0f);
+            EnsureCollider();
         }
 
         public void Initialize(int amount, Material healthy, Material depleted)
         {
+            EnsureCollider();
             Amount = amount;
             MaxAmount = amount;
             healthyMaterial = healthy;
@@ -38,6 +32,7 @@ namespace QuestCommandRTS
 
         public void InitializeForRestore(int maxAmount, int amount, Material healthy, Material depleted)
         {
+            EnsureCollider();
             MaxAmount = Mathf.Max(1, maxAmount);
             Amount = Mathf.Clamp(amount, 0, MaxAmount);
             healthyMaterial = healthy;
@@ -62,6 +57,18 @@ namespace QuestCommandRTS
             Amount -= taken;
             RefreshVisuals();
             return taken;
+        }
+
+        private void EnsureCollider()
+        {
+            SphereCollider collider = gameObject.GetComponent<SphereCollider>();
+            if (collider == null)
+            {
+                collider = gameObject.AddComponent<SphereCollider>();
+            }
+
+            collider.radius = 2.4f;
+            collider.center = new Vector3(0f, 0.7f, 0f);
         }
 
         private void BuildVisuals()

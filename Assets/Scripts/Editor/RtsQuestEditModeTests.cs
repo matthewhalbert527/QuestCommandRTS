@@ -307,6 +307,56 @@ namespace QuestCommandRTS.Editor
         }
 
         [Test]
+        public void QuestControllerPrimaryButtonIssuesContextCommands()
+        {
+            RtsGame game = CreateInitializedGame(RtsRuntimeMode.QuestVr);
+            QuestRtsInputController controller = game.GetComponent<QuestRtsInputController>();
+            Assert.IsNotNull(controller);
+
+            RtsUnit attacker = FindPlayerUnit(game, UnitKind.Rifleman);
+            RtsEntity enemy = game.CreateUnit(RtsTeam.Enemy, UnitKind.Rifleman, attacker.transform.position + new Vector3(7f, 0f, 0f));
+            Physics.SyncTransforms();
+
+            game.ClearSelection();
+            game.SelectEntity(attacker, false);
+            Ray enemyRay = RayAt(enemy);
+            Assert.AreEqual(RtsCommandResult.AttackIssued, controller.ProcessInputFrameForTests(QuestFrame(enemyRay, false, false, true, false, false), false));
+            RtsUnitOrderSaveData attackOrder = attacker.CaptureOrderState();
+            Assert.AreEqual("Attack", attackOrder.orderType);
+            Assert.AreEqual(enemy.PersistentId, attackOrder.targetEntityId);
+            ReleaseButtons(controller, enemyRay);
+
+            HarvesterUnit harvester = (HarvesterUnit)FindPlayerUnit(game, UnitKind.Harvester);
+            ResourceNode resource = game.ResourceNodes[0];
+            game.ClearSelection();
+            game.SelectEntity(harvester, false);
+            Ray resourceRay = RayAtResource(resource);
+            Assert.AreEqual(RtsCommandResult.HarvestIssued, controller.ProcessInputFrameForTests(QuestFrame(resourceRay, false, false, true, false, false), false));
+            RtsHarvesterSaveData harvesterState = harvester.CaptureHarvesterState();
+            Assert.AreEqual(1, harvesterState.state);
+            Assert.AreEqual(resource.PersistentId, harvesterState.targetResourceNodeId);
+            Assert.Greater(harvesterState.homeRefineryEntityId, 0);
+            ReleaseButtons(controller, resourceRay);
+
+            ProductionStructure producer = FindPlayerProduction(game);
+            Vector3 rallyPoint = new Vector3(-42f, 0f, -42f);
+            game.ClearSelection();
+            game.SelectEntity(producer, false);
+            Ray rallyRay = RayAtPoint(rallyPoint);
+            Assert.AreEqual(RtsCommandResult.RallyPointSet, controller.ProcessInputFrameForTests(QuestFrame(rallyRay, false, false, true, false, false), false));
+            Assert.IsTrue(producer.HasRallyPoint);
+            AssertVectorNear(rallyPoint, producer.RallyPoint);
+            ReleaseButtons(controller, rallyRay);
+
+            Vector3 movePoint = new Vector3(-24f, 0f, -34f);
+            game.ClearSelection();
+            game.SelectEntity(attacker, false);
+            Ray moveRay = RayAtPoint(movePoint);
+            Assert.AreEqual(RtsCommandResult.MoveIssued, controller.ProcessInputFrameForTests(QuestFrame(moveRay, false, false, true, false, false), false));
+            Assert.AreEqual("Move", attacker.CaptureOrderState().orderType);
+        }
+
+        [Test]
         public void QuestPointerFeedbackUpdatesLineReticleAndMissState()
         {
             RtsGame game = CreateInitializedGame(RtsRuntimeMode.QuestVr);
@@ -533,9 +583,40 @@ namespace QuestCommandRTS.Editor
             return new Ray(point + Vector3.up * 18f, Vector3.down);
         }
 
+        private static Ray RayAtResource(ResourceNode resource)
+        {
+            Vector3 origin = resource.transform.position + Vector3.up * 18f;
+            Vector3[] offsets =
+            {
+                Vector3.zero,
+                Vector3.forward * 0.75f,
+                Vector3.back * 0.75f,
+                Vector3.left * 0.75f,
+                Vector3.right * 0.75f
+            };
+
+            for (int i = 0; i < offsets.Length; i++)
+            {
+                Ray ray = new Ray(origin + offsets[i], Vector3.down);
+                RaycastHit hit;
+                if (Physics.Raycast(ray, out hit, 500f) && hit.collider.GetComponentInParent<ResourceNode>() == resource)
+                {
+                    return ray;
+                }
+            }
+
+            Assert.Fail("Could not find ray for resource " + resource.PersistentId);
+            return new Ray(origin, Vector3.down);
+        }
+
         private static QuestRtsInputFrame QuestFrame(Ray ray, bool leftTriggerHeld, bool rightTriggerHeld, bool primaryButtonHeld, bool secondaryButtonHeld, bool leftPrimaryButtonHeld)
         {
             return new QuestRtsInputFrame(ray, leftTriggerHeld, rightTriggerHeld, primaryButtonHeld, secondaryButtonHeld, leftPrimaryButtonHeld);
+        }
+
+        private static void ReleaseButtons(QuestRtsInputController controller, Ray ray)
+        {
+            controller.ProcessInputFrameForTests(QuestFrame(ray, false, false, false, false, false), false);
         }
 
         private static void AssertVectorNear(Vector3 expected, Vector3 actual)
@@ -557,6 +638,21 @@ namespace QuestCommandRTS.Editor
             }
 
             Assert.Fail("Missing player entity of type " + type.Name);
+            return null;
+        }
+
+        private static RtsUnit FindPlayerUnit(RtsGame game, UnitKind kind)
+        {
+            for (int i = 0; i < game.Entities.Count; i++)
+            {
+                RtsUnit unit = game.Entities[i] as RtsUnit;
+                if (unit != null && unit.Team == RtsTeam.Player && unit.UnitKind == kind)
+                {
+                    return unit;
+                }
+            }
+
+            Assert.Fail("Missing player unit " + kind);
             return null;
         }
 
