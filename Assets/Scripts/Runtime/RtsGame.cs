@@ -551,7 +551,7 @@ namespace QuestCommandRTS
                 if (structure != null)
                 {
                     SpawnFloatingText("Sold +" + Mathf.RoundToInt(RtsBalance.GetStructure(structure.StructureKind).Cost * 0.5f * structure.HealthPercent), structure.transform.position + Vector3.up * 2.2f, new Color(0.55f, 1f, 0.65f));
-                    Destroy(structure.gameObject);
+                    DestroyRuntimeObject(structure.gameObject);
                 }
             }
 

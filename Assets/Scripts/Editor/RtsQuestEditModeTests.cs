@@ -973,6 +973,55 @@ namespace QuestCommandRTS.Editor
         }
 
         [Test]
+        public void QuestConsoleSelectedTabRepairsDamagedStructureThroughPointer()
+        {
+            RtsGame game = CreateInitializedGame(RtsRuntimeMode.QuestVr);
+            QuestCommandConsole console = game.GetComponent<QuestCommandConsole>();
+            Assert.IsNotNull(console);
+
+            RtsStructure powerPlant = FindStructure(game, RtsTeam.Player, StructureKind.PowerPlant);
+            powerPlant.TakeDamage(100f, null);
+            game.ClearSelection();
+            game.SelectEntity(powerPlant, false);
+
+            float damagedHealth = powerPlant.Health;
+            float missingHealth = powerPlant.MaxHealth - powerPlant.Health;
+            int expectedCost = Mathf.Clamp(Mathf.CeilToInt(missingHealth * 0.22f), 25, 180);
+            int startingCredits = game.Resources.Credits;
+
+            console.SetOpen(true);
+            ClickConsoleButton(console, "Selected Tab");
+            ClickConsoleButton(console, "Repair Button");
+
+            Assert.Greater(powerPlant.Health, damagedHealth);
+            Assert.AreEqual(Mathf.Min(powerPlant.MaxHealth, damagedHealth + expectedCost / 0.22f), powerPlant.Health, 0.01f);
+            Assert.AreEqual(startingCredits - expectedCost, game.Resources.Credits);
+        }
+
+        [Test]
+        public void QuestConsoleSelectedTabSellsSelectedStructureThroughPointer()
+        {
+            RtsGame game = CreateInitializedGame(RtsRuntimeMode.QuestVr);
+            QuestCommandConsole console = game.GetComponent<QuestCommandConsole>();
+            Assert.IsNotNull(console);
+
+            RtsStructure barracks = FindStructure(game, RtsTeam.Player, StructureKind.Barracks);
+            int startingCredits = game.Resources.Credits;
+            int expectedRefund = Mathf.RoundToInt(RtsBalance.GetStructure(StructureKind.Barracks).Cost * 0.5f * barracks.HealthPercent);
+            int startingBarracks = CountPlayerStructures(game, StructureKind.Barracks);
+
+            game.ClearSelection();
+            game.SelectEntity(barracks, false);
+            console.SetOpen(true);
+            ClickConsoleButton(console, "Selected Tab");
+            ClickConsoleButton(console, "Sell Button");
+
+            Assert.AreEqual(startingCredits + expectedRefund, game.Resources.Credits);
+            Assert.AreEqual(startingBarracks - 1, CountPlayerStructures(game, StructureKind.Barracks));
+            Assert.AreEqual(0, game.Selection.Count);
+        }
+
+        [Test]
         public void QuestConsoleNewMatchButtonResetsMatchThroughPointer()
         {
             RtsGame game = CreateInitializedGame(RtsRuntimeMode.QuestVr);
