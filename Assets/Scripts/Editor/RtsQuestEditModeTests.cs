@@ -869,6 +869,26 @@ namespace QuestCommandRTS.Editor
         }
 
         [Test]
+        public void DispatcherGathersOnlyLivingPlayerUnitsForCommands()
+        {
+            RtsGame game = CreateInitializedGame(RtsRuntimeMode.Desktop);
+            game.ClearSelection();
+
+            RtsUnit liveUnit = FindPlayerUnit(game, UnitKind.Rifleman);
+            RtsUnit deadUnit = game.CreateUnit(RtsTeam.Player, UnitKind.Rifleman, liveUnit.transform.position + new Vector3(3f, 0f, 0f));
+            deadUnit.SetHealthForRestore(0f);
+
+            game.SelectEntity(liveUnit, false);
+            game.SelectEntity(deadUnit, true);
+
+            System.Collections.Generic.List<RtsUnit> gathered = new System.Collections.Generic.List<RtsUnit>();
+            game.CommandDispatcher.GatherSelectedControllableUnits(gathered);
+
+            Assert.AreEqual(1, gathered.Count);
+            Assert.AreSame(liveUnit, gathered[0]);
+        }
+
+        [Test]
         public void DispatcherResolvesContextCommandPriority()
         {
             RtsGame game = CreateInitializedGame(RtsRuntimeMode.Desktop);

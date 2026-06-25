@@ -314,7 +314,7 @@ namespace QuestCommandRTS
             for (int i = 0; i < game.Selection.Count; i++)
             {
                 RtsUnit unit = game.Selection[i] as RtsUnit;
-                if (unit != null && unit.Team == RtsTeam.Player)
+                if (unit != null && unit.Team == RtsTeam.Player && unit.IsAlive)
                 {
                     results.Add(unit);
                 }
