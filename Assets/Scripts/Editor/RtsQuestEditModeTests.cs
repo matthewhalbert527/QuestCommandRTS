@@ -170,6 +170,64 @@ namespace QuestCommandRTS.Editor
         }
 
         [Test]
+        public void QuestControllerMapsTriggerSelectionAndAdditiveModifier()
+        {
+            RtsGame game = CreateInitializedGame(RtsRuntimeMode.QuestVr);
+            QuestRtsInputController controller = game.GetComponent<QuestRtsInputController>();
+            Assert.IsNotNull(controller);
+
+            game.ClearSelection();
+            RtsEntity first = FindPlayerEntity(game, typeof(RtsStructure));
+            RtsEntity second = FindPlayerEntity(game, typeof(RtsUnit));
+
+            Assert.AreEqual(RtsCommandResult.SelectionChanged, controller.ProcessInputFrameForTests(QuestFrame(RayAt(first), false, true, false, false, false), false));
+            Assert.AreEqual(1, game.Selection.Count);
+            Assert.AreSame(first, game.Selection[0]);
+
+            Assert.AreEqual(RtsCommandResult.None, controller.ProcessInputFrameForTests(QuestFrame(RayAt(second), false, true, false, false, false), false));
+            Assert.AreEqual(1, game.Selection.Count);
+            Assert.AreSame(first, game.Selection[0]);
+
+            controller.ProcessInputFrameForTests(QuestFrame(RayAt(second), false, false, false, false, false), false);
+            Assert.AreEqual(RtsCommandResult.SelectionChanged, controller.ProcessInputFrameForTests(QuestFrame(RayAt(second), true, true, false, false, false), false));
+            Assert.AreEqual(2, game.Selection.Count);
+            Assert.AreSame(first, game.Selection[0]);
+            Assert.AreSame(second, game.Selection[1]);
+        }
+
+        [Test]
+        public void QuestControllerMapsCommandCancelAndHeldButtonTransitions()
+        {
+            RtsGame game = CreateInitializedGame(RtsRuntimeMode.QuestVr);
+            QuestRtsInputController controller = game.GetComponent<QuestRtsInputController>();
+            Assert.IsNotNull(controller);
+
+            game.ClearSelection();
+            RtsUnit unit = (RtsUnit)FindPlayerEntity(game, typeof(RtsUnit));
+            game.SelectEntity(unit, false);
+
+            Ray terrainRay = RayAtPoint(new Vector3(-24f, 0f, -34f));
+            Assert.AreEqual(RtsCommandResult.MoveIssued, controller.ProcessInputFrameForTests(QuestFrame(terrainRay, false, false, true, false, false), false));
+            Assert.AreEqual("Move", unit.CaptureOrderState().orderType);
+
+            Assert.AreEqual(RtsCommandResult.None, controller.ProcessInputFrameForTests(QuestFrame(RayAtPoint(new Vector3(-18f, 0f, -28f)), false, false, true, false, false), false));
+            Assert.AreEqual("Move", unit.CaptureOrderState().orderType);
+
+            controller.ProcessInputFrameForTests(QuestFrame(terrainRay, false, false, false, false, false), false);
+            Assert.AreEqual(RtsCommandResult.AttackMoveIssued, controller.ProcessInputFrameForTests(QuestFrame(terrainRay, true, false, true, false, false), false));
+            Assert.AreEqual("AttackMove", unit.CaptureOrderState().orderType);
+
+            controller.ProcessInputFrameForTests(QuestFrame(terrainRay, false, false, false, false, false), false);
+            Assert.AreEqual(RtsCommandResult.SelectionCleared, controller.ProcessInputFrameForTests(QuestFrame(terrainRay, false, false, false, true, false), false));
+            Assert.AreEqual(0, game.Selection.Count);
+
+            controller.ProcessInputFrameForTests(QuestFrame(terrainRay, false, false, false, false, false), false);
+            Assert.IsTrue(game.PlayerCommands.RequestConstruction(StructureKind.PowerPlant));
+            Assert.AreEqual(RtsCommandResult.PlacementCanceled, controller.ProcessInputFrameForTests(QuestFrame(terrainRay, false, false, false, true, false), false));
+            Assert.IsFalse(game.BuildManager.IsPlacing);
+        }
+
+        [Test]
         public void ConsoleModelBuildAvailabilityReflectsCreditsTechnologyAndPower()
         {
             RtsGame lowCreditGame = CreateInitializedGame(RtsRuntimeMode.Desktop);
@@ -359,6 +417,16 @@ namespace QuestCommandRTS.Editor
         private static Ray RayAt(RtsEntity entity)
         {
             return new Ray(entity.transform.position + Vector3.up * 18f, Vector3.down);
+        }
+
+        private static Ray RayAtPoint(Vector3 point)
+        {
+            return new Ray(point + Vector3.up * 18f, Vector3.down);
+        }
+
+        private static QuestRtsInputFrame QuestFrame(Ray ray, bool leftTriggerHeld, bool rightTriggerHeld, bool primaryButtonHeld, bool secondaryButtonHeld, bool leftPrimaryButtonHeld)
+        {
+            return new QuestRtsInputFrame(ray, leftTriggerHeld, rightTriggerHeld, primaryButtonHeld, secondaryButtonHeld, leftPrimaryButtonHeld);
         }
 
         private static RtsEntity FindPlayerEntity(RtsGame game, System.Type type)

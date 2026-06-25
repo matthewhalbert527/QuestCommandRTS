@@ -3,6 +3,26 @@ using UnityEngine.XR;
 
 namespace QuestCommandRTS
 {
+    public struct QuestRtsInputFrame
+    {
+        public readonly Ray PointerRay;
+        public readonly bool LeftTriggerHeld;
+        public readonly bool RightTriggerHeld;
+        public readonly bool PrimaryButtonHeld;
+        public readonly bool SecondaryButtonHeld;
+        public readonly bool LeftPrimaryButtonHeld;
+
+        public QuestRtsInputFrame(Ray pointerRay, bool leftTriggerHeld, bool rightTriggerHeld, bool primaryButtonHeld, bool secondaryButtonHeld, bool leftPrimaryButtonHeld)
+        {
+            PointerRay = pointerRay;
+            LeftTriggerHeld = leftTriggerHeld;
+            RightTriggerHeld = rightTriggerHeld;
+            PrimaryButtonHeld = primaryButtonHeld;
+            SecondaryButtonHeld = secondaryButtonHeld;
+            LeftPrimaryButtonHeld = leftPrimaryButtonHeld;
+        }
+    }
+
     public sealed class QuestRtsInputController : MonoBehaviour
     {
         private RtsGame game;
@@ -84,93 +104,135 @@ namespace QuestCommandRTS
             bool secondaryButton = ReadButton(rightDevice, CommonUsages.secondaryButton);
             bool leftPrimaryButton = ReadButton(leftDevice, CommonUsages.primaryButton);
 
-            bool rightTriggerDown = rightTrigger && !previousRightTrigger;
-            bool primaryDown = primaryButton && !previousPrimaryButton;
-            bool secondaryDown = secondaryButton && !previousSecondaryButton;
-            bool leftPrimaryDown = leftPrimaryButton && !previousLeftPrimaryButton;
+            ProcessInputFrame(new QuestRtsInputFrame(ray, leftTriggerHeld, rightTrigger, primaryButton, secondaryButton, leftPrimaryButton), true);
+        }
 
-            previousRightTrigger = rightTrigger;
-            previousPrimaryButton = primaryButton;
-            previousSecondaryButton = secondaryButton;
-            previousLeftPrimaryButton = leftPrimaryButton;
+#if UNITY_EDITOR
+        public RtsCommandResult ProcessInputFrameForTests(QuestRtsInputFrame frame, bool updatePointerFeedback)
+        {
+            return ProcessInputFrame(frame, updatePointerFeedback);
+        }
+#endif
+
+        private RtsCommandResult ProcessInputFrame(QuestRtsInputFrame frame, bool updatePointerFeedback)
+        {
+            if (game == null || dispatcher == null || settings == null)
+            {
+                return RtsCommandResult.None;
+            }
+
+            if (!game.AcceptsSystemInput)
+            {
+                ResetButtonState();
+                SetPointerVisible(false);
+                return RtsCommandResult.None;
+            }
+
+            if (updatePointerFeedback)
+            {
+                SetPointerVisible(true);
+            }
+
+            bool rightTriggerDown = frame.RightTriggerHeld && !previousRightTrigger;
+            bool primaryDown = frame.PrimaryButtonHeld && !previousPrimaryButton;
+            bool secondaryDown = frame.SecondaryButtonHeld && !previousSecondaryButton;
+            bool leftPrimaryDown = frame.LeftPrimaryButtonHeld && !previousLeftPrimaryButton;
+
+            previousRightTrigger = frame.RightTriggerHeld;
+            previousPrimaryButton = frame.PrimaryButtonHeld;
+            previousSecondaryButton = frame.SecondaryButtonHeld;
+            previousLeftPrimaryButton = frame.LeftPrimaryButtonHeld;
 
             if (leftPrimaryDown && commandConsole != null)
             {
                 commandConsole.ToggleOpen();
             }
 
-            bool uiCaptured = commandConsole != null && commandConsole.TryHandlePointer(ray, rightTriggerDown);
+            bool uiCaptured = commandConsole != null && commandConsole.TryHandlePointer(frame.PointerRay, rightTriggerDown);
             Vector3 panelPoint = Vector3.zero;
-            bool panelHit = commandConsole != null && commandConsole.TryGetPanelHit(ray, out panelPoint);
-            if (panelHit)
+            bool panelHit = commandConsole != null && commandConsole.TryGetPanelHit(frame.PointerRay, out panelPoint);
+            if (updatePointerFeedback)
             {
-                UpdatePointer(ray, true, panelPoint, uiColor);
-            }
-            else
-            {
-                RaycastHit hit;
-                bool hasHit = dispatcher.TryGetPointerHit(ray, settings.RayLengthSimulationUnits, out hit);
-                UpdatePointer(ray, hasHit, hit);
+                if (panelHit)
+                {
+                    UpdatePointer(frame.PointerRay, true, panelPoint, uiColor);
+                }
+                else
+                {
+                    RaycastHit hit;
+                    bool hasHit = dispatcher.TryGetPointerHit(frame.PointerRay, settings.RayLengthSimulationUnits, out hit);
+                    UpdatePointer(frame.PointerRay, hasHit, hit);
+                }
             }
 
             if (!uiCaptured && game.BuildManager != null && game.BuildManager.IsPlacing)
             {
-                dispatcher.UpdatePlacement(ray, settings.RayLengthSimulationUnits);
+                dispatcher.UpdatePlacement(frame.PointerRay, settings.RayLengthSimulationUnits);
             }
 
             if (!game.AcceptsPlayerInput)
             {
-                return;
+                return RtsCommandResult.None;
             }
 
             if (game.IsMatchOver)
             {
-                return;
+                return RtsCommandResult.None;
             }
 
             if (game.BuildManager != null && game.BuildManager.IsPlacing)
             {
+                RtsCommandResult placementResult = RtsCommandResult.None;
                 if (primaryDown && !uiCaptured)
                 {
-                    dispatcher.ConfirmPlacement();
+                    placementResult = dispatcher.ConfirmPlacement();
                 }
 
                 if (secondaryDown)
                 {
-                    dispatcher.CancelPlacement();
+                    placementResult = dispatcher.CancelPlacement();
                 }
 
-                return;
+                return placementResult;
             }
 
             if (secondaryDown)
             {
-                if (leftTriggerHeld)
+                if (frame.LeftTriggerHeld)
                 {
-                    dispatcher.StopSelectedUnits();
-                    return;
+                    return dispatcher.StopSelectedUnits();
                 }
 
-                dispatcher.CancelPlacementOrClearSelection();
-                return;
+                return dispatcher.CancelPlacementOrClearSelection();
             }
 
+            RtsCommandResult result = RtsCommandResult.None;
             if (rightTriggerDown && !uiCaptured)
             {
-                dispatcher.SelectFromRay(ray, leftTriggerHeld, settings.RayLengthSimulationUnits);
+                result = dispatcher.SelectFromRay(frame.PointerRay, frame.LeftTriggerHeld, settings.RayLengthSimulationUnits);
             }
 
             if (primaryDown && !uiCaptured)
             {
-                if (leftTriggerHeld)
+                if (frame.LeftTriggerHeld)
                 {
-                    dispatcher.AttackMoveFromRay(ray, settings.RayLengthSimulationUnits);
+                    result = dispatcher.AttackMoveFromRay(frame.PointerRay, settings.RayLengthSimulationUnits);
                 }
                 else
                 {
-                    dispatcher.CommandFromRay(ray, settings.RayLengthSimulationUnits);
+                    result = dispatcher.CommandFromRay(frame.PointerRay, settings.RayLengthSimulationUnits);
                 }
             }
+
+            return result;
+        }
+
+        private void ResetButtonState()
+        {
+            previousRightTrigger = false;
+            previousPrimaryButton = false;
+            previousSecondaryButton = false;
+            previousLeftPrimaryButton = false;
         }
 
         private void UpdatePointer(Ray ray, bool hasHit, RaycastHit hit)
