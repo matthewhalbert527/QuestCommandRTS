@@ -1,5 +1,7 @@
+using System;
 using System.Collections.Generic;
 using UnityEngine;
+using Object = UnityEngine.Object;
 
 namespace QuestCommandRTS
 {
@@ -29,8 +31,13 @@ namespace QuestCommandRTS
         public RtsFogOfWar FogOfWar { get; private set; }
         public RtsCommandDispatcher CommandDispatcher { get; private set; }
         public RtsPlayerCommandService PlayerCommands { get; private set; }
+        public RtsSimulationClock Clock { get; private set; }
+        public RtsLifecycleCoordinator Lifecycle { get; private set; }
+        public RtsSaveService SaveService { get; private set; }
+        public RtsProfileSettings ProfileSettings { get; private set; }
         public RtsRuntimeMode RuntimeMode { get; private set; }
         public QuestTabletopRig QuestRig { get; private set; }
+        public EnemyDirector EnemyDirector { get; private set; }
         public IReadOnlyList<RtsEntity> Entities => entities;
         public IReadOnlyList<RtsEntity> Selection => selection;
         public IReadOnlyList<ResourceNode> ResourceNodes => resourceNodes;
@@ -38,6 +45,7 @@ namespace QuestCommandRTS
         public string StatusMessage { get; private set; } = "Destroy the enemy base.";
         public float MatchTime { get; private set; }
         public bool IsMatchOver => MatchState != RtsMatchState.Running;
+        public bool AcceptsPlayerInput => initialized && Lifecycle != null && Lifecycle.AcceptsInput && Clock != null && !Clock.IsPaused && (SaveService == null || !SaveService.IsBusy);
 
         private readonly List<RtsEntity> entities = new List<RtsEntity>();
         private readonly List<RtsEntity> selection = new List<RtsEntity>();
@@ -56,6 +64,8 @@ namespace QuestCommandRTS
         private Material darkMaterial;
         private bool initialized;
         private float nextObjectiveCheckTime;
+        private int nextEntityId = 1;
+        private int nextResourceNodeId = 1;
 
         private void Awake()
         {
@@ -75,17 +85,26 @@ namespace QuestCommandRTS
 
         private void Update()
         {
-            if (!initialized || IsMatchOver)
+            if (!initialized || Clock == null)
             {
                 return;
             }
 
-            MatchTime += Time.deltaTime;
-
-            if (Time.time >= nextObjectiveCheckTime)
+            using (RtsProfilerMarkers.GameUpdate.Auto())
             {
-                nextObjectiveCheckTime = Time.time + 0.5f;
-                EvaluateMatchState();
+                Clock.Tick(Time.unscaledDeltaTime);
+                MatchTime = Clock.SimulationTime;
+
+                if (IsMatchOver || Clock.IsPaused)
+                {
+                    return;
+                }
+
+                if (Clock.SimulationTime >= nextObjectiveCheckTime)
+                {
+                    nextObjectiveCheckTime = Clock.SimulationTime + 0.5f;
+                    EvaluateMatchState();
+                }
             }
         }
 
@@ -124,6 +143,15 @@ namespace QuestCommandRTS
                 return;
             }
 
+            if (entity.PersistentId <= 0)
+            {
+                entity.AssignPersistentId(AllocateEntityId());
+            }
+            else
+            {
+                nextEntityId = Mathf.Max(nextEntityId, entity.PersistentId + 1);
+            }
+
             entities.Add(entity);
         }
 
@@ -139,6 +167,16 @@ namespace QuestCommandRTS
             {
                 entity.SetSelected(false);
             }
+        }
+
+        public int AllocateEntityId()
+        {
+            return nextEntityId++;
+        }
+
+        public int AllocateResourceNodeId()
+        {
+            return nextResourceNodeId++;
         }
 
         public void ClearSelection()
@@ -682,6 +720,17 @@ namespace QuestCommandRTS
             }
 
             initialized = true;
+            Clock = new RtsSimulationClock();
+            ProfileSettings = RtsProfileSettings.CreateDefault();
+            ProfileSettings.TryLoad(out string profileError);
+            if (!string.IsNullOrEmpty(profileError))
+            {
+                Debug.LogWarning("Profile settings load failed: " + profileError);
+            }
+
+            SaveService = new RtsSaveService(this, RtsSaveFileStore.CreateDefault());
+            Lifecycle = gameObject.AddComponent<RtsLifecycleCoordinator>();
+            Lifecycle.Initialize(this);
             RuntimeMode = RtsRuntimeModeResolver.Resolve();
             PlayerCommands = new RtsPlayerCommandService();
             PlayerCommands.Initialize(this);
@@ -716,10 +765,303 @@ namespace QuestCommandRTS
                 gameObject.AddComponent<RtsHud>().Initialize(this);
             }
 
-            gameObject.AddComponent<EnemyDirector>().Initialize(this);
+            EnemyDirector = gameObject.AddComponent<EnemyDirector>();
+            EnemyDirector.Initialize(this);
 
             RecalculatePower();
             EvaluateMatchState();
+        }
+
+        public RtsMatchSaveData CaptureSaveData()
+        {
+            using (RtsProfilerMarkers.SaveCapture.Auto())
+            {
+                RtsMatchSaveData data = new RtsMatchSaveData
+                {
+                    matchTime = MatchTime,
+                    matchState = MatchState.ToString(),
+                    statusMessage = StatusMessage,
+                    nextEntityId = nextEntityId,
+                    nextResourceNodeId = nextResourceNodeId,
+                    resources = new RtsResourceBankSaveData
+                    {
+                        credits = Resources != null ? Resources.Credits : 0,
+                        powerProvided = Resources != null ? Resources.PowerProvided : 0,
+                        powerUsed = Resources != null ? Resources.PowerUsed : 0
+                    },
+                    fog = FogOfWar != null ? FogOfWar.CaptureState() : new RtsFogSaveData(),
+                    buildPlacement = BuildManager != null ? BuildManager.CapturePlacementState() : new RtsBuildPlacementSaveData(),
+                    enemyDirector = EnemyDirector != null ? EnemyDirector.CaptureState() : new RtsEnemyDirectorSaveData()
+                };
+
+                for (int i = 0; i < resourceNodes.Count; i++)
+                {
+                    ResourceNode node = resourceNodes[i];
+                    if (node == null)
+                    {
+                        continue;
+                    }
+
+                    data.resourceNodes.Add(new RtsResourceNodeSaveData
+                    {
+                        id = node.PersistentId,
+                        position = new Vector3Data(node.transform.position),
+                        amount = node.Amount,
+                        maxAmount = node.MaxAmount
+                    });
+                }
+
+                for (int i = 0; i < entities.Count; i++)
+                {
+                    RtsEntity entity = entities[i];
+                    if (entity == null)
+                    {
+                        continue;
+                    }
+
+                    data.entities.Add(CaptureEntity(entity));
+                }
+
+                return data;
+            }
+        }
+
+        public bool RestoreSaveData(RtsMatchSaveData data, out string error)
+        {
+            error = string.Empty;
+            if (data == null)
+            {
+                error = "Save data is empty.";
+                return false;
+            }
+
+            using (RtsProfilerMarkers.SaveRestore.Auto())
+            {
+                ClearDynamicWorld();
+
+                nextEntityId = 1;
+                nextResourceNodeId = 1;
+                Resources.SetCreditsForRestore(data.resources != null ? data.resources.credits : 0);
+                Clock.SetSimulationTime(data.matchTime);
+                MatchTime = Clock.SimulationTime;
+
+                Dictionary<int, ResourceNode> resourceById = new Dictionary<int, ResourceNode>();
+                if (data.resourceNodes != null)
+                {
+                    for (int i = 0; i < data.resourceNodes.Count; i++)
+                    {
+                        RtsResourceNodeSaveData nodeData = data.resourceNodes[i];
+                        ResourceNode node = CreateResourceNode(nodeData.position.ToVector3(), nodeData.maxAmount, nodeData.amount, nodeData.id);
+                        resourceById[node.PersistentId] = node;
+                    }
+                }
+
+                Dictionary<int, RtsEntity> entityById = new Dictionary<int, RtsEntity>();
+                List<RtsEntitySaveData> unitSaves = new List<RtsEntitySaveData>();
+
+                if (data.entities != null)
+                {
+                    for (int i = 0; i < data.entities.Count; i++)
+                    {
+                        RtsEntitySaveData entityData = data.entities[i];
+                        if (entityData == null || entityData.entityType != "Structure")
+                        {
+                            continue;
+                        }
+
+                        if (!Enum.TryParse(entityData.team, out RtsTeam team) || !Enum.TryParse(entityData.structureKind, out StructureKind kind))
+                        {
+                            continue;
+                        }
+
+                        RtsStructure structure = CreateStructure(team, kind, entityData.position.ToVector3());
+                        ApplyEntitySaveData(structure, entityData);
+                        ProductionStructure production = structure as ProductionStructure;
+                        if (production != null)
+                        {
+                            production.RestoreProductionState(entityData.production);
+                        }
+
+                        entityById[structure.PersistentId] = structure;
+                    }
+
+                    for (int i = 0; i < data.entities.Count; i++)
+                    {
+                        RtsEntitySaveData entityData = data.entities[i];
+                        if (entityData == null || entityData.entityType != "Unit")
+                        {
+                            continue;
+                        }
+
+                        if (!Enum.TryParse(entityData.team, out RtsTeam team) || !Enum.TryParse(entityData.unitKind, out UnitKind kind))
+                        {
+                            continue;
+                        }
+
+                        RtsUnit unit = CreateUnit(team, kind, entityData.position.ToVector3());
+                        ApplyEntitySaveData(unit, entityData);
+                        entityById[unit.PersistentId] = unit;
+                        unitSaves.Add(entityData);
+                    }
+                }
+
+                for (int i = 0; i < unitSaves.Count; i++)
+                {
+                    RtsEntitySaveData entityData = unitSaves[i];
+                    if (!entityById.TryGetValue(entityData.id, out RtsEntity entity))
+                    {
+                        continue;
+                    }
+
+                    RtsUnit unit = entity as RtsUnit;
+                    if (unit == null)
+                    {
+                        continue;
+                    }
+
+                    unit.RestoreOrderState(entityData.order, entityById);
+                    HarvesterUnit harvester = unit as HarvesterUnit;
+                    if (harvester != null)
+                    {
+                        harvester.RestoreHarvesterState(entityData.harvester, resourceById, entityById);
+                    }
+                }
+
+                nextEntityId = Mathf.Max(nextEntityId, data.nextEntityId);
+                nextResourceNodeId = Mathf.Max(nextResourceNodeId, data.nextResourceNodeId);
+                RecalculatePower();
+
+                if (!Enum.TryParse(data.matchState, out RtsMatchState restoredState))
+                {
+                    restoredState = RtsMatchState.Running;
+                }
+
+                MatchState = restoredState;
+                StatusMessage = string.IsNullOrEmpty(data.statusMessage) ? "Destroy the enemy base." : data.statusMessage;
+                nextObjectiveCheckTime = Clock.SimulationTime + 0.5f;
+
+                if (FogOfWar != null)
+                {
+                    FogOfWar.RestoreState(data.fog);
+                }
+
+                if (BuildManager != null)
+                {
+                    BuildManager.RestorePlacementState(data.buildPlacement);
+                }
+
+                if (EnemyDirector != null)
+                {
+                    EnemyDirector.RestoreState(data.enemyDirector);
+                }
+
+                Lifecycle?.SetMatchEnded(IsMatchOver);
+                Physics.SyncTransforms();
+                return true;
+            }
+        }
+
+        private RtsEntitySaveData CaptureEntity(RtsEntity entity)
+        {
+            RtsEntitySaveData data = new RtsEntitySaveData
+            {
+                id = entity.PersistentId,
+                team = entity.Team.ToString(),
+                position = new Vector3Data(entity.transform.position),
+                rotationY = entity.transform.eulerAngles.y,
+                health = entity.Health,
+                maxHealth = entity.MaxHealth
+            };
+
+            RtsUnit unit = entity as RtsUnit;
+            if (unit != null)
+            {
+                data.entityType = "Unit";
+                data.unitKind = unit.UnitKind.ToString();
+                data.order = unit.CaptureOrderState();
+
+                HarvesterUnit harvester = unit as HarvesterUnit;
+                if (harvester != null)
+                {
+                    data.harvester = harvester.CaptureHarvesterState();
+                }
+
+                return data;
+            }
+
+            RtsStructure structure = entity as RtsStructure;
+            if (structure != null)
+            {
+                data.entityType = "Structure";
+                data.structureKind = structure.StructureKind.ToString();
+
+                ProductionStructure production = structure as ProductionStructure;
+                if (production != null)
+                {
+                    data.production = production.CaptureProductionState();
+                }
+
+                return data;
+            }
+
+            data.entityType = "Entity";
+            return data;
+        }
+
+        private void ApplyEntitySaveData(RtsEntity entity, RtsEntitySaveData data)
+        {
+            entity.AssignPersistentId(data.id > 0 ? data.id : AllocateEntityId());
+            nextEntityId = Mathf.Max(nextEntityId, entity.PersistentId + 1);
+            entity.transform.position = ClampToGround(data.position.ToVector3());
+            entity.transform.rotation = Quaternion.Euler(0f, data.rotationY, 0f);
+            entity.SetHealthForRestore(data.health);
+        }
+
+        private void ClearDynamicWorld()
+        {
+            ClearSelection();
+            if (BuildManager != null)
+            {
+                BuildManager.CancelPlacement();
+            }
+
+            DestroyChildren(unitsRoot);
+            DestroyChildren(structuresRoot);
+            DestroyChildren(resourcesRoot);
+            DestroyChildren(effectsRoot);
+            entities.Clear();
+            selection.Clear();
+            resourceNodes.Clear();
+        }
+
+        private static void DestroyChildren(Transform root)
+        {
+            if (root == null)
+            {
+                return;
+            }
+
+            for (int i = root.childCount - 1; i >= 0; i--)
+            {
+                DestroyRuntimeObject(root.GetChild(i).gameObject);
+            }
+        }
+
+        private static void DestroyRuntimeObject(UnityEngine.Object target)
+        {
+            if (target == null)
+            {
+                return;
+            }
+
+            if (Application.isPlaying)
+            {
+                Destroy(target);
+            }
+            else
+            {
+                DestroyImmediate(target);
+            }
         }
 
         private void CollectScreenRectMatches(Rect screenRect, List<RtsEntity> matches, bool unitsOnly)
@@ -809,6 +1151,7 @@ namespace QuestCommandRTS
 
             MatchState = state;
             StatusMessage = message;
+            Lifecycle?.SetMatchEnded(true);
             if (BuildManager != null)
             {
                 BuildManager.CancelPlacement();
@@ -927,13 +1270,21 @@ namespace QuestCommandRTS
                 float angle = (Mathf.PI * 2f * i) / count;
                 float radius = 3.2f + (i % 4) * 1.8f;
                 Vector3 position = center + new Vector3(Mathf.Cos(angle) * radius, 0f, Mathf.Sin(angle) * radius);
-                GameObject nodeObject = new GameObject("Flux Crystals");
-                nodeObject.transform.SetParent(resourcesRoot, true);
-                nodeObject.transform.position = position;
-                ResourceNode node = nodeObject.AddComponent<ResourceNode>();
-                node.Initialize(2600 + i * 220, resourceMaterial, depletedResourceMaterial);
-                resourceNodes.Add(node);
+                CreateResourceNode(position, 2600 + i * 220, 2600 + i * 220, 0);
             }
+        }
+
+        private ResourceNode CreateResourceNode(Vector3 position, int maxAmount, int amount, int persistentId)
+        {
+            GameObject nodeObject = new GameObject("Flux Crystals");
+            nodeObject.transform.SetParent(resourcesRoot, true);
+            nodeObject.transform.position = ClampToGround(position);
+            ResourceNode node = nodeObject.AddComponent<ResourceNode>();
+            node.InitializeForRestore(maxAmount, amount, resourceMaterial, depletedResourceMaterial);
+            node.AssignPersistentId(persistentId > 0 ? persistentId : AllocateResourceNodeId());
+            nextResourceNodeId = Mathf.Max(nextResourceNodeId, node.PersistentId + 1);
+            resourceNodes.Add(node);
+            return node;
         }
 
         private void SpawnStartingForces()

@@ -12,33 +12,61 @@ namespace QuestCommandRTS
         public void Initialize(RtsGame owner)
         {
             game = owner;
-            nextWaveTime = Time.time + 22f;
-            nextIdleOrderTime = Time.time + 3f;
+            nextWaveTime = game.Clock.SimulationTime + 22f;
+            nextIdleOrderTime = game.Clock.SimulationTime + 3f;
         }
 
         private void Update()
         {
-            if (game == null || game.IsMatchOver)
+            if (game == null || game.IsMatchOver || game.Clock.IsPaused)
             {
                 return;
             }
 
-            if (Time.time >= nextWaveTime)
+            using (RtsProfilerMarkers.EnemyDirector.Auto())
             {
-                SpawnWave();
+                if (game.Clock.SimulationTime >= nextWaveTime)
+                {
+                    SpawnWave();
+                }
+
+                if (game.Clock.SimulationTime >= nextIdleOrderTime)
+                {
+                    nextIdleOrderTime = game.Clock.SimulationTime + 3.5f;
+                    OrderIdleEnemies();
+                }
+            }
+        }
+
+        public RtsEnemyDirectorSaveData CaptureState()
+        {
+            return new RtsEnemyDirectorSaveData
+            {
+                waveIndex = waveIndex,
+                nextWaveTime = nextWaveTime,
+                nextIdleOrderTime = nextIdleOrderTime
+            };
+        }
+
+        public void RestoreState(RtsEnemyDirectorSaveData data)
+        {
+            if (data == null)
+            {
+                nextWaveTime = game.Clock.SimulationTime + 22f;
+                nextIdleOrderTime = game.Clock.SimulationTime + 3f;
+                waveIndex = 0;
+                return;
             }
 
-            if (Time.time >= nextIdleOrderTime)
-            {
-                nextIdleOrderTime = Time.time + 3.5f;
-                OrderIdleEnemies();
-            }
+            waveIndex = Mathf.Max(0, data.waveIndex);
+            nextWaveTime = Mathf.Max(game.Clock.SimulationTime + 1f, data.nextWaveTime);
+            nextIdleOrderTime = Mathf.Max(game.Clock.SimulationTime + 0.5f, data.nextIdleOrderTime);
         }
 
         private void SpawnWave()
         {
             waveIndex++;
-            nextWaveTime = Time.time + Mathf.Max(18f, 42f - waveIndex * 1.5f);
+            nextWaveTime = game.Clock.SimulationTime + Mathf.Max(18f, 42f - waveIndex * 1.5f);
             RtsEntity target = game.FindPlayerPrimaryTarget();
 
             if (target == null)

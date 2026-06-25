@@ -13,7 +13,7 @@ namespace QuestCommandRTS
 
         public bool RequestConstruction(StructureKind kind)
         {
-            if (game == null || game.BuildManager == null)
+            if (!CanAcceptCommands() || game.BuildManager == null)
             {
                 return false;
             }
@@ -23,7 +23,7 @@ namespace QuestCommandRTS
 
         public bool UpdateConstructionPlacement(Ray ray)
         {
-            if (game == null || game.BuildManager == null || !game.BuildManager.IsPlacing)
+            if (!CanAcceptCommands() || game.BuildManager == null || !game.BuildManager.IsPlacing)
             {
                 return false;
             }
@@ -34,7 +34,7 @@ namespace QuestCommandRTS
 
         public bool ConfirmConstructionPlacement()
         {
-            if (game == null || game.BuildManager == null || !game.BuildManager.IsPlacing)
+            if (!CanAcceptCommands() || game.BuildManager == null || !game.BuildManager.IsPlacing)
             {
                 return false;
             }
@@ -44,7 +44,7 @@ namespace QuestCommandRTS
 
         public bool CancelConstructionPlacement()
         {
-            if (game == null || game.BuildManager == null || !game.BuildManager.IsPlacing)
+            if (!CanAcceptCommands() || game.BuildManager == null || !game.BuildManager.IsPlacing)
             {
                 return false;
             }
@@ -68,6 +68,12 @@ namespace QuestCommandRTS
                 return false;
             }
 
+            if (!game.AcceptsPlayerInput)
+            {
+                disabledReason = "Paused";
+                return false;
+            }
+
             if (!game.CanBuildStructure(kind))
             {
                 disabledReason = game.GetStructureRequirement(kind);
@@ -86,7 +92,7 @@ namespace QuestCommandRTS
 
         public bool QueueProduction(UnitKind kind)
         {
-            if (game == null || game.IsMatchOver)
+            if (!CanAcceptCommands() || game.IsMatchOver)
             {
                 return false;
             }
@@ -118,6 +124,12 @@ namespace QuestCommandRTS
             if (game.IsMatchOver)
             {
                 disabledReason = "Match complete";
+                return false;
+            }
+
+            if (!game.AcceptsPlayerInput)
+            {
+                disabledReason = "Paused";
                 return false;
             }
 
@@ -158,6 +170,12 @@ namespace QuestCommandRTS
                 return false;
             }
 
+            if (!game.AcceptsPlayerInput)
+            {
+                disabledReason = "Paused";
+                return false;
+            }
+
             ProductionStructure producer = FindProducerForUnit(kind, true);
             if (producer == null)
             {
@@ -177,6 +195,11 @@ namespace QuestCommandRTS
 
         public bool CancelLastQueuedProduction()
         {
+            if (!CanAcceptCommands())
+            {
+                return false;
+            }
+
             ProductionStructure producer = FindSelectedProductionWithQueuedItem();
             if (producer == null)
             {
@@ -200,17 +223,17 @@ namespace QuestCommandRTS
 
         public bool RepairSelectedStructures()
         {
-            return game != null && game.TryRepairSelectedStructures();
+            return CanAcceptCommands() && game.TryRepairSelectedStructures();
         }
 
         public bool SellSelectedStructures()
         {
-            return game != null && game.SellSelectedStructures();
+            return CanAcceptCommands() && game.SellSelectedStructures();
         }
 
         public bool SetSelectedRallyPoint(Vector3 point)
         {
-            if (game == null || game.Selection.Count == 0)
+            if (!CanAcceptCommands() || game.Selection.Count == 0)
             {
                 return false;
             }
@@ -358,6 +381,11 @@ namespace QuestCommandRTS
             }
 
             return null;
+        }
+
+        private bool CanAcceptCommands()
+        {
+            return game != null && game.AcceptsPlayerInput;
         }
     }
 }

@@ -33,6 +33,13 @@ namespace QuestCommandRTS
                 return;
             }
 
+            if (!game.AcceptsPlayerInput)
+            {
+                mouseSelectionActive = false;
+                mouseDragging = false;
+                return;
+            }
+
             HandleCameraMovement();
             HandleControlGroups();
 

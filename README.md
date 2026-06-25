@@ -18,7 +18,7 @@ The project manifest pins:
 - `com.unity.inputsystem` 1.18.0
 - `com.unity.test-framework` 1.1.33
 
-For Android device builds, install Android Build Support, SDK, NDK, and OpenJDK through Unity Hub for Unity 2022.3.62f3.
+Android support is not required for the current desktop-focused prototype workflow.
 
 ## Runtime Modes
 
@@ -75,6 +75,15 @@ Building placement follows the existing desktop build rules. The preview snaps t
 
 The full battlefield remains approximately 224 simulation units wide. The Quest rig defaults to 126 simulation units per physical meter, so the board appears roughly 1.78 meters wide while gameplay coordinates and movement logic stay unchanged.
 
+## Persistence And Lifecycle
+
+- Runtime entities and resource nodes now receive stable save IDs.
+- `RtsSaveService` captures and restores the generated skirmish state through a versioned JSON envelope with checksum validation.
+- Saved state includes resources, health, orders, production queues, harvest state, fog exploration, active placement, and enemy wave timers.
+- `RtsLifecycleCoordinator` pauses simulation on app pause/focus loss, blocks commands while suspended or saving/loading, hides Quest pointer visuals when input focus is gone, and attempts autosave on pause/focus loss.
+
+See `docs/SAVE_SYSTEM.md`, `docs/LIFECYCLE_TEST_MATRIX.md`, and `docs/PERFORMANCE_TESTING.md`.
+
 ## Current VR Limitations
 
 - No radial menus, lasso selection, hand tracking, passthrough, spatial anchors, locomotion, or board grabbing.
@@ -87,7 +96,16 @@ The full battlefield remains approximately 224 simulation units wide. The Quest 
 
 - `Command RTS > Open Battlefield Scene`
 - `Command RTS > Export Sample Screenshot`
+- `Command RTS > Build > Desktop Development Build`
 - `Tools > Quest RTS > Apply Recommended Quest Settings`
 - `Tools > Quest RTS > Validate XR Setup`
+
+## Tests
+
+Batch edit-mode test command:
+
+```powershell
+& "C:\Users\matth\Unity\Hub\Editor\2022.3.62f3\Editor\Unity.exe" -batchmode -projectPath "E:\UnityProjects\QuestCommandRTS" -runTests -testPlatform EditMode -testResults "E:\UnityProjects\QuestCommandRTS\Logs\EditModeResults.xml" -logFile "E:\UnityProjects\QuestCommandRTS\Logs\UnityTestRun.log"
+```
 
 See `docs/QUEST_XR_SETUP.md` for Quest setup, manual OpenXR checks, and troubleshooting.

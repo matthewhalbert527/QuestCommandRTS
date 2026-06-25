@@ -54,6 +54,18 @@ namespace QuestCommandRTS
                 return;
             }
 
+            if (!game.AcceptsPlayerInput)
+            {
+                previousRightTrigger = false;
+                previousPrimaryButton = false;
+                previousSecondaryButton = false;
+                previousLeftPrimaryButton = false;
+                SetPointerVisible(false);
+                return;
+            }
+
+            SetPointerVisible(true);
+
             if (!rightDevice.isValid)
             {
                 rightDevice = InputDevices.GetDeviceAtXRNode(XRNode.RightHand);
@@ -160,6 +172,19 @@ namespace QuestCommandRTS
             reticle.position = hit.point;
             reticle.localScale = Vector3.one * settings.ReticleSizeMeters;
             SetPointerColor(GetPointerColor(dispatcher.ResolveContextCommand(hit)));
+        }
+
+        private void SetPointerVisible(bool visible)
+        {
+            if (pointerLine != null)
+            {
+                pointerLine.enabled = visible;
+            }
+
+            if (reticle != null)
+            {
+                reticle.gameObject.SetActive(visible && reticle.gameObject.activeSelf);
+            }
         }
 
         private Color GetPointerColor(RtsContextCommandKind command)

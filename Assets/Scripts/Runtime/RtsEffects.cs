@@ -8,7 +8,13 @@ namespace QuestCommandRTS
 
         private void Update()
         {
-            Lifetime -= Time.deltaTime;
+            float deltaTime = RtsGame.HasInstance ? RtsGame.Instance.Clock.DeltaTime : Time.deltaTime;
+            if (RtsGame.HasInstance && RtsGame.Instance.Clock.IsPaused)
+            {
+                return;
+            }
+
+            Lifetime -= deltaTime;
             if (Lifetime <= 0f)
             {
                 Destroy(gameObject);
@@ -32,8 +38,14 @@ namespace QuestCommandRTS
 
         private void Update()
         {
-            Lifetime -= Time.deltaTime;
-            transform.position += Velocity * Time.deltaTime;
+            float deltaTime = RtsGame.HasInstance ? RtsGame.Instance.Clock.DeltaTime : Time.deltaTime;
+            if (RtsGame.HasInstance && RtsGame.Instance.Clock.IsPaused)
+            {
+                return;
+            }
+
+            Lifetime -= deltaTime;
+            transform.position += Velocity * deltaTime;
 
             if (Camera.main != null)
             {

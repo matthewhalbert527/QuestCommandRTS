@@ -1,5 +1,7 @@
+using System;
 using System.Collections.Generic;
 using UnityEngine;
+using Random = UnityEngine.Random;
 
 namespace QuestCommandRTS
 {
@@ -63,37 +65,40 @@ namespace QuestCommandRTS
 
         private void Update()
         {
-            if (!RtsGame.HasInstance || RtsGame.Instance.IsMatchOver)
+            if (!RtsGame.HasInstance || RtsGame.Instance.IsMatchOver || RtsGame.Instance.Clock.IsPaused)
             {
                 RefreshRallyVisual();
                 return;
             }
 
-            if (activeKind == null)
+            using (RtsProfilerMarkers.Production.Auto())
             {
-                StartNextItem();
-            }
-
-            if (activeKind == null)
-            {
-                RefreshRallyVisual();
-                return;
-            }
-
-            float powerMultiplier = RtsGame.Instance.Resources.HasLowPower ? 0.45f : 1f;
-            activeRemaining -= Time.deltaTime * powerMultiplier;
-
-            if (activeRemaining <= 0f)
-            {
-                UnitKind completed = activeKind.Value;
-                activeKind = null;
-                RtsUnit unit = RtsGame.Instance.CreateUnit(Team, completed, GetSpawnPoint());
-                if (unit != null && Team == RtsTeam.Player && HasRallyPoint)
+                if (activeKind == null)
                 {
-                    unit.IssueMove(RallyPoint + Random.insideUnitSphere * 1.25f);
+                    StartNextItem();
                 }
 
-                StartNextItem();
+                if (activeKind == null)
+                {
+                    RefreshRallyVisual();
+                    return;
+                }
+
+                float powerMultiplier = RtsGame.Instance.Resources.HasLowPower ? 0.45f : 1f;
+                activeRemaining -= RtsGame.Instance.Clock.DeltaTime * powerMultiplier;
+
+                if (activeRemaining <= 0f)
+                {
+                    UnitKind completed = activeKind.Value;
+                    activeKind = null;
+                    RtsUnit unit = RtsGame.Instance.CreateUnit(Team, completed, GetSpawnPoint());
+                    if (unit != null && Team == RtsTeam.Player && HasRallyPoint)
+                    {
+                        unit.IssueMove(RallyPoint + Random.insideUnitSphere * 1.25f);
+                    }
+
+                    StartNextItem();
+                }
             }
 
             RefreshRallyVisual();
@@ -164,6 +169,68 @@ namespace QuestCommandRTS
 
             kind = UnitKind.Rifleman;
             return false;
+        }
+
+        public RtsProductionSaveData CaptureProductionState()
+        {
+            RtsProductionSaveData data = new RtsProductionSaveData
+            {
+                hasActiveProduction = activeKind.HasValue,
+                activeKind = activeKind.HasValue ? activeKind.Value.ToString() : string.Empty,
+                activeRemaining = activeRemaining,
+                activeDuration = activeDuration,
+                hasRallyPoint = HasRallyPoint,
+                rallyPoint = new Vector3Data(RallyPoint)
+            };
+
+            for (int i = 0; i < queue.Count; i++)
+            {
+                data.queue.Add(queue[i].ToString());
+            }
+
+            return data;
+        }
+
+        public void RestoreProductionState(RtsProductionSaveData data)
+        {
+            queue.Clear();
+            activeKind = null;
+            activeRemaining = 0f;
+            activeDuration = 0f;
+            HasRallyPoint = false;
+
+            if (data == null)
+            {
+                RefreshRallyVisual();
+                return;
+            }
+
+            if (data.hasActiveProduction && Enum.TryParse(data.activeKind, out UnitKind parsedActive))
+            {
+                activeKind = parsedActive;
+                activeDuration = Mathf.Max(0.1f, data.activeDuration);
+                activeRemaining = Mathf.Clamp(data.activeRemaining, 0f, activeDuration);
+            }
+
+            if (data.queue != null)
+            {
+                for (int i = 0; i < data.queue.Count; i++)
+                {
+                    if (Enum.TryParse(data.queue[i], out UnitKind queuedKind))
+                    {
+                        queue.Add(queuedKind);
+                    }
+                }
+            }
+
+            if (data.hasRallyPoint)
+            {
+                RallyPoint = RtsGame.HasInstance ? RtsGame.Instance.ClampWorldPoint(data.rallyPoint.ToVector3()) : data.rallyPoint.ToVector3();
+                HasRallyPoint = true;
+                EnsureRallyVisual();
+            }
+
+            RefreshRallyVisual();
         }
 
         public void SetRallyPoint(Vector3 point)
@@ -307,7 +374,7 @@ namespace QuestCommandRTS
 
         private void Update()
         {
-            if (!RtsGame.HasInstance || RtsGame.Instance.IsMatchOver || Time.time < nextAttackTime)
+            if (!RtsGame.HasInstance || RtsGame.Instance.IsMatchOver || RtsGame.Instance.Clock.IsPaused || RtsGame.Instance.Clock.SimulationTime < nextAttackTime)
             {
                 return;
             }
@@ -318,7 +385,7 @@ namespace QuestCommandRTS
                 return;
             }
 
-            nextAttackTime = Time.time + AttackCooldown;
+            nextAttackTime = RtsGame.Instance.Clock.SimulationTime + AttackCooldown;
             Vector3 aimPoint = target.GroundPosition + Vector3.up * 0.8f;
 
             if (head != null)

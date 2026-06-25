@@ -7,6 +7,7 @@ namespace QuestCommandRTS
         public int Amount = 3500;
         public int MaxAmount = 3500;
 
+        public int PersistentId { get; private set; }
         public bool IsDepleted => Amount <= 0;
 
         private Transform visualRoot;
@@ -33,6 +34,21 @@ namespace QuestCommandRTS
             depletedMaterial = depleted;
             BuildVisuals();
             RefreshVisuals();
+        }
+
+        public void InitializeForRestore(int maxAmount, int amount, Material healthy, Material depleted)
+        {
+            MaxAmount = Mathf.Max(1, maxAmount);
+            Amount = Mathf.Clamp(amount, 0, MaxAmount);
+            healthyMaterial = healthy;
+            depletedMaterial = depleted;
+            BuildVisuals();
+            RefreshVisuals();
+        }
+
+        public void AssignPersistentId(int persistentId)
+        {
+            PersistentId = Mathf.Max(0, persistentId);
         }
 
         public int Harvest(int requested)

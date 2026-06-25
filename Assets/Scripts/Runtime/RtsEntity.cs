@@ -12,6 +12,7 @@ namespace QuestCommandRTS
         public float SelectionRadius = 0.9f;
 
         public float Health { get; private set; }
+        public int PersistentId { get; private set; }
         public bool IsAlive => Health > 0f;
         public bool IsSelected { get; private set; }
         public float HealthPercent => MaxHealth <= 0f ? 0f : Mathf.Clamp01(Health / MaxHealth);
@@ -76,6 +77,16 @@ namespace QuestCommandRTS
             SelectionRadius = selectionRadius;
             DrawSelectionRing();
             ApplyTeamTint();
+        }
+
+        public void AssignPersistentId(int persistentId)
+        {
+            PersistentId = Mathf.Max(0, persistentId);
+        }
+
+        public void SetHealthForRestore(float health)
+        {
+            Health = Mathf.Clamp(health, 0f, MaxHealth);
         }
 
         public void SetSelected(bool selected)

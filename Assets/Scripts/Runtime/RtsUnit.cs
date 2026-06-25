@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace QuestCommandRTS
@@ -26,12 +27,12 @@ namespace QuestCommandRTS
 
         protected virtual void Update()
         {
-            if (RtsGame.HasInstance && RtsGame.Instance.IsMatchOver)
+            if (RtsGame.HasInstance && (RtsGame.Instance.IsMatchOver || RtsGame.Instance.Clock.IsPaused))
             {
                 return;
             }
 
-            TickOrders(Time.deltaTime);
+            TickOrders(GetDeltaTime());
         }
 
         public virtual void Initialize(RtsTeam team, UnitKind kind)
@@ -68,6 +69,52 @@ namespace QuestCommandRTS
         public bool IsIdle()
         {
             return !hasDestination && attackTarget == null;
+        }
+
+        public RtsUnitOrderSaveData CaptureOrderState()
+        {
+            RtsUnitOrderSaveData data = new RtsUnitOrderSaveData
+            {
+                orderType = "None",
+                destination = new Vector3Data(destination)
+            };
+
+            if (attackTarget != null && attackTarget.IsAlive)
+            {
+                data.orderType = "Attack";
+                data.targetEntityId = attackTarget.PersistentId;
+                return data;
+            }
+
+            if (hasDestination)
+            {
+                data.orderType = "Move";
+            }
+
+            return data;
+        }
+
+        public void RestoreOrderState(RtsUnitOrderSaveData data, Dictionary<int, RtsEntity> entityById)
+        {
+            attackTarget = null;
+            hasDestination = false;
+
+            if (data == null)
+            {
+                return;
+            }
+
+            destination = ClampToMap(data.destination.ToVector3());
+            if (data.orderType == "Move")
+            {
+                hasDestination = true;
+                return;
+            }
+
+            if (data.orderType == "Attack" && entityById != null && entityById.TryGetValue(data.targetEntityId, out RtsEntity target))
+            {
+                IssueAttack(target);
+            }
         }
 
         protected void TickOrders(float deltaTime)
@@ -126,9 +173,10 @@ namespace QuestCommandRTS
 
             FacePoint(attackTarget.transform.position, deltaTime);
 
-            if (Time.time >= nextAttackTime)
+            float currentTime = GetSimulationTime();
+            if (currentTime >= nextAttackTime)
             {
-                nextAttackTime = Time.time + Mathf.Max(0.15f, AttackCooldown);
+                nextAttackTime = currentTime + Mathf.Max(0.15f, AttackCooldown);
                 attackTarget.TakeDamage(Damage, this);
                 RtsGame.Instance.SpawnTracer(GroundPosition + Vector3.up * 0.8f, attackTarget.GroundPosition + Vector3.up * 0.8f, Team);
             }
@@ -157,6 +205,16 @@ namespace QuestCommandRTS
         {
             float limit = RtsBalance.MapHalfSize - 1f;
             return new Vector3(Mathf.Clamp(position.x, -limit, limit), 0f, Mathf.Clamp(position.z, -limit, limit));
+        }
+
+        protected static float GetDeltaTime()
+        {
+            return RtsGame.HasInstance ? RtsGame.Instance.Clock.DeltaTime : Time.deltaTime;
+        }
+
+        protected static float GetSimulationTime()
+        {
+            return RtsGame.HasInstance ? RtsGame.Instance.Clock.SimulationTime : Time.time;
         }
     }
 
@@ -202,25 +260,62 @@ namespace QuestCommandRTS
 
         protected override void Update()
         {
-            if (RtsGame.HasInstance && RtsGame.Instance.IsMatchOver)
+            if (RtsGame.HasInstance && (RtsGame.Instance.IsMatchOver || RtsGame.Instance.Clock.IsPaused))
             {
                 return;
             }
 
+            float deltaTime = GetDeltaTime();
             switch (state)
             {
                 case HarvestState.MovingToResource:
-                    TickMovingToResource(Time.deltaTime);
+                    TickMovingToResource(deltaTime);
                     break;
                 case HarvestState.Harvesting:
-                    TickHarvesting(Time.deltaTime);
+                    TickHarvesting(deltaTime);
                     break;
                 case HarvestState.Returning:
-                    TickReturning(Time.deltaTime);
+                    TickReturning(deltaTime);
                     break;
                 default:
                     base.Update();
                     break;
+            }
+        }
+
+        public RtsHarvesterSaveData CaptureHarvesterState()
+        {
+            return new RtsHarvesterSaveData
+            {
+                state = (int)state,
+                cargo = Cargo,
+                targetResourceNodeId = targetNode != null ? targetNode.PersistentId : 0,
+                homeRefineryEntityId = homeRefinery != null ? homeRefinery.PersistentId : 0,
+                harvestAccumulator = harvestAccumulator
+            };
+        }
+
+        public void RestoreHarvesterState(RtsHarvesterSaveData data, Dictionary<int, ResourceNode> resourceById, Dictionary<int, RtsEntity> entityById)
+        {
+            if (data == null)
+            {
+                return;
+            }
+
+            Cargo = Mathf.Clamp(data.cargo, 0, CargoCapacity);
+            state = (HarvestState)Mathf.Clamp(data.state, 0, 3);
+            harvestAccumulator = Mathf.Max(0f, data.harvestAccumulator);
+            targetNode = resourceById != null && resourceById.TryGetValue(data.targetResourceNodeId, out ResourceNode node) ? node : null;
+            homeRefinery = null;
+            if (entityById != null && entityById.TryGetValue(data.homeRefineryEntityId, out RtsEntity entity))
+            {
+                homeRefinery = entity as RefineryStructure;
+            }
+
+            if (state != HarvestState.Idle)
+            {
+                hasDestination = false;
+                attackTarget = null;
             }
         }
 

@@ -112,6 +112,11 @@ namespace QuestCommandRTS
             Credits += Mathf.Max(0, amount);
         }
 
+        public void SetCreditsForRestore(int credits)
+        {
+            Credits = Mathf.Max(0, credits);
+        }
+
         public void SetPower(int provided, int used)
         {
             PowerProvided = Mathf.Max(0, provided);

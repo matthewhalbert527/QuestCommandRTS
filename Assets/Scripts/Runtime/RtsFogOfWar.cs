@@ -36,13 +36,16 @@ namespace QuestCommandRTS
 
         private void Update()
         {
-            if (game == null || Time.time < nextUpdateTime)
+            if (game == null || game.Clock.IsPaused || game.Clock.SimulationTime < nextUpdateTime)
             {
                 return;
             }
 
-            nextUpdateTime = Time.time + UpdateInterval;
-            RefreshFog(false);
+            nextUpdateTime = game.Clock.SimulationTime + UpdateInterval;
+            using (RtsProfilerMarkers.FogUpdate.Auto())
+            {
+                RefreshFog(false);
+            }
         }
 
         public bool IsVisible(Vector3 point)
@@ -55,6 +58,55 @@ namespace QuestCommandRTS
         {
             FogCell cell = GetCell(point);
             return cell == null || cell.Explored;
+        }
+
+        public RtsFogSaveData CaptureState()
+        {
+            RtsFogSaveData data = new RtsFogSaveData
+            {
+                gridSize = GridSize,
+                explored = new bool[GridSize * GridSize]
+            };
+
+            if (cells == null)
+            {
+                return data;
+            }
+
+            int index = 0;
+            for (int z = 0; z < GridSize; z++)
+            {
+                for (int x = 0; x < GridSize; x++)
+                {
+                    data.explored[index++] = cells[x, z].Explored;
+                }
+            }
+
+            return data;
+        }
+
+        public void RestoreState(RtsFogSaveData data)
+        {
+            if (data == null || data.explored == null || cells == null || data.gridSize != GridSize)
+            {
+                RefreshFog(true);
+                return;
+            }
+
+            int index = 0;
+            for (int z = 0; z < GridSize; z++)
+            {
+                for (int x = 0; x < GridSize; x++)
+                {
+                    FogCell cell = cells[x, z];
+                    cell.Explored = index < data.explored.Length && data.explored[index];
+                    cell.Visible = false;
+                    index++;
+                    ApplyCellVisual(cell);
+                }
+            }
+
+            RefreshFog(true);
         }
 
         private void BuildGrid()

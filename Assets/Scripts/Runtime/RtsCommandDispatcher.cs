@@ -85,7 +85,7 @@ namespace QuestCommandRTS
 
         public RtsCommandResult SelectFromRay(Ray ray, bool additive, float maxDistance)
         {
-            if (game == null)
+            if (game == null || !game.AcceptsPlayerInput)
             {
                 return RtsCommandResult.None;
             }
@@ -107,7 +107,7 @@ namespace QuestCommandRTS
 
         public RtsCommandResult SelectFromHit(RaycastHit hit, bool additive)
         {
-            if (game == null || hit.collider == null)
+            if (game == null || !game.AcceptsPlayerInput || hit.collider == null)
             {
                 return RtsCommandResult.None;
             }
@@ -156,7 +156,7 @@ namespace QuestCommandRTS
 
         public RtsCommandResult CommandFromRay(Ray ray, float maxDistance)
         {
-            if (game == null)
+            if (game == null || !game.AcceptsPlayerInput)
             {
                 return RtsCommandResult.None;
             }
@@ -172,7 +172,7 @@ namespace QuestCommandRTS
 
         public RtsCommandResult CommandFromHit(RaycastHit hit)
         {
-            if (game == null || hit.collider == null)
+            if (game == null || !game.AcceptsPlayerInput || hit.collider == null)
             {
                 return RtsCommandResult.None;
             }

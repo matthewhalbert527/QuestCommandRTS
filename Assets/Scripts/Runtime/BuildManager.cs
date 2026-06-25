@@ -30,6 +30,7 @@ namespace QuestCommandRTS
         private bool placementValid;
         private bool hasPlacementPoint;
         private BuildPlacementFailureReason lastFailureReason = BuildPlacementFailureReason.None;
+        private bool placementSuspended;
 
         public void Initialize(RtsGame owner)
         {
@@ -86,12 +87,13 @@ namespace QuestCommandRTS
             preview = null;
             placementValid = false;
             hasPlacementPoint = false;
+            placementSuspended = false;
             lastFailureReason = BuildPlacementFailureReason.None;
         }
 
         public void UpdatePlacement(Ray ray)
         {
-            if (preview == null)
+            if (preview == null || placementSuspended)
             {
                 return;
             }
@@ -110,7 +112,7 @@ namespace QuestCommandRTS
 
         public void UpdatePlacementAtPoint(Vector3 point)
         {
-            if (preview == null)
+            if (preview == null || placementSuspended)
             {
                 return;
             }
@@ -124,7 +126,7 @@ namespace QuestCommandRTS
 
         public bool TryConfirmPlacement()
         {
-            if (preview == null)
+            if (preview == null || placementSuspended)
             {
                 return false;
             }
@@ -157,6 +159,50 @@ namespace QuestCommandRTS
             }
 
             return placementValid ? "Valid placement" : GetFailureText(lastFailureReason);
+        }
+
+        public RtsBuildPlacementSaveData CapturePlacementState()
+        {
+            return new RtsBuildPlacementSaveData
+            {
+                isPlacing = preview != null,
+                structureKind = preview != null ? pendingKind.ToString() : string.Empty,
+                hasPlacementPoint = hasPlacementPoint,
+                placementPoint = new Vector3Data(placementPoint)
+            };
+        }
+
+        public void RestorePlacementState(RtsBuildPlacementSaveData data)
+        {
+            CancelPlacement();
+            if (data == null || !data.isPlacing || !System.Enum.TryParse(data.structureKind, out StructureKind kind))
+            {
+                return;
+            }
+
+            pendingKind = kind;
+            preview = game.CreateStructurePreview(kind);
+            placementSuspended = false;
+            hasPlacementPoint = data.hasPlacementPoint;
+            placementPoint = data.placementPoint.ToVector3();
+            if (hasPlacementPoint)
+            {
+                UpdatePlacementAtPoint(placementPoint);
+            }
+            else
+            {
+                placementValid = false;
+                lastFailureReason = BuildPlacementFailureReason.NoGroundHit;
+            }
+        }
+
+        public void SetPlacementSuspended(bool suspended)
+        {
+            placementSuspended = suspended;
+            if (preview != null)
+            {
+                preview.SetActive(!suspended);
+            }
         }
 
         public bool CanPlaceAt(Vector3 point, StructureKind kind, out BuildPlacementFailureReason reason)
