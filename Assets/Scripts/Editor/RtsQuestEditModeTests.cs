@@ -716,6 +716,47 @@ namespace QuestCommandRTS.Editor
         }
 
         [Test]
+        public void QuestPointerFeedbackUsesContextColorsForTargetsAndConsole()
+        {
+            RtsGame game = CreateInitializedGame(RtsRuntimeMode.QuestVr);
+            QuestRtsInputController controller = game.GetComponent<QuestRtsInputController>();
+            QuestCommandConsole console = game.GetComponent<QuestCommandConsole>();
+            Assert.IsNotNull(controller);
+            Assert.IsNotNull(console);
+
+            RtsUnit playerUnit = FindPlayerUnit(game, UnitKind.Rifleman);
+            RtsUnit enemy = game.CreateUnit(RtsTeam.Enemy, UnitKind.Rifleman, playerUnit.transform.position + new Vector3(4f, 0f, 0f));
+            Physics.SyncTransforms();
+            game.FogOfWar.RefreshNowForTests();
+
+            controller.ProcessInputFrameForTests(QuestFrame(RayAt(enemy), false, false, false, false, false), true);
+            AssertColorNear(new Color(1f, 0.32f, 0.22f, 0.95f), controller.PointerLineForTests.startColor);
+
+            ResourceNode resource = game.ResourceNodes[0];
+            controller.ProcessInputFrameForTests(QuestFrame(RayAtResource(resource), false, false, false, false, false), true);
+            AssertColorNear(new Color(0.25f, 1f, 0.48f, 0.95f), controller.PointerLineForTests.startColor);
+
+            ProductionStructure producer = FindPlayerProduction(game);
+            game.ClearSelection();
+            game.SelectEntity(producer, false);
+            controller.ProcessInputFrameForTests(QuestFrame(RayAtPoint(new Vector3(-42f, 0f, -42f)), false, false, false, false, false), true);
+            AssertColorNear(new Color(0.55f, 0.95f, 1f, 0.95f), controller.PointerLineForTests.startColor);
+
+            game.ClearSelection();
+            controller.ProcessInputFrameForTests(QuestFrame(RayAtPoint(new Vector3(-24f, 0f, -34f)), false, false, false, false, false), true);
+            AssertColorNear(new Color(0.3f, 0.88f, 1f, 0.95f), controller.PointerLineForTests.startColor);
+
+            console.SetOpen(true);
+            Ray panelRay = new Ray(console.PanelRect.position - console.PanelRect.forward * 8f, console.PanelRect.forward);
+            controller.ProcessInputFrameForTests(QuestFrame(panelRay, false, false, false, false, false), true);
+            AssertColorNear(new Color(0.72f, 0.92f, 1f, 0.95f), controller.PointerLineForTests.startColor);
+
+            Ray missRay = new Ray(new Vector3(180f, 12f, 180f), Vector3.up);
+            controller.ProcessInputFrameForTests(QuestFrame(missRay, false, false, false, false, false), true);
+            AssertColorNear(new Color(0.55f, 0.6f, 0.62f, 0.65f), controller.PointerLineForTests.startColor);
+        }
+
+        [Test]
         public void QuestPointerFeedbackHidesWhenSystemInputIsBlocked()
         {
             RtsGame game = CreateInitializedGame(RtsRuntimeMode.QuestVr);
@@ -1284,6 +1325,15 @@ namespace QuestCommandRTS.Editor
             Assert.AreEqual(expected.x, actual.x, 0.001f);
             Assert.AreEqual(expected.y, actual.y, 0.001f);
             Assert.AreEqual(expected.z, actual.z, 0.001f);
+        }
+
+        private static void AssertColorNear(Color expected, Color actual)
+        {
+            const float tolerance = 0.005f;
+            Assert.AreEqual(expected.r, actual.r, tolerance);
+            Assert.AreEqual(expected.g, actual.g, tolerance);
+            Assert.AreEqual(expected.b, actual.b, tolerance);
+            Assert.AreEqual(expected.a, actual.a, tolerance);
         }
 
         private static void AssertQuaternionNear(Quaternion expected, Quaternion actual)
