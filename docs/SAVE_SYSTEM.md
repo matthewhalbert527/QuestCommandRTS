@@ -14,7 +14,7 @@ Captured state includes:
 - resource node amounts
 - fog explored cells
 - active building placement
-- current wave director timers
+- enemy commander credits plus wave, income, rebuild, production, and idle-order timers
 
 Restore is a rebuild pass. The current generated battlefield entities/resources are destroyed, saved resource nodes are recreated, structures are recreated first, units are recreated second, then orders and cross-references are restored by stable ID.
 

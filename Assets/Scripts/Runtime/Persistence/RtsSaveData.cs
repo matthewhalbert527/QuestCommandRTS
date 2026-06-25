@@ -118,9 +118,14 @@ namespace QuestCommandRTS
     [Serializable]
     public sealed class RtsEnemyDirectorSaveData
     {
+        public bool hasEconomyState;
         public int waveIndex;
+        public int enemyCredits;
         public float nextWaveTime;
         public float nextIdleOrderTime;
+        public float nextIncomeTime;
+        public float nextBuildTime;
+        public float nextProductionTime;
     }
 
     [Serializable]

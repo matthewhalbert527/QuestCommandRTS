@@ -204,6 +204,58 @@ namespace QuestCommandRTS.Editor
         }
 
         [Test]
+        public void EnemyDirectorEconomyStatePersistsThroughRestore()
+        {
+            RtsGame game = CreateInitializedGame();
+            game.EnemyDirector.SetEconomyForTests(2345, 11f, 12f, 13f, 31f, 7f, 3);
+
+            RtsMatchSaveData saved = game.CaptureSaveData();
+
+            Assert.IsTrue(saved.enemyDirector.hasEconomyState);
+            Assert.AreEqual(2345, saved.enemyDirector.enemyCredits);
+            Assert.AreEqual(3, saved.enemyDirector.waveIndex);
+
+            game.EnemyDirector.SetEconomyForTests(10, 1f, 1f, 1f, 1f, 1f, 0);
+            Assert.IsTrue(game.RestoreSaveData(saved, out string error), error);
+
+            RtsEnemyDirectorSaveData restored = game.EnemyDirector.CaptureState();
+            Assert.AreEqual(2345, game.EnemyDirector.EnemyCreditsForTests);
+            Assert.AreEqual(3, restored.waveIndex);
+            Assert.AreEqual(11f, restored.nextIncomeTime, 0.001f);
+            Assert.AreEqual(12f, restored.nextBuildTime, 0.001f);
+            Assert.AreEqual(13f, restored.nextProductionTime, 0.001f);
+        }
+
+        [Test]
+        public void EnemyDirectorSpendsCreditsToProduceUnits()
+        {
+            RtsGame game = CreateInitializedGame();
+            int beforeUnits = CountLivingEnemyUnits(game);
+
+            game.EnemyDirector.SetEnemyCreditsForTests(500);
+            Assert.IsTrue(game.EnemyDirector.TryProduceUnitForTests());
+
+            Assert.AreEqual(beforeUnits + 1, CountLivingEnemyUnits(game));
+            Assert.Less(game.EnemyDirector.EnemyCreditsForTests, 500);
+        }
+
+        [Test]
+        public void EnemyDirectorRebuildsMissingPowerPlant()
+        {
+            RtsGame game = CreateInitializedGame();
+            RtsStructure powerPlant = FindEnemyStructure(game, StructureKind.PowerPlant);
+            powerPlant.SetHealthForRestore(0f);
+
+            Assert.AreEqual(0, CountLivingEnemyStructures(game, StructureKind.PowerPlant));
+
+            game.EnemyDirector.SetEnemyCreditsForTests(1000);
+            Assert.IsTrue(game.EnemyDirector.TryBuildBaseStructureForTests());
+
+            Assert.AreEqual(1, CountLivingEnemyStructures(game, StructureKind.PowerPlant));
+            Assert.Less(game.EnemyDirector.EnemyCreditsForTests, 1000);
+        }
+
+        [Test]
         public void SaveRestoreRoundTripsCoreSkirmishState()
         {
             RtsGame game = CreateInitializedGame();
@@ -258,6 +310,51 @@ namespace QuestCommandRTS.Editor
 
             Assert.Fail("Missing player entity of type " + type.Name);
             return null;
+        }
+
+        private static RtsStructure FindEnemyStructure(RtsGame game, StructureKind kind)
+        {
+            for (int i = 0; i < game.Entities.Count; i++)
+            {
+                RtsStructure structure = game.Entities[i] as RtsStructure;
+                if (structure != null && structure.Team == RtsTeam.Enemy && structure.IsAlive && structure.StructureKind == kind)
+                {
+                    return structure;
+                }
+            }
+
+            Assert.Fail("Missing enemy structure " + kind);
+            return null;
+        }
+
+        private static int CountLivingEnemyStructures(RtsGame game, StructureKind kind)
+        {
+            int count = 0;
+            for (int i = 0; i < game.Entities.Count; i++)
+            {
+                RtsStructure structure = game.Entities[i] as RtsStructure;
+                if (structure != null && structure.Team == RtsTeam.Enemy && structure.IsAlive && structure.StructureKind == kind)
+                {
+                    count++;
+                }
+            }
+
+            return count;
+        }
+
+        private static int CountLivingEnemyUnits(RtsGame game)
+        {
+            int count = 0;
+            for (int i = 0; i < game.Entities.Count; i++)
+            {
+                RtsUnit unit = game.Entities[i] as RtsUnit;
+                if (unit != null && unit.Team == RtsTeam.Enemy && unit.IsAlive)
+                {
+                    count++;
+                }
+            }
+
+            return count;
         }
 
         private static RtsEntity FindEntityById(RtsGame game, int id)

@@ -88,9 +88,15 @@ The full battlefield remains approximately 224 simulation units wide. The Quest 
 
 - Runtime entities and resource nodes now receive stable save IDs.
 - `RtsSaveService` captures and restores the generated skirmish state through a versioned JSON envelope with checksum validation.
-- Saved state includes resources, health, orders, production queues, harvest state, fog exploration, active placement, and enemy wave timers.
+- Saved state includes resources, health, orders, production queues, harvest state, fog exploration, active placement, and enemy commander economy/timers.
 - `RtsLifecycleCoordinator` pauses simulation on app pause/focus loss, blocks commands while suspended or saving/loading, hides Quest pointer visuals when input focus is gone, and attempts autosave on pause/focus loss.
 - Desktop HUD and Quest command console controls expose manual save/load and user pause.
+
+## Skirmish AI
+
+- The enemy commander now has its own credit bank, income ticks, paid unit production, and periodic attack orders.
+- Enemy structures can be rebuilt from fixed base slots while at least one enemy structure remains alive.
+- Timed enemy attacks still exist, but spawned attackers now spend commander credits instead of appearing for free.
 
 See `docs/SAVE_SYSTEM.md`, `docs/LIFECYCLE_TEST_MATRIX.md`, and `docs/PERFORMANCE_TESTING.md`.
 

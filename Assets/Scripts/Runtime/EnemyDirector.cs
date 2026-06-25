@@ -4,16 +4,28 @@ namespace QuestCommandRTS
 {
     public sealed class EnemyDirector : MonoBehaviour
     {
+        private const int StartingEnemyCredits = 1800;
+        private const int MaximumEnemyCredits = 12000;
+        private const int BaseIncome = 180;
+        private const int RefineryIncomeBonus = 160;
+        private const float IncomeInterval = 7.5f;
+        private const float BuildInterval = 8.5f;
+        private const float ProductionInterval = 5.5f;
+        private const float IdleOrderInterval = 3.5f;
+
         private RtsGame game;
         private float nextWaveTime;
         private float nextIdleOrderTime;
+        private float nextIncomeTime;
+        private float nextBuildTime;
+        private float nextProductionTime;
+        private int enemyCredits;
         private int waveIndex;
 
         public void Initialize(RtsGame owner)
         {
             game = owner;
-            nextWaveTime = game.Clock.SimulationTime + 22f;
-            nextIdleOrderTime = game.Clock.SimulationTime + 3f;
+            ResetEconomy(game.Clock.SimulationTime);
         }
 
         private void Update()
@@ -30,9 +42,27 @@ namespace QuestCommandRTS
                     SpawnWave();
                 }
 
+                if (game.Clock.SimulationTime >= nextIncomeTime)
+                {
+                    nextIncomeTime = game.Clock.SimulationTime + IncomeInterval;
+                    GrantIncome();
+                }
+
+                if (game.Clock.SimulationTime >= nextBuildTime)
+                {
+                    nextBuildTime = game.Clock.SimulationTime + BuildInterval;
+                    TryBuildBaseStructure();
+                }
+
+                if (game.Clock.SimulationTime >= nextProductionTime)
+                {
+                    nextProductionTime = game.Clock.SimulationTime + ProductionInterval;
+                    TryProduceUnit();
+                }
+
                 if (game.Clock.SimulationTime >= nextIdleOrderTime)
                 {
-                    nextIdleOrderTime = game.Clock.SimulationTime + 3.5f;
+                    nextIdleOrderTime = game.Clock.SimulationTime + IdleOrderInterval;
                     OrderIdleEnemies();
                 }
             }
@@ -42,9 +72,14 @@ namespace QuestCommandRTS
         {
             return new RtsEnemyDirectorSaveData
             {
+                hasEconomyState = true,
                 waveIndex = waveIndex,
+                enemyCredits = enemyCredits,
                 nextWaveTime = nextWaveTime,
-                nextIdleOrderTime = nextIdleOrderTime
+                nextIdleOrderTime = nextIdleOrderTime,
+                nextIncomeTime = nextIncomeTime,
+                nextBuildTime = nextBuildTime,
+                nextProductionTime = nextProductionTime
             };
         }
 
@@ -52,44 +87,92 @@ namespace QuestCommandRTS
         {
             if (data == null)
             {
-                nextWaveTime = game.Clock.SimulationTime + 22f;
-                nextIdleOrderTime = game.Clock.SimulationTime + 3f;
-                waveIndex = 0;
+                ResetEconomy(game.Clock.SimulationTime);
                 return;
             }
 
+            float now = game.Clock.SimulationTime;
             waveIndex = Mathf.Max(0, data.waveIndex);
-            nextWaveTime = Mathf.Max(game.Clock.SimulationTime + 1f, data.nextWaveTime);
-            nextIdleOrderTime = Mathf.Max(game.Clock.SimulationTime + 0.5f, data.nextIdleOrderTime);
+            enemyCredits = data.hasEconomyState ? Mathf.Clamp(data.enemyCredits, 0, MaximumEnemyCredits) : StartingEnemyCredits;
+            nextWaveTime = Mathf.Max(now + 1f, data.nextWaveTime);
+            nextIdleOrderTime = Mathf.Max(now + 0.5f, data.nextIdleOrderTime);
+            nextIncomeTime = data.hasEconomyState ? Mathf.Max(now + 0.5f, data.nextIncomeTime) : now + 5f;
+            nextBuildTime = data.hasEconomyState ? Mathf.Max(now + 0.5f, data.nextBuildTime) : now + 8f;
+            nextProductionTime = data.hasEconomyState ? Mathf.Max(now + 0.5f, data.nextProductionTime) : now + 4f;
         }
+
+#if UNITY_EDITOR
+        public int EnemyCreditsForTests => enemyCredits;
+
+        public void SetEconomyForTests(int credits, float nextIncome, float nextBuild, float nextProduction, float nextWave, float nextIdleOrder, int wave)
+        {
+            enemyCredits = Mathf.Clamp(credits, 0, MaximumEnemyCredits);
+            nextIncomeTime = Mathf.Max(0f, nextIncome);
+            nextBuildTime = Mathf.Max(0f, nextBuild);
+            nextProductionTime = Mathf.Max(0f, nextProduction);
+            nextWaveTime = Mathf.Max(0f, nextWave);
+            nextIdleOrderTime = Mathf.Max(0f, nextIdleOrder);
+            waveIndex = Mathf.Max(0, wave);
+        }
+
+        public void SetEnemyCreditsForTests(int credits)
+        {
+            enemyCredits = Mathf.Clamp(credits, 0, MaximumEnemyCredits);
+        }
+
+        public bool TryBuildBaseStructureForTests()
+        {
+            return TryBuildBaseStructure();
+        }
+
+        public bool TryProduceUnitForTests()
+        {
+            return TryProduceUnit();
+        }
+#endif
 
         private void SpawnWave()
         {
-            waveIndex++;
-            nextWaveTime = game.Clock.SimulationTime + Mathf.Max(18f, 42f - waveIndex * 1.5f);
             RtsEntity target = game.FindPlayerPrimaryTarget();
-
             if (target == null)
             {
+                nextWaveTime = game.Clock.SimulationTime + 8f;
                 return;
             }
 
+            int nextWaveIndex = waveIndex + 1;
             Vector3 enemyBase = game.GetEnemyBaseCenter();
-            int infantryCount = 2 + Mathf.Min(5, waveIndex);
+            int infantryCount = 2 + Mathf.Min(5, nextWaveIndex);
+            int spawned = 0;
             for (int i = 0; i < infantryCount; i++)
             {
+                if (!TrySpendEnemyCredits(RtsBalance.GetUnit(UnitKind.Rifleman).Cost))
+                {
+                    break;
+                }
+
                 Vector3 spawn = enemyBase + new Vector3(Random.Range(-8f, 8f), 0f, Random.Range(-8f, 8f));
                 RtsUnit unit = game.CreateUnit(RtsTeam.Enemy, UnitKind.Rifleman, spawn);
                 unit.IssueAttack(target);
+                spawned++;
             }
 
-            if (waveIndex % 2 == 0)
+            if (nextWaveIndex % 2 == 0 && HasLivingEnemyStructure(StructureKind.WarFactory) && TrySpendEnemyCredits(RtsBalance.GetUnit(UnitKind.Tank).Cost))
             {
                 RtsUnit tank = game.CreateUnit(RtsTeam.Enemy, UnitKind.Tank, enemyBase + new Vector3(Random.Range(-7f, 7f), 0f, Random.Range(-7f, 7f)));
                 tank.IssueAttack(target);
+                spawned++;
             }
 
-            game.SpawnFloatingText("Enemy wave", enemyBase + Vector3.up * 3f, new Color(1f, 0.5f, 0.35f));
+            if (spawned <= 0)
+            {
+                nextWaveTime = game.Clock.SimulationTime + 8f;
+                return;
+            }
+
+            waveIndex = nextWaveIndex;
+            nextWaveTime = game.Clock.SimulationTime + Mathf.Max(18f, 42f - waveIndex * 1.5f);
+            game.SpawnFloatingText("Enemy attack", enemyBase + Vector3.up * 3f, new Color(1f, 0.5f, 0.35f));
         }
 
         private void OrderIdleEnemies()
@@ -107,6 +190,245 @@ namespace QuestCommandRTS
                 {
                     unit.IssueAttack(target);
                 }
+            }
+        }
+
+        private void ResetEconomy(float now)
+        {
+            enemyCredits = StartingEnemyCredits;
+            waveIndex = 0;
+            nextWaveTime = now + 22f;
+            nextIdleOrderTime = now + 3f;
+            nextIncomeTime = now + 5f;
+            nextBuildTime = now + 8f;
+            nextProductionTime = now + 4f;
+        }
+
+        private void GrantIncome()
+        {
+            if (game.CountLivingStructures(RtsTeam.Enemy) <= 0)
+            {
+                return;
+            }
+
+            int income = BaseIncome + CountLivingEnemyStructures(StructureKind.Refinery) * RefineryIncomeBonus;
+            enemyCredits = Mathf.Clamp(enemyCredits + income, 0, MaximumEnemyCredits);
+        }
+
+        private bool TryBuildBaseStructure()
+        {
+            if (game.CountLivingStructures(RtsTeam.Enemy) <= 0)
+            {
+                return false;
+            }
+
+            StructureKind? targetKind = ChooseStructureToBuild();
+            if (!targetKind.HasValue)
+            {
+                return false;
+            }
+
+            StructureStats stats = RtsBalance.GetStructure(targetKind.Value);
+            if (!TrySpendEnemyCredits(stats.Cost))
+            {
+                return false;
+            }
+
+            int slotIndex = CountLivingEnemyStructures(targetKind.Value);
+            RtsStructure structure = game.CreateStructure(RtsTeam.Enemy, targetKind.Value, GetEnemyBuildSlot(targetKind.Value, slotIndex));
+            game.SpawnFloatingText("Enemy " + stats.Name, structure.transform.position + Vector3.up * 2.5f, new Color(1f, 0.46f, 0.28f));
+            return true;
+        }
+
+        private bool TryProduceUnit()
+        {
+            UnitKind kind = ChooseUnitToProduce();
+            ProductionStructure producer = FindEnemyProducer(kind);
+            if (producer == null)
+            {
+                return false;
+            }
+
+            UnitStats stats = RtsBalance.GetUnit(kind);
+            if (!TrySpendEnemyCredits(stats.Cost))
+            {
+                return false;
+            }
+
+            RtsUnit unit = game.CreateUnit(RtsTeam.Enemy, kind, GetSpawnPoint(producer));
+            RtsEntity target = game.FindPlayerPrimaryTarget();
+            if (target != null)
+            {
+                unit.IssueAttackMove(target.transform.position + new Vector3(Random.Range(-6f, 6f), 0f, Random.Range(-6f, 6f)));
+            }
+
+            return true;
+        }
+
+        private StructureKind? ChooseStructureToBuild()
+        {
+            if (!HasLivingEnemyStructure(StructureKind.CommandCenter) && enemyCredits >= RtsBalance.GetStructure(StructureKind.CommandCenter).Cost)
+            {
+                return StructureKind.CommandCenter;
+            }
+
+            if (!HasLivingEnemyStructure(StructureKind.PowerPlant) || EnemyPowerUsed() > EnemyPowerProvided())
+            {
+                return StructureKind.PowerPlant;
+            }
+
+            if (!HasLivingEnemyStructure(StructureKind.Barracks))
+            {
+                return StructureKind.Barracks;
+            }
+
+            if (!HasLivingEnemyStructure(StructureKind.Refinery))
+            {
+                return StructureKind.Refinery;
+            }
+
+            if (!HasLivingEnemyStructure(StructureKind.WarFactory))
+            {
+                return StructureKind.WarFactory;
+            }
+
+            if (CountLivingEnemyStructures(StructureKind.Turret) < 2)
+            {
+                return StructureKind.Turret;
+            }
+
+            return null;
+        }
+
+        private UnitKind ChooseUnitToProduce()
+        {
+            bool canBuildTank = HasLivingEnemyStructure(StructureKind.WarFactory) && enemyCredits >= RtsBalance.GetUnit(UnitKind.Tank).Cost;
+            if (canBuildTank && CountLivingEnemyUnits(UnitKind.Tank) < 4)
+            {
+                return UnitKind.Tank;
+            }
+
+            return UnitKind.Rifleman;
+        }
+
+        private ProductionStructure FindEnemyProducer(UnitKind kind)
+        {
+            for (int i = 0; i < game.Entities.Count; i++)
+            {
+                ProductionStructure producer = game.Entities[i] as ProductionStructure;
+                if (producer != null && producer.Team == RtsTeam.Enemy && producer.IsAlive && producer.CanTrain(kind))
+                {
+                    return producer;
+                }
+            }
+
+            return null;
+        }
+
+        private bool TrySpendEnemyCredits(int amount)
+        {
+            if (enemyCredits < amount)
+            {
+                return false;
+            }
+
+            enemyCredits -= amount;
+            return true;
+        }
+
+        private int CountLivingEnemyStructures(StructureKind kind)
+        {
+            int count = 0;
+            for (int i = 0; i < game.Entities.Count; i++)
+            {
+                RtsStructure structure = game.Entities[i] as RtsStructure;
+                if (structure != null && structure.Team == RtsTeam.Enemy && structure.IsAlive && structure.StructureKind == kind)
+                {
+                    count++;
+                }
+            }
+
+            return count;
+        }
+
+        private int CountLivingEnemyUnits(UnitKind kind)
+        {
+            int count = 0;
+            for (int i = 0; i < game.Entities.Count; i++)
+            {
+                RtsUnit unit = game.Entities[i] as RtsUnit;
+                if (unit != null && unit.Team == RtsTeam.Enemy && unit.IsAlive && unit.UnitKind == kind)
+                {
+                    count++;
+                }
+            }
+
+            return count;
+        }
+
+        private bool HasLivingEnemyStructure(StructureKind kind)
+        {
+            return CountLivingEnemyStructures(kind) > 0;
+        }
+
+        private int EnemyPowerProvided()
+        {
+            int total = 0;
+            for (int i = 0; i < game.Entities.Count; i++)
+            {
+                RtsStructure structure = game.Entities[i] as RtsStructure;
+                if (structure != null && structure.Team == RtsTeam.Enemy && structure.IsAlive)
+                {
+                    total += structure.PowerProvided;
+                }
+            }
+
+            return total;
+        }
+
+        private int EnemyPowerUsed()
+        {
+            int total = 0;
+            for (int i = 0; i < game.Entities.Count; i++)
+            {
+                RtsStructure structure = game.Entities[i] as RtsStructure;
+                if (structure != null && structure.Team == RtsTeam.Enemy && structure.IsAlive)
+                {
+                    total += structure.PowerUsed;
+                }
+            }
+
+            return total;
+        }
+
+        private static Vector3 GetSpawnPoint(RtsStructure producer)
+        {
+            Vector3 forward = producer.transform.forward.sqrMagnitude > 0.01f ? producer.transform.forward : Vector3.back;
+            Vector3 point = producer.transform.position + forward * (producer.FootprintRadius + 2.4f);
+            point.x += Random.Range(-0.9f, 0.9f);
+            point.z += Random.Range(-0.9f, 0.9f);
+            point.y = 0f;
+            return point;
+        }
+
+        private static Vector3 GetEnemyBuildSlot(StructureKind kind, int slotIndex)
+        {
+            switch (kind)
+            {
+                case StructureKind.CommandCenter:
+                    return new Vector3(86f, 0f, 78f);
+                case StructureKind.PowerPlant:
+                    return slotIndex == 0 ? new Vector3(96f, 0f, 62f) : new Vector3(104f, 0f, 82f);
+                case StructureKind.Barracks:
+                    return new Vector3(74f, 0f, 64f);
+                case StructureKind.Refinery:
+                    return new Vector3(82f, 0f, 96f);
+                case StructureKind.WarFactory:
+                    return new Vector3(100f, 0f, 82f);
+                case StructureKind.Turret:
+                    return slotIndex == 0 ? new Vector3(66f, 0f, 84f) : new Vector3(96f, 0f, 48f);
+                default:
+                    return new Vector3(82f, 0f, 72f);
             }
         }
     }
