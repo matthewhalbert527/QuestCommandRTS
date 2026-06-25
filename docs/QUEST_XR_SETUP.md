@@ -163,6 +163,7 @@ Open the console with X/left primary.
 - Inspect the `QuestTabletopSettings` component created at runtime.
 - Default `SimulationUnitsPerMeter` is 126.
 - The 224-unit board should appear roughly 1.78 meters wide.
+- For a room-sized board, use `Command RTS > Profile > Use Room-Sized Quest Tabletop Scale`; it writes a local profile with `tabletopScale` 2.25, making the same battlefield roughly 4.0 meters wide with a longer pointer ray. Use `Command RTS > Profile > Use Default Quest Tabletop Scale` to restore the default.
 - Default `BoardHeightMeters` is 0.82, which offsets the rig root so the battlefield plane sits at physical tabletop height above the tracking origin.
 - Forced Quest mode without live headset tracking seeds fallback head and controller poses from `QuestTabletopSettings`; live XR tracking should replace those poses as soon as device position and rotation features are available.
 - If the board appears on the floor, verify the project includes the `BoardHeightMeters` setting and that `QuestTabletopRig` uses `QuestTabletopSettings.GetRigRootPosition()`.

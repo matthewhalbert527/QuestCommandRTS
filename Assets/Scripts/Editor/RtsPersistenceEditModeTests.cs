@@ -129,7 +129,7 @@ namespace QuestCommandRTS.Editor
             try
             {
                 Directory.CreateDirectory(tempPath);
-                File.WriteAllText(settingsPath, "{ \"schemaVersion\": 1, \"masterVolume\": 2.5, \"musicVolume\": -1, \"effectsVolume\": 4, \"pointerLength\": -9, \"tabletopScale\": 2, \"tabletopHeight\": -3, \"uiScale\": 0.1, \"qualityPreset\": \"Ultra\", \"periodicAutosaveIntervalSeconds\": 9999 }");
+                File.WriteAllText(settingsPath, "{ \"schemaVersion\": 1, \"masterVolume\": 2.5, \"musicVolume\": -1, \"effectsVolume\": 4, \"pointerLength\": -9, \"tabletopScale\": 99, \"tabletopHeight\": -3, \"uiScale\": 0.1, \"qualityPreset\": \"Ultra\", \"periodicAutosaveIntervalSeconds\": 9999 }");
 
                 RtsProfileSettings settings = new RtsProfileSettings(settingsPath);
                 Assert.IsTrue(settings.TryLoad(out string error), error);
@@ -137,7 +137,7 @@ namespace QuestCommandRTS.Editor
                 Assert.AreEqual(0f, settings.Data.musicVolume, 0.001f);
                 Assert.AreEqual(1f, settings.Data.effectsVolume, 0.001f);
                 Assert.AreEqual(3.2f, settings.Data.pointerLength, 0.001f);
-                Assert.AreEqual(1.5f, settings.Data.tabletopScale, 0.001f);
+                Assert.AreEqual(RtsProfileSettingsData.MaxTabletopScale, settings.Data.tabletopScale, 0.001f);
                 Assert.AreEqual(0.82f, settings.Data.tabletopHeight, 0.001f);
                 Assert.AreEqual(0.75f, settings.Data.uiScale, 0.001f);
                 Assert.AreEqual(900f, settings.Data.periodicAutosaveIntervalSeconds, 0.001f);
@@ -209,6 +209,24 @@ namespace QuestCommandRTS.Editor
             Assert.AreEqual(2.222f, settings.BattlefieldWidthMeters, 0.01f);
             Assert.AreEqual(0.696f, settings.StatusPanelSizeMeters.x, 0.001f);
             Assert.AreEqual(0.624f, settings.CommandConsoleSizeMeters.y, 0.001f);
+        }
+
+        [Test]
+        public void QuestTabletopSettingsSupportRoomSizedProfileScale()
+        {
+            GameObject root = new GameObject("Quest Room Scale Settings Test");
+            QuestTabletopSettings settings = root.AddComponent<QuestTabletopSettings>();
+            RtsProfileSettingsData profile = new RtsProfileSettingsData
+            {
+                tabletopScale = RtsProfileSettingsData.RoomSizedTabletopScale,
+                pointerLength = RtsProfileSettingsData.RoomSizedPointerLength
+            };
+
+            settings.ApplyProfile(profile);
+
+            Assert.AreEqual(126f / RtsProfileSettingsData.RoomSizedTabletopScale, settings.SimulationUnitsPerMeter, 0.001f);
+            Assert.AreEqual(4f, settings.BattlefieldWidthMeters, 0.01f);
+            Assert.AreEqual(RtsProfileSettingsData.RoomSizedPointerLength, settings.RayLengthMeters, 0.001f);
         }
 
         [Test]

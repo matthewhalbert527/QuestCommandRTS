@@ -10,6 +10,7 @@ This document records what has been implemented and what has actually been verif
 - Quest VR mode creates a scaled tabletop rig, uses an XR head camera, tracks left and right controller nodes through Unity XR input, and does not install the desktop camera/input/HUD path.
 - Right controller ray feedback, reticle, single-target trigger selection, additive selection modifier, context command button, cancel/clear button, attack-move/stop modifiers, building placement, and the Quest command console all route into shared game command services. Quest console build, produce, cancel-queue, repair, sell, pause, save/load, and new-match buttons are covered through panel-ray activation tests. Selected and damaged entities now show lightweight health bars for tabletop readability.
 - Quest mode uses a compact world-space status panel for credits, power, selected count, status text, and core control hints.
+- Quest tabletop scale now includes editor profile presets for the default approximately 1.78m board and a room-sized approximately 4.0m board with longer pointer reach.
 
 ## Architecture
 
@@ -21,7 +22,7 @@ This document records what has been implemented and what has actually been verif
 - `QuestXrProjectValidator` validates package and project settings, and separates automated checks from manual headset/setup checks.
 - `QuestRuntimeSmokeReport` validates the generated Quest runtime object graph locally while keeping physical headset behavior marked manual.
 - `DesktopRuntimeSmokeReport` validates the generated desktop runtime object graph locally while keeping hands-on desktop controls marked manual.
-- `RtsProfileSettings` stores versioned user preferences separately from match saves and applies safe Quest tabletop scale, height, pointer length, and UI scale during rig creation.
+- `RtsProfileSettings` stores versioned user preferences separately from match saves and applies safe Quest tabletop scale, height, pointer length, and UI scale during rig creation, including a room-sized tabletop profile preset.
 - `RtsSaveFileStore` and `RtsSaveService` keep a prior `.bak` slot and fall back to it when the newest save is corrupt or unreadable.
 - Save metadata is checksum-validated before display, includes app/config/map/time/state/count fields, and can fall back to backup metadata when the primary slot is corrupt.
 - `RtsLifecycleCoordinator` now performs configurable periodic autosaves during active play while suppressing periodic writes during pause, focus loss, save, and load states.
@@ -33,7 +34,7 @@ This document records what has been implemented and what has actually been verif
 
 Automated verification last run locally:
 
-- EditMode tests: `69` total, `69` passed, `0` failed.
+- EditMode tests: `70` total, `70` passed, `0` failed.
 - XR setup validator: automated package/project-setting checks pass except for local Android Build Support, which is missing from this Unity install; manual headset and Android OpenXR UI verification remain manual.
 - Generated Quest runtime smoke report: automated object-graph checks pass in EditMode; physical headset behavior remains manual.
 - Generated desktop runtime smoke report: automated object-graph checks pass in EditMode; hands-on desktop control regression remains manual.
@@ -53,7 +54,7 @@ Automated verification last run locally:
 | Desktop and Quest input share the same RTS command dispatcher | Pass | Desktop and Quest controllers both delegate selection, placement, context commands, attack-move, stop, and clear/cancel through `RtsCommandDispatcher` and `RtsPlayerCommandService`. |
 | Quest path does not create, reposition, or rotate the desktop command camera | Pass | Forced Quest initialization tests assert no `Command Camera`, no `RtsInputController`, and no `RtsHud`; the view camera is the Quest head camera. |
 | Quest path does not run the desktop overlay HUD | Pass | Forced Quest initialization tests assert `RtsHud` is absent and `QuestWorldHud` is present. |
-| Tabletop scale is configurable and defaults to approximately 125-128 simulation units per physical meter | Pass | `QuestTabletopSettings.SimulationUnitsPerMeter` defaults to `126`, yielding an approximately `1.78m` battlefield width in tests. |
+| Tabletop scale is configurable and defaults to approximately 125-128 simulation units per physical meter | Pass | `QuestTabletopSettings.SimulationUnitsPerMeter` defaults to `126`, yielding an approximately `1.78m` battlefield width in tests. Profile presets also cover an optional approximately `4.0m` room-sized board. |
 | Android/OpenXR project settings are configured or explicitly validated and documented | Partial local environment gap | Validator checks package pins, Android Build Support, Android API/backend/architecture/package id/input/graphics, OpenXR loaders, SPI, and Oculus Touch. This Unity install is missing Android Build Support, so Quest device builds are not locally verified. |
 | New per-frame Quest input code avoids obvious managed allocations | Pass | EditMode test scans Quest input, tracked pose, world HUD, and command console hot loops for obvious allocation-heavy patterns. |
 | README and Quest XR setup docs are updated | Pass | `README.md`, `docs/QUEST_XR_SETUP.md`, `docs/SAVE_SYSTEM.md`, `docs/LIFECYCLE_TEST_MATRIX.md`, `docs/PERFORMANCE_TESTING.md`, and this status document record controls, persistence/settings, setup, validation, limitations, and manual checks. |

@@ -83,7 +83,7 @@ The Quest command console has three tabs:
 
 Building placement follows the existing desktop build rules. The preview snaps to the map, turns green when valid, turns red when invalid, and reports concise invalid reasons such as outside map, outside build radius, blocked footprint, missing prerequisite, or insufficient credits.
 
-The full battlefield remains approximately 224 simulation units wide. The Quest rig defaults to 126 simulation units per physical meter, so the board appears roughly 1.78 meters wide while gameplay coordinates and movement logic stay unchanged. `QuestTabletopSettings.BoardHeightMeters` defaults to 0.82m, which shifts the generated battlefield to tabletop height above the physical tracking origin instead of leaving the board on the floor.
+The full battlefield remains approximately 224 simulation units wide. The Quest rig defaults to 126 simulation units per physical meter, so the board appears roughly 1.78 meters wide while gameplay coordinates and movement logic stay unchanged. `Command RTS > Profile > Use Room-Sized Quest Tabletop Scale` writes a local profile preset that expands the board to roughly 4.0 meters wide and increases pointer reach; `Use Default Quest Tabletop Scale` restores the default. `QuestTabletopSettings.BoardHeightMeters` defaults to 0.82m, which shifts the generated battlefield to tabletop height above the physical tracking origin instead of leaving the board on the floor.
 
 ## Persistence And Lifecycle
 
@@ -127,6 +127,8 @@ See `docs/SAVE_SYSTEM.md`, `docs/LIFECYCLE_TEST_MATRIX.md`, `docs/PERFORMANCE_TE
 - `Command RTS > Validate Generated Desktop Runtime`
 - `Command RTS > Build > Validate Desktop Build Support`
 - `Command RTS > Build > Desktop Development Build`
+- `Command RTS > Profile > Use Default Quest Tabletop Scale`
+- `Command RTS > Profile > Use Room-Sized Quest Tabletop Scale`
 - `Tools > Quest RTS > Apply Recommended Quest Settings`
 - `Tools > Quest RTS > Validate XR Setup`
 - `Tools > Quest RTS > Validate Generated Quest Runtime`

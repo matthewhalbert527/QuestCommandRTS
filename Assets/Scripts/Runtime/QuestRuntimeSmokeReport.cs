@@ -50,11 +50,15 @@ namespace QuestCommandRTS
 
             if (settings != null)
             {
-                bool scaleValid = settings.SimulationUnitsPerMeter >= 125f && settings.SimulationUnitsPerMeter <= 128f;
-                Add(results, "Tabletop scale", scaleValid, "SimulationUnitsPerMeter=" + settings.SimulationUnitsPerMeter.ToString("0.##") + ", boardWidthMeters=" + settings.BattlefieldWidthMeters.ToString("0.##"));
+                float minSimulationUnitsPerMeter = 126f / RtsProfileSettingsData.MaxTabletopScale;
+                float maxSimulationUnitsPerMeter = 126f / RtsProfileSettingsData.MinTabletopScale;
+                bool scaleValid = settings.SimulationUnitsPerMeter >= minSimulationUnitsPerMeter - 0.01f && settings.SimulationUnitsPerMeter <= maxSimulationUnitsPerMeter + 0.01f;
+                Add(results, "Tabletop scale", scaleValid, "SimulationUnitsPerMeter=" + settings.SimulationUnitsPerMeter.ToString("0.##") + ", supported=" + minSimulationUnitsPerMeter.ToString("0.##") + "-" + maxSimulationUnitsPerMeter.ToString("0.##"));
 
-                bool boardWidthValid = settings.BattlefieldWidthMeters >= 1.75f && settings.BattlefieldWidthMeters <= 1.8f;
-                Add(results, "Board physical width", boardWidthValid, "Expected 1.75m to 1.8m, actual " + settings.BattlefieldWidthMeters.ToString("0.##") + "m.");
+                float minBoardWidthMeters = RtsBalance.MapHalfSize * 2f / maxSimulationUnitsPerMeter;
+                float maxBoardWidthMeters = RtsBalance.MapHalfSize * 2f / minSimulationUnitsPerMeter;
+                bool boardWidthValid = settings.BattlefieldWidthMeters >= minBoardWidthMeters - 0.01f && settings.BattlefieldWidthMeters <= maxBoardWidthMeters + 0.01f;
+                Add(results, "Board physical width", boardWidthValid, "Supported " + minBoardWidthMeters.ToString("0.##") + "m to " + maxBoardWidthMeters.ToString("0.##") + "m, actual " + settings.BattlefieldWidthMeters.ToString("0.##") + "m.");
 
                 bool tabletopHeightValid = Mathf.Abs(settings.GetRigRootPosition().y + settings.BoardHeightSimulationUnits) <= 0.01f;
                 Add(results, "Tabletop height offset", tabletopHeightValid, "BoardHeightMeters=" + settings.BoardHeightMeters.ToString("0.##"));

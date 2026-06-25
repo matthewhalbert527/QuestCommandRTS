@@ -8,6 +8,12 @@ namespace QuestCommandRTS
     public sealed class RtsProfileSettingsData
     {
         public const int CurrentSchemaVersion = 1;
+        public const float DefaultPointerLength = 3.2f;
+        public const float RoomSizedPointerLength = 5.5f;
+        public const float DefaultTabletopScale = 1f;
+        public const float MinTabletopScale = 0.75f;
+        public const float MaxTabletopScale = 2.25f;
+        public const float RoomSizedTabletopScale = MaxTabletopScale;
 
         public int schemaVersion = CurrentSchemaVersion;
         public float masterVolume = 1f;
@@ -15,8 +21,8 @@ namespace QuestCommandRTS
         public float effectsVolume = 0.9f;
         public bool hapticsEnabled = true;
         public bool leftHandedMode;
-        public float pointerLength = 3.2f;
-        public float tabletopScale = 1f;
+        public float pointerLength = DefaultPointerLength;
+        public float tabletopScale = DefaultTabletopScale;
         public float tabletopHeight = 0.82f;
         public float uiScale = 1f;
         public bool highContrast;
@@ -31,8 +37,8 @@ namespace QuestCommandRTS
             masterVolume = Mathf.Clamp01(masterVolume);
             musicVolume = Mathf.Clamp01(musicVolume);
             effectsVolume = Mathf.Clamp01(effectsVolume);
-            pointerLength = NormalizePositiveRange(pointerLength, 3.2f, 0.25f, 8f);
-            tabletopScale = NormalizePositiveRange(tabletopScale, 1f, 0.75f, 1.5f);
+            pointerLength = NormalizePositiveRange(pointerLength, DefaultPointerLength, 0.25f, 8f);
+            tabletopScale = NormalizePositiveRange(tabletopScale, DefaultTabletopScale, MinTabletopScale, MaxTabletopScale);
             tabletopHeight = NormalizePositiveRange(tabletopHeight, 0.82f, 0.35f, 1.25f);
             uiScale = NormalizePositiveRange(uiScale, 1f, 0.75f, 1.35f);
             periodicAutosaveIntervalSeconds = NormalizePositiveRange(periodicAutosaveIntervalSeconds, 180f, 30f, 900f);
