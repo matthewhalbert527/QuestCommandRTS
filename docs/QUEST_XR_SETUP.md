@@ -48,6 +48,8 @@ Run `Tools > Quest RTS > Apply Recommended Quest Settings` to apply:
 
 Then run `Tools > Quest RTS > Validate XR Setup`.
 
+Run `Tools > Quest RTS > Validate Generated Quest Runtime` for a local generated-runtime smoke report. It forces Quest mode in the editor, verifies the generated tabletop rig, XR head camera path, Quest input/controller objects, pointer visuals, world-space HUD, command console, and confirms the desktop camera/input/HUD path is absent. This does not replace physical headset testing.
+
 If Android Build Support is not installed or the editor has not switched to Android yet, Unity might not create Android OpenXR package settings in the local session. In that case, install the Android modules, switch the build target to Android, rerun the apply command, and verify Android Single Pass Instanced, Meta Quest Support, and Oculus Touch in Project Settings.
 
 ## Manual OpenXR Checks
