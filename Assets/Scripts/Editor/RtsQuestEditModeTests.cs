@@ -1,4 +1,5 @@
 #if UNITY_EDITOR
+using System.IO;
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.UI;
@@ -221,6 +222,39 @@ namespace QuestCommandRTS.Editor
             AssertValidationPassed(report, "Standalone Single Pass Instanced");
             AssertValidationPassed(report, "Standalone Oculus Touch profile");
             AssertValidationManual(report, "Headset setup");
+        }
+
+        [Test]
+        public void DesktopBuildArtifactValidationRequiresExistingNonEmptyFile()
+        {
+            string directory = Path.Combine(Path.GetTempPath(), "QuestCommandRTS-BuildValidation");
+            Directory.CreateDirectory(directory);
+            string missingPath = Path.Combine(directory, "missing.exe");
+            string emptyPath = Path.Combine(directory, "empty.exe");
+            string validPath = Path.Combine(directory, "valid.exe");
+
+            try
+            {
+                File.WriteAllBytes(emptyPath, new byte[0]);
+                File.WriteAllBytes(validPath, new byte[] { 1, 2, 3 });
+
+                Assert.IsFalse(RtsBuildAutomation.IsValidBuildArtifact(null));
+                Assert.IsFalse(RtsBuildAutomation.IsValidBuildArtifact(missingPath));
+                Assert.IsFalse(RtsBuildAutomation.IsValidBuildArtifact(emptyPath));
+                Assert.IsTrue(RtsBuildAutomation.IsValidBuildArtifact(validPath));
+            }
+            finally
+            {
+                if (File.Exists(emptyPath))
+                {
+                    File.Delete(emptyPath);
+                }
+
+                if (File.Exists(validPath))
+                {
+                    File.Delete(validPath);
+                }
+            }
         }
 
         [Test]

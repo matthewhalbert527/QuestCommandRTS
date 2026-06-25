@@ -30,7 +30,22 @@ namespace QuestCommandRTS.Editor
                 throw new InvalidOperationException("Desktop build failed: " + report.summary.result);
             }
 
+            if (!IsValidBuildArtifact(WindowsBuildPath))
+            {
+                throw new InvalidOperationException("Desktop build reported success but did not create " + Path.GetFullPath(WindowsBuildPath) + ". Confirm the Windows Standalone module is installed and enabled for this Unity editor.");
+            }
+
             Debug.Log("Desktop build created at " + Path.GetFullPath(WindowsBuildPath));
+        }
+
+        internal static bool IsValidBuildArtifact(string path)
+        {
+            if (string.IsNullOrEmpty(path) || !File.Exists(path))
+            {
+                return false;
+            }
+
+            return new FileInfo(path).Length > 0;
         }
     }
 }
