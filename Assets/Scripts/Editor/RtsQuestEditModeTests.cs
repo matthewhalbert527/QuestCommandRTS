@@ -593,6 +593,7 @@ namespace QuestCommandRTS.Editor
             AssertSmokePassed(report, "Board physical width");
             AssertSmokePassed(report, "Tabletop height offset");
             AssertSmokePassed(report, "Rig scale applied");
+            AssertSmokePassed(report, "Fallback tabletop view");
             AssertSmokePassed(report, "Head tracking node");
             AssertSmokePassed(report, "Left controller node");
             AssertSmokePassed(report, "Right controller node");

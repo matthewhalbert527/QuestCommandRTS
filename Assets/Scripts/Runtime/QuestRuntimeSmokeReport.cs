@@ -85,6 +85,8 @@ namespace QuestCommandRTS
                 {
                     bool rigScaleValid = Vector3.Distance(rig.RigRoot.localScale, Vector3.one * settings.SimulationUnitsPerMeter) <= 0.01f;
                     Add(results, "Rig scale applied", rigScaleValid, "RigRoot.localScale=" + rig.RigRoot.localScale);
+                    string comfortViewDetail;
+                    Add(results, "Fallback tabletop view", HasComfortableFallbackView(rig, settings, out comfortViewDetail), comfortViewDetail);
                 }
             }
             if (rig != null)
@@ -154,6 +156,31 @@ namespace QuestCommandRTS
 
             detail = "eventSystems=" + eventSystems.Length + ", standaloneInputModules=" + standaloneModules;
             return eventSystems.Length == 0 && standaloneModules == 0;
+        }
+
+        private static bool HasComfortableFallbackView(QuestTabletopRig rig, QuestTabletopSettings settings, out string detail)
+        {
+            if (rig == null || rig.HeadCamera == null || settings == null)
+            {
+                detail = "Quest rig, head camera, and settings are required.";
+                return false;
+            }
+
+            Transform head = rig.HeadCamera.transform;
+            Vector3 headPosition = head.position;
+            float boardHalfWidth = RtsBalance.MapHalfSize;
+            float distanceOutsideNearEdgeMeters = (-boardHalfWidth - headPosition.z) / settings.SimulationUnitsPerMeter;
+            float eyeHeightAboveBoardMeters = headPosition.y / settings.SimulationUnitsPerMeter;
+            Vector3 toCenter = (Vector3.zero - headPosition).normalized;
+            float facingCenterDot = Vector3.Dot(head.forward.normalized, toCenter);
+
+            bool outsideNearEdge = headPosition.z < -boardHalfWidth - settings.SimulationUnitsPerMeter * 0.15f;
+            bool comfortableEyeHeight = eyeHeightAboveBoardMeters >= 0.4f && eyeHeightAboveBoardMeters <= 1.4f;
+            bool facingCenter = facingCenterDot >= 0.75f;
+            detail = "outsideNearEdgeMeters=" + distanceOutsideNearEdgeMeters.ToString("0.##") +
+                ", eyeHeightAboveBoardMeters=" + eyeHeightAboveBoardMeters.ToString("0.##") +
+                ", facingCenterDot=" + facingCenterDot.ToString("0.##");
+            return outsideNearEdge && comfortableEyeHeight && facingCenter;
         }
 
         private static bool HasWorldSpaceCanvas(string objectName)
