@@ -22,6 +22,8 @@ namespace QuestCommandRTS
         public float CameraFarClipMeters = 6f;
         public Vector3 StatusPanelLocalPositionMeters = new Vector3(-0.72f, 1.15f, 0.48f);
         public Vector2 StatusPanelSizeMeters = new Vector2(0.58f, 0.22f);
+        public Vector3 TacticalMapLocalPositionMeters = new Vector3(0.68f, 1.12f, 0.46f);
+        public Vector2 TacticalMapSizeMeters = new Vector2(0.34f, 0.34f);
         public Vector3 CommandConsoleLocalPositionMeters = new Vector3(-0.78f, 0.96f, 0.12f);
         public Vector2 CommandConsoleSizeMeters = new Vector2(0.74f, 0.52f);
 
@@ -46,6 +48,7 @@ namespace QuestCommandRTS
             BoardHeightMeters = profile.tabletopHeight;
             RayLengthMeters = profile.pointerLength;
             StatusPanelSizeMeters = new Vector2(0.58f, 0.22f) * profile.uiScale;
+            TacticalMapSizeMeters = new Vector2(0.34f, 0.34f) * profile.uiScale;
             CommandConsoleSizeMeters = new Vector2(0.74f, 0.52f) * profile.uiScale;
             ClampValues();
         }

@@ -11,6 +11,7 @@ namespace QuestCommandRTS
         public Transform LeftController { get; private set; }
         public Transform RightController { get; private set; }
         public QuestCommandConsole CommandConsole { get; private set; }
+        public QuestTacticalMap TacticalMap { get; private set; }
 
         private QuestTabletopSettings settings;
 
@@ -52,6 +53,9 @@ namespace QuestCommandRTS
 
             QuestWorldHud hud = gameObject.AddComponent<QuestWorldHud>();
             hud.Initialize(game, RigRoot, settings);
+
+            TacticalMap = gameObject.AddComponent<QuestTacticalMap>();
+            TacticalMap.Initialize(game, RigRoot, settings);
 
             CommandConsole = gameObject.AddComponent<QuestCommandConsole>();
             CommandConsole.Initialize(game, RigRoot, settings);

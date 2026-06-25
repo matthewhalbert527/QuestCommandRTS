@@ -106,8 +106,10 @@ namespace QuestCommandRTS.Editor
             Assert.IsNull(game.GetComponent<RtsHud>());
             Assert.IsNotNull(game.GetComponent<QuestRtsInputController>());
             Assert.IsNotNull(game.GetComponent<QuestWorldHud>());
+            Assert.IsNotNull(game.GetComponent<QuestTacticalMap>());
             Assert.IsNotNull(game.GetComponent<QuestCommandConsole>());
             Assert.IsNotNull(game.QuestRig);
+            Assert.IsNotNull(game.QuestRig.TacticalMap);
             Assert.AreSame(game.QuestRig.HeadCamera.transform, game.GetViewCameraTransform());
         }
 
@@ -185,6 +187,56 @@ namespace QuestCommandRTS.Editor
 
             hud.RefreshForTests(false);
             Assert.AreSame(afterPause, hud.StatusTextForTests.text);
+        }
+
+        [Test]
+        public void QuestTacticalMapUsesWorldSpacePooledPipsAndNoPointerCapture()
+        {
+            RtsGame game = CreateInitializedGame(RtsRuntimeMode.QuestVr);
+            QuestTacticalMap tacticalMap = game.GetComponent<QuestTacticalMap>();
+            Assert.IsNotNull(tacticalMap);
+
+            GameObject mapObject = GameObject.Find("Quest Tactical Map");
+            Assert.IsNotNull(mapObject);
+
+            Canvas canvas = mapObject.GetComponent<Canvas>();
+            Assert.IsNotNull(canvas);
+            Assert.AreEqual(RenderMode.WorldSpace, canvas.renderMode);
+
+            GraphicRaycaster raycaster = mapObject.GetComponent<GraphicRaycaster>();
+            Assert.IsNotNull(raycaster);
+            Assert.IsFalse(raycaster.enabled);
+
+            Assert.IsNotNull(tacticalMap.PanelRectForTests);
+            Assert.IsNotNull(tacticalMap.MapRectForTests);
+            Assert.AreEqual(QuestTacticalMap.MaxEntityPips, tacticalMap.EntityPipCapacityForTests);
+            Assert.AreEqual(QuestTacticalMap.MaxResourcePips, tacticalMap.ResourcePipCapacityForTests);
+            Assert.Greater(tacticalMap.VisibleEntityPipCountForTests, 0);
+            Assert.Greater(tacticalMap.VisibleResourcePipCountForTests, 0);
+            AssertPanelImage("Tactical Map Plot Area", 0.8f);
+
+            Text header = FindRectTransform("Tactical Map Header").GetComponent<Text>();
+            Assert.IsNotNull(header);
+            StringAssert.Contains("TACTICAL MAP", header.text);
+        }
+
+        [Test]
+        public void QuestTacticalMapRefreshHidesDepletedResources()
+        {
+            RtsGame game = CreateInitializedGame(RtsRuntimeMode.QuestVr);
+            QuestTacticalMap tacticalMap = game.GetComponent<QuestTacticalMap>();
+            Assert.IsNotNull(tacticalMap);
+
+            tacticalMap.RefreshForTests(true);
+            int beforeDepletion = tacticalMap.VisibleResourcePipCountForTests;
+            Assert.Greater(beforeDepletion, 0);
+
+            ResourceNode node = game.ResourceNodes[0];
+            node.Harvest(node.Amount);
+
+            tacticalMap.RefreshForTests(true);
+
+            Assert.AreEqual(beforeDepletion - 1, tacticalMap.VisibleResourcePipCountForTests);
         }
 
         [Test]
@@ -458,6 +510,7 @@ namespace QuestCommandRTS.Editor
             AssertSmokePassed(report, "Quest rig present");
             AssertSmokePassed(report, "Quest input present");
             AssertSmokePassed(report, "Quest world HUD present");
+            AssertSmokePassed(report, "Quest tactical map present");
             AssertSmokePassed(report, "Quest command console present");
             AssertSmokePassed(report, "View camera uses XR head");
             AssertSmokePassed(report, "Tabletop scale");
@@ -486,8 +539,9 @@ namespace QuestCommandRTS.Editor
             Assert.Greater(snapshot.uniqueSharedMaterialCount, 0);
             Assert.AreEqual(1, snapshot.enabledCameraCount);
             Assert.AreEqual(1, snapshot.enabledLightCount);
-            Assert.GreaterOrEqual(snapshot.worldSpaceCanvasCount, 2);
+            Assert.GreaterOrEqual(snapshot.worldSpaceCanvasCount, 3);
             Assert.AreEqual(0, snapshot.screenSpaceOverlayCanvasCount);
+            Assert.AreEqual(1, snapshot.tacticalMapCanvasCount);
             Assert.AreEqual(1, snapshot.fogOverlayObjectCount);
             Assert.AreEqual(1, snapshot.fogOverlayRendererCount);
             Assert.AreEqual(0, snapshot.fogCellObjectCount);
@@ -502,6 +556,7 @@ namespace QuestCommandRTS.Editor
             AssertBudgetPassed(report, "Light budget");
             AssertBudgetPassed(report, "Camera budget");
             AssertBudgetPassed(report, "World-space Quest UI");
+            AssertBudgetPassed(report, "Quest tactical map UI");
             AssertBudgetPassed(report, "Fog overlay budget");
             AssertBudgetPassed(report, "Visual set dressing colliders");
         }
@@ -513,6 +568,7 @@ namespace QuestCommandRTS.Editor
 
             AssertBudgetPassed(report, "Runtime mode");
             AssertBudgetPassed(report, "World-space Quest UI");
+            AssertBudgetPassed(report, "Quest tactical map UI");
             AssertBudgetPassed(report, "Fog overlay budget");
             AssertBudgetPassed(report, "Visual set dressing colliders");
         }
@@ -1007,6 +1063,7 @@ namespace QuestCommandRTS.Editor
                 "Assets/Scripts/Runtime/QuestRtsInputController.cs|private RtsCommandResult ProcessInputFrame(",
                 "Assets/Scripts/Runtime/QuestTrackedNodePose.cs|private void Update(",
                 "Assets/Scripts/Runtime/QuestWorldHud.cs|private void Update(",
+                "Assets/Scripts/Runtime/QuestTacticalMap.cs|private void Update(",
                 "Assets/Scripts/Runtime/QuestCommandConsole.cs|private void Update("
             };
 

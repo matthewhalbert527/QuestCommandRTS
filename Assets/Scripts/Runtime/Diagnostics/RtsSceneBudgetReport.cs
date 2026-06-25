@@ -45,6 +45,7 @@ namespace QuestCommandRTS
         public int canvasCount;
         public int worldSpaceCanvasCount;
         public int screenSpaceOverlayCanvasCount;
+        public int tacticalMapCanvasCount;
 
         public static RtsSceneBudgetSnapshot Capture(RtsGame game)
         {
@@ -215,6 +216,11 @@ namespace QuestCommandRTS
                 {
                     snapshot.screenSpaceOverlayCanvasCount++;
                 }
+
+                if (canvas.gameObject.name == "Quest Tactical Map")
+                {
+                    snapshot.tacticalMapCanvasCount++;
+                }
             }
         }
 
@@ -252,7 +258,8 @@ namespace QuestCommandRTS
             Add(results, "Collider budget", snapshot.enabledColliderCount <= MaxQuestEnabledColliders, snapshot.enabledColliderCount + "/" + MaxQuestEnabledColliders);
             Add(results, "Light budget", snapshot.enabledLightCount <= MaxQuestEnabledLights, snapshot.enabledLightCount + "/" + MaxQuestEnabledLights);
             Add(results, "Camera budget", snapshot.enabledCameraCount == MaxQuestEnabledCameras, snapshot.enabledCameraCount + "/" + MaxQuestEnabledCameras);
-            Add(results, "World-space Quest UI", snapshot.worldSpaceCanvasCount >= 2 && snapshot.screenSpaceOverlayCanvasCount == 0, "world=" + snapshot.worldSpaceCanvasCount + ", overlay=" + snapshot.screenSpaceOverlayCanvasCount);
+            Add(results, "World-space Quest UI", snapshot.worldSpaceCanvasCount >= 3 && snapshot.screenSpaceOverlayCanvasCount == 0, "world=" + snapshot.worldSpaceCanvasCount + ", overlay=" + snapshot.screenSpaceOverlayCanvasCount);
+            Add(results, "Quest tactical map UI", snapshot.tacticalMapCanvasCount == 1, "tacticalMapCanvases=" + snapshot.tacticalMapCanvasCount);
             Add(results, "Fog overlay budget", snapshot.fogOverlayObjectCount == 1 && snapshot.fogOverlayRendererCount == 1 && snapshot.fogCellObjectCount == 0, "overlays=" + snapshot.fogOverlayObjectCount + ", renderers=" + snapshot.fogOverlayRendererCount + ", cells=" + snapshot.fogCellObjectCount);
             Add(results, "Visual set dressing colliders", snapshot.visualSetDressingObjectCount > 0 && snapshot.visualSetDressingColliderCount == 0, "objects=" + snapshot.visualSetDressingObjectCount + ", colliders=" + snapshot.visualSetDressingColliderCount);
             return results;

@@ -48,7 +48,7 @@ Run `Tools > Quest RTS > Apply Recommended Quest Settings` to apply:
 
 Then run `Tools > Quest RTS > Validate XR Setup`. The validator checks both project settings and whether this Unity editor install supports `BuildTarget.Android`. If it reports that Android Build Support is missing, install Android Build Support, SDK and NDK Tools, and OpenJDK through Unity Hub before attempting a Quest device build.
 
-Run `Tools > Quest RTS > Validate Generated Quest Runtime` for a local generated-runtime smoke report. It forces Quest mode in the editor, verifies the generated tabletop rig, XR head camera path, Quest input/controller objects, pointer visuals, world-space HUD, command console, and confirms the desktop camera/input/HUD path is absent. This does not replace physical headset testing.
+Run `Tools > Quest RTS > Validate Generated Quest Runtime` for a local generated-runtime smoke report. It forces Quest mode in the editor, verifies the generated tabletop rig, XR head camera path, Quest input/controller objects, pointer visuals, world-space HUD, tactical map, command console, and confirms the desktop camera/input/HUD path is absent. This does not replace physical headset testing.
 
 If Android Build Support is not installed or the editor has not switched to Android yet, Unity might not create Android OpenXR package settings in the local session. In that case, install the Android modules, switch the build target to Android, rerun the apply command, and verify Android Single Pass Instanced, Meta Quest Support, and Oculus Touch in Project Settings.
 
@@ -106,6 +106,10 @@ Open the console with X/left primary.
 - Selected tab: inspect health, selected counts, queue/rally status, and use Repair or Sell when a player structure is eligible. Rally points are set by selecting a production structure and pressing A on terrain.
 - System tab: pause/resume, save the manual slot, load the manual slot when one exists, and start a new match.
 
+## Quest Tactical Map
+
+The tactical map is a non-interactive world-space battle-view panel next to the tabletop. It uses pooled UI pips for resource fields and visible forces, keeps fogged enemies hidden, and has its `GraphicRaycaster` disabled so the right ray continues to select terrain and activate command-console controls normally.
+
 ## Manual Smoke Test Checklist
 
 - HMD pose tracking works without camera snapping.
@@ -134,6 +138,7 @@ Open the console with X/left primary.
 - System tab can pause/resume, save, load, and start a new match without enabling desktop HUD.
 - Desktop overlay HUD and OnGUI minimap are absent in Quest mode.
 - World-space status panel is readable and does not cover the board.
+- World-space tactical map is readable, updates resource/unit pips, and does not capture pointer input.
 - No GameObject named `Command Camera` is created in Quest mode.
 - Basic play has no recurring exceptions.
 

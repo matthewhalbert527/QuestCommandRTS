@@ -25,7 +25,7 @@ Android modules are not needed for desktop/editor play, but they are required fo
 `RtsRuntimeModeResolver` chooses a mode at startup:
 
 - `Desktop`: creates the existing command camera, mouse/keyboard input, Screen Space Overlay HUD, OnGUI minimap, and desktop build/production controls.
-- `QuestVr`: activates a scaled tabletop XR rig, uses the tracked HMD camera, installs controller input, and shows Quest world-space status and command panels instead of the desktop HUD.
+- `QuestVr`: activates a scaled tabletop XR rig, uses the tracked HMD camera, installs controller input, and shows Quest world-space status, tactical map, and command panels instead of the desktop HUD.
 
 Quest mode is selected from active XR device state, or from an initialized Android OpenXR loader for Quest builds. Desktop/editor runs without an active XR device remain in `Desktop` by default. For testing, use the force-mode override in code, the `-questRtsMode QuestVr` command-line argument, or the `QUEST_RTS_FORCE_MODE=QuestVr` environment variable.
 
@@ -83,6 +83,8 @@ The Quest command console has four tabs:
 
 Building placement follows the existing desktop build rules. The preview snaps to the map, turns green when valid, turns red when invalid, and reports concise invalid reasons such as outside map, outside build radius, blocked footprint, missing prerequisite, or insufficient credits.
 
+The Quest tactical map is a non-interactive world-space battle-view panel. It mirrors the desktop minimap data with pooled pips for resources and visible friendly/enemy forces, keeps fogged enemies hidden, and has pointer raycasting disabled so it does not block battlefield or console commands.
+
 The full battlefield remains approximately 224 simulation units wide. The Quest rig defaults to 126 simulation units per physical meter, so the board appears roughly 1.78 meters wide while gameplay coordinates and movement logic stay unchanged. `Command RTS > Profile > Use Room-Sized Quest Tabletop Scale` writes a local profile preset that expands the board to roughly 4.0 meters wide and increases pointer reach; `Use Default Quest Tabletop Scale` restores the default. `QuestTabletopSettings.BoardHeightMeters` defaults to 0.82m, which shifts the generated battlefield to tabletop height above the physical tracking origin instead of leaving the board on the floor.
 
 The generated battlefield uses original primitive placeholder art with sandy terrain accents, projected water channels, ridges, rocks, scorches, rails, and corner pylons. These set-dressing pieces are visual-only and have their colliders removed so pointer raycasts and build placement still use the underlying battlefield.
@@ -102,7 +104,7 @@ The generated battlefield uses original primitive placeholder art with sandy ter
 
 `RtsRuntimeDiagnosticsSnapshot` can export a JSON snapshot of a generated match with entity, team, unit, structure, production, resource, fog, save-slot, and tabletop scale counts. Use it before and after large-board or content changes to catch accidental world-generation drift.
 
-`RtsSceneBudgetSnapshot` can export the generated Quest scene footprint with object, renderer, material, collider, light, camera, world-space UI, and fog-overlay counts. Fog of war uses one texture-backed overlay instead of thousands of per-cell renderers so the tabletop scene stays inside the local Quest budget gates before hardware profiling.
+`RtsSceneBudgetSnapshot` can export the generated Quest scene footprint with object, renderer, material, collider, light, camera, world-space UI, tactical map, and fog-overlay counts. Fog of war uses one texture-backed overlay instead of thousands of per-cell renderers so the tabletop scene stays inside the local Quest budget gates before hardware profiling.
 
 `Command RTS > Export Soak Diagnostics Snapshot` creates a populated desktop baseline with additional units, active production queues, mixed attack-move orders, and an active placement preview, then exports the same diagnostics shape for profiler/device comparisons.
 
@@ -117,7 +119,7 @@ See `docs/SAVE_SYSTEM.md`, `docs/LIFECYCLE_TEST_MATRIX.md`, `docs/PERFORMANCE_TE
 ## Current VR Limitations
 
 - No radial menus, box/lasso selection volume, hand tracking, passthrough, spatial anchors, locomotion, or board grabbing.
-- The VR console is still placeholder UI, but now uses a layered holographic-style world panel with color-coded row icon tiles and text labels.
+- The VR console and tactical map are still placeholder UI, but now use layered holographic-style world panels with color-coded row icon tiles, pooled map pips, and text labels.
 - Quest Link and device behavior still require manual headset verification.
 - Primitive placeholder art remains intentionally lightweight.
 

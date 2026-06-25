@@ -154,6 +154,14 @@ namespace QuestCommandRTS.Editor
                 console.localRotation = Quaternion.Euler(18f, 4f, 0f);
                 console.localScale = Vector3.one * 0.00058f;
             }
+
+            GameObject tacticalMap = GameObject.Find("Quest Tactical Map");
+            if (tacticalMap != null)
+            {
+                tacticalMap.transform.localPosition = new Vector3(0.02f, 0.92f, 0.48f);
+                tacticalMap.transform.localRotation = Quaternion.Euler(18f, 4f, 0f);
+                tacticalMap.transform.localScale = Vector3.one * 0.00086f;
+            }
         }
     }
 }

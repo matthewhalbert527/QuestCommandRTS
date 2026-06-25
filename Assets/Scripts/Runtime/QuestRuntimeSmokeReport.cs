@@ -36,6 +36,7 @@ namespace QuestCommandRTS
             QuestTabletopRig rig = game.QuestRig;
             QuestRtsInputController input = game.GetComponent<QuestRtsInputController>();
             QuestWorldHud worldHud = game.GetComponent<QuestWorldHud>();
+            QuestTacticalMap tacticalMap = game.GetComponent<QuestTacticalMap>();
             QuestCommandConsole console = game.GetComponent<QuestCommandConsole>();
 
             Add(results, "Runtime mode", game.RuntimeMode == RtsRuntimeMode.QuestVr, game.RuntimeMode.ToString());
@@ -45,6 +46,7 @@ namespace QuestCommandRTS
             Add(results, "Quest rig present", rig != null && rig.RigRoot != null && rig.HeadCamera != null, "QuestTabletopRig should own the tabletop root and XR head camera.");
             Add(results, "Quest input present", input != null, "QuestRtsInputController should translate controller state into shared dispatcher calls.");
             Add(results, "Quest world HUD present", worldHud != null && HasWorldSpaceCanvas("Quest World Status"), "Quest mode should expose a world-space status panel.");
+            Add(results, "Quest tactical map present", tacticalMap != null && HasWorldSpaceCanvas("Quest Tactical Map"), "Quest mode should expose the battle map as world-space headset UI.");
             Add(results, "Quest command console present", console != null && console.PanelRect != null, "Quest command console should exist under the tabletop rig.");
             Add(results, "View camera uses XR head", rig != null && rig.HeadCamera != null && game.GetViewCameraTransform() == rig.HeadCamera.transform, "Game view camera should resolve to the Quest head camera.");
 
