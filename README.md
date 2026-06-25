@@ -1,37 +1,48 @@
 # Quest Command RTS
 
-Unity prototype for a classic RTS inspired by Command and Conquer. The current build runs in the Windows editor/standalone target; Android support is not required.
+Unity RTS prototype with original content and classic command-and-control mechanics inspired by the RTS genre. Command & Conquer is only a mechanical reference point; this project does not use protected names, logos, factions, characters, story, maps, audio, or recognizable assets.
 
-## What is included
+## Supported Unity Version
 
-- Runtime bootstrap that creates a complete playable battlefield when `Assets/Scenes/Battlefield.unity` enters Play Mode.
-- Room-sized generated command board, roughly 224 x 224 Unity units, with a framed tabletop edge.
-- Selectable infantry, harvesters, tanks, buildings, health, attacks, production queues, power, and credits.
-- Resource harvesting loop with refineries and crystal fields.
-- Base construction with placement ghosts, footprint validation, build radius checks, and credit costs.
-- HUD buttons for production, construction, and army selection.
-- Mouse and keyboard controls for editor testing.
-- Basic enemy wave director that periodically sends units at the player base.
-- RTS camera pan/zoom, drag selection, production rally points, control groups, minimap pips, and win/loss state.
-- Construction tech prerequisites plus repair and sell commands for player structures.
-- Lightweight fog of war with scouting reveal and hidden enemy minimap pips.
-- Editor menu item: `Command RTS > Open Battlefield Scene`.
-- Editor menu item: `Command RTS > Export Sample Screenshot`.
+- Unity 2022.3.62f3.
+- Desktop/editor play works in the Windows Standalone target.
+- Quest VR uses Unity XR Management and OpenXR.
 
-## Open and run
+## Package Prerequisites
+
+The project manifest pins:
+
+- `com.unity.xr.management` 4.5.4
+- `com.unity.xr.openxr` 1.15.1
+- `com.unity.xr.interaction.toolkit` 3.2.2
+- `com.unity.inputsystem` 1.18.0
+- `com.unity.test-framework` 1.1.33
+
+For Android device builds, install Android Build Support, SDK, NDK, and OpenJDK through Unity Hub for Unity 2022.3.62f3.
+
+## Runtime Modes
+
+`RtsRuntimeModeResolver` chooses a mode at startup:
+
+- `Desktop`: creates the existing command camera, mouse/keyboard input, Screen Space Overlay HUD, OnGUI minimap, and desktop build/production controls.
+- `QuestVr`: activates a scaled tabletop XR rig, uses the tracked HMD camera, installs controller input, and shows a small world-space status panel instead of the desktop HUD.
+
+Quest mode is selected from an active XR loader/runtime. For testing, use the force-mode override in code, the `-questRtsMode QuestVr` command-line argument, or the `QUEST_RTS_FORCE_MODE=QuestVr` environment variable.
+
+## Open And Run
 
 1. Open this folder in Unity Hub as an existing project.
-2. Use Unity 2022.3 LTS or newer.
+2. Use Unity 2022.3.62f3.
 3. Open `Assets/Scenes/Battlefield.unity`.
 4. Press Play.
 
-The scene is intentionally empty. `RtsBootstrap` creates the camera, map, HUD, player base, enemy base, units, and managers at runtime.
+The scene is intentionally empty. `RtsBootstrap` creates the map, units, buildings, resources, managers, and runtime-specific input/HUD objects.
 
-## Controls
+## Desktop Controls
 
 - Left click or drag: select.
 - Shift + left click: add to selection.
-- Right click: command selected units, harvest resources, attack enemies, or set a selected production building's rally point.
+- Right click: move, attack, harvest, or set a selected production building rally point.
 - Middle click or Escape: cancel/clear.
 - Arrow keys or screen-edge mouse: pan camera.
 - Mouse wheel: zoom camera.
@@ -40,11 +51,29 @@ The scene is intentionally empty. `RtsBootstrap` creates the camera, map, HUD, p
 - Z: repair the most damaged selected structure.
 - X: sell selected structures for a partial refund.
 - Ctrl + 5-9: assign control group; 5-9: recall control group.
-- HUD buttons train units and place buildings.
 
-## Next takeover steps
+## Quest Controls
 
-- Merge these scripts into the Antigravity project once its path or repo is available.
-- Replace primitive visuals with production assets and tune camera/unit scale for desktop play.
-- Add real pathfinding/avoidance, save/load, audio, and campaign/skirmish rules.
-- Move balance values from `RtsBalance` into ScriptableObjects when the design starts changing frequently.
+- Right controller ray: hover terrain, units, buildings, and resources.
+- Right trigger: select one friendly entity.
+- Left trigger + right trigger: add the friendly entity to the current selection.
+- A/right primary: issue the shared context command: attack enemy, harvest resource, set rally point, or move.
+- B/right secondary: cancel active placement, otherwise clear selection.
+
+The full battlefield remains approximately 224 simulation units wide. The Quest rig defaults to 126 simulation units per physical meter, so the board appears roughly 1.78 meters wide while gameplay coordinates and movement logic stay unchanged.
+
+## Current VR Limitations
+
+- No full VR construction or production interface yet.
+- No radial menus, lasso selection, hand tracking, passthrough, spatial anchors, locomotion, or board grabbing.
+- Quest Link and device behavior still require manual headset verification.
+- Primitive placeholder art remains intentionally lightweight.
+
+## Editor Tools
+
+- `Command RTS > Open Battlefield Scene`
+- `Command RTS > Export Sample Screenshot`
+- `Tools > Quest RTS > Apply Recommended Quest Settings`
+- `Tools > Quest RTS > Validate XR Setup`
+
+See `docs/QUEST_XR_SETUP.md` for Quest setup, manual OpenXR checks, and troubleshooting.

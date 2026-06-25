@@ -1,6 +1,5 @@
 #if UNITY_EDITOR
 using System.IO;
-using System.Reflection;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
@@ -27,10 +26,17 @@ namespace QuestCommandRTS.Editor
         {
             EditorSceneManager.OpenScene(ScenePath);
 
+            RtsRuntimeModeResolver.ForceModeForTests(RtsRuntimeMode.Desktop);
             GameObject root = new GameObject("Screenshot Runtime");
             RtsGame game = root.AddComponent<RtsGame>();
-            InvokePrivate(game, "Awake");
-            InvokePrivate(game, "Initialize");
+            try
+            {
+                game.Initialize();
+            }
+            finally
+            {
+                RtsRuntimeModeResolver.ForceModeForTests(null);
+            }
 
             Camera camera = game.CommandCamera;
             camera.transform.position = new Vector3(-18f, 96f, -132f);
@@ -62,12 +68,6 @@ namespace QuestCommandRTS.Editor
 
             AssetDatabase.Refresh();
             Debug.Log("Command RTS screenshot exported to " + outputPath);
-        }
-
-        private static void InvokePrivate(object target, string methodName)
-        {
-            MethodInfo method = target.GetType().GetMethod(methodName, BindingFlags.Instance | BindingFlags.NonPublic);
-            method.Invoke(target, null);
         }
     }
 }

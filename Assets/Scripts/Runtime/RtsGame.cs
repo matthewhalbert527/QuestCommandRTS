@@ -27,6 +27,9 @@ namespace QuestCommandRTS
         public Camera CommandCamera { get; private set; }
         public BuildManager BuildManager { get; private set; }
         public RtsFogOfWar FogOfWar { get; private set; }
+        public RtsCommandDispatcher CommandDispatcher { get; private set; }
+        public RtsRuntimeMode RuntimeMode { get; private set; }
+        public QuestTabletopRig QuestRig { get; private set; }
         public IReadOnlyList<RtsEntity> Entities => entities;
         public IReadOnlyList<RtsEntity> Selection => selection;
         public IReadOnlyList<ResourceNode> ResourceNodes => resourceNodes;
@@ -677,18 +680,31 @@ namespace QuestCommandRTS
             textObject.AddComponent<FloatingText>();
         }
 
-        private void Initialize()
+        public void Initialize()
         {
             if (initialized)
             {
                 return;
             }
 
+            if (Instance == null)
+            {
+                Instance = this;
+            }
+
             initialized = true;
+            RuntimeMode = RtsRuntimeModeResolver.Resolve();
+            CommandDispatcher = new RtsCommandDispatcher();
+            CommandDispatcher.Initialize(this);
             Resources = new ResourceBank(3400);
             CreateMaterials();
             CreateRoots();
-            SetupCameraAndLight();
+            if (RuntimeMode == RtsRuntimeMode.Desktop)
+            {
+                SetupDesktopCamera();
+            }
+
+            SetupLight();
             CreateGround();
             CreateResourceFields();
             SpawnStartingForces();
@@ -697,8 +713,18 @@ namespace QuestCommandRTS
             BuildManager.Initialize(this);
             FogOfWar = gameObject.AddComponent<RtsFogOfWar>();
             FogOfWar.Initialize(this);
-            gameObject.AddComponent<RtsInputController>().Initialize(this);
-            gameObject.AddComponent<RtsHud>().Initialize(this);
+
+            if (RuntimeMode == RtsRuntimeMode.QuestVr)
+            {
+                QuestRig = gameObject.AddComponent<QuestTabletopRig>();
+                QuestRig.Initialize(this, CommandDispatcher);
+            }
+            else
+            {
+                gameObject.AddComponent<RtsInputController>().Initialize(this, CommandDispatcher);
+                gameObject.AddComponent<RtsHud>().Initialize(this);
+            }
+
             gameObject.AddComponent<EnemyDirector>().Initialize(this);
 
             RecalculatePower();
@@ -818,7 +844,7 @@ namespace QuestCommandRTS
             effectsRoot.SetParent(transform, false);
         }
 
-        private void SetupCameraAndLight()
+        private void SetupDesktopCamera()
         {
             CommandCamera = Camera.main;
             if (CommandCamera == null)
@@ -835,7 +861,10 @@ namespace QuestCommandRTS
             CommandCamera.nearClipPlane = 0.05f;
             CommandCamera.farClipPlane = 250f;
             CommandCamera.fieldOfView = 60f;
+        }
 
+        private void SetupLight()
+        {
             if (Object.FindObjectOfType<Light>() == null)
             {
                 GameObject lightObject = new GameObject("Sun");

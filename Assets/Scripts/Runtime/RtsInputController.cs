@@ -6,18 +6,20 @@ namespace QuestCommandRTS
 {
     public sealed class RtsInputController : MonoBehaviour
     {
-        private readonly List<RtsUnit> commandUnits = new List<RtsUnit>();
         private readonly List<RtsEntity>[] controlGroups = new List<RtsEntity>[5];
         private RtsGame game;
+        private RtsCommandDispatcher dispatcher;
         private bool mouseSelectionActive;
         private bool mouseDragging;
         private Vector2 mouseSelectionStart;
         private Rect mouseSelectionRect;
         private const float DragThreshold = 8f;
+        private const float PointerRayDistance = 250f;
 
-        public void Initialize(RtsGame owner)
+        public void Initialize(RtsGame owner, RtsCommandDispatcher commandDispatcher)
         {
             game = owner;
+            dispatcher = commandDispatcher;
             for (int i = 0; i < controlGroups.Length; i++)
             {
                 controlGroups[i] = new List<RtsEntity>();
@@ -26,7 +28,7 @@ namespace QuestCommandRTS
 
         private void Update()
         {
-            if (game == null || game.CommandCamera == null)
+            if (game == null || dispatcher == null || game.CommandCamera == null)
             {
                 return;
             }
@@ -56,16 +58,16 @@ namespace QuestCommandRTS
 
             if (game.BuildManager != null && game.BuildManager.IsPlacing)
             {
-                game.BuildManager.UpdatePlacement(ray);
+                dispatcher.UpdatePlacement(ray);
 
-                if ((selectDown || Input.GetMouseButtonDown(0)) && !IsPointerOverUi())
+                if (selectDown && !IsPointerOverUi())
                 {
-                    game.BuildManager.TryConfirmPlacement();
+                    dispatcher.ConfirmPlacement();
                 }
 
                 if (commandDown || cancelDown)
                 {
-                    game.BuildManager.CancelPlacement();
+                    dispatcher.CancelPlacement();
                 }
 
                 return;
@@ -73,7 +75,7 @@ namespace QuestCommandRTS
 
             if (cancelDown)
             {
-                game.ClearSelection();
+                dispatcher.ClearSelection();
                 return;
             }
 
@@ -161,143 +163,12 @@ namespace QuestCommandRTS
         private void SelectFromRay(Ray ray)
         {
             bool additive = Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift);
-            if (!Physics.Raycast(ray, out RaycastHit hit, 250f))
-            {
-                if (!additive)
-                {
-                    game.ClearSelection();
-                }
-
-                return;
-            }
-
-            RtsEntity entity = hit.collider.GetComponentInParent<RtsEntity>();
-            game.SelectEntity(entity, additive);
+            dispatcher.SelectFromRay(ray, additive, PointerRayDistance);
         }
 
         private void CommandFromRay(Ray ray)
         {
-            if (!Physics.Raycast(ray, out RaycastHit hit, 250f))
-            {
-                return;
-            }
-
-            RtsEntity entity = hit.collider.GetComponentInParent<RtsEntity>();
-            if (entity != null && entity.Team == RtsTeam.Enemy && game.IsEntityVisible(entity))
-            {
-                IssueAttack(entity);
-                return;
-            }
-
-            ResourceNode resource = hit.collider.GetComponentInParent<ResourceNode>();
-            if (resource != null)
-            {
-                IssueHarvest(resource);
-                return;
-            }
-
-            Vector3 point = hit.point;
-            point.y = 0f;
-            if (TrySetRallyPoint(point))
-            {
-                return;
-            }
-
-            IssueMove(point);
-        }
-
-        private void IssueAttack(RtsEntity target)
-        {
-            GatherSelectedUnits();
-            for (int i = 0; i < commandUnits.Count; i++)
-            {
-                commandUnits[i].IssueAttack(target);
-            }
-        }
-
-        private void IssueHarvest(ResourceNode resource)
-        {
-            RefineryStructure refinery = game.FindNearestPlayerRefinery(resource.transform.position);
-            GatherSelectedUnits();
-
-            bool assigned = false;
-            for (int i = 0; i < commandUnits.Count; i++)
-            {
-                HarvesterUnit harvester = commandUnits[i] as HarvesterUnit;
-                if (harvester != null)
-                {
-                    harvester.IssueHarvest(resource, refinery);
-                    assigned = true;
-                }
-            }
-
-            if (!assigned)
-            {
-                game.SpawnFloatingText("Select harvester", resource.transform.position + Vector3.up * 2f, Color.yellow);
-            }
-        }
-
-        private void IssueMove(Vector3 point)
-        {
-            GatherSelectedUnits();
-            int count = commandUnits.Count;
-
-            for (int i = 0; i < count; i++)
-            {
-                commandUnits[i].IssueMove(point + FormationOffset(i, count));
-            }
-        }
-
-        private bool TrySetRallyPoint(Vector3 point)
-        {
-            bool hasSelectedUnit = false;
-            bool setAny = false;
-
-            for (int i = 0; i < game.Selection.Count; i++)
-            {
-                RtsEntity entity = game.Selection[i];
-                if (entity is RtsUnit && entity.Team == RtsTeam.Player)
-                {
-                    hasSelectedUnit = true;
-                    break;
-                }
-            }
-
-            if (hasSelectedUnit)
-            {
-                return false;
-            }
-
-            for (int i = 0; i < game.Selection.Count; i++)
-            {
-                ProductionStructure producer = game.Selection[i] as ProductionStructure;
-                if (producer != null && producer.Team == RtsTeam.Player)
-                {
-                    producer.SetRallyPoint(point);
-                    setAny = true;
-                }
-            }
-
-            if (setAny)
-            {
-                game.SpawnFloatingText("Rally set", point + Vector3.up * 1.4f, new Color(0.5f, 0.95f, 1f));
-            }
-
-            return setAny;
-        }
-
-        private void GatherSelectedUnits()
-        {
-            commandUnits.Clear();
-
-            for (int i = 0; i < game.Selection.Count; i++)
-            {
-                RtsUnit unit = game.Selection[i] as RtsUnit;
-                if (unit != null && unit.Team == RtsTeam.Player)
-                {
-                    commandUnits.Add(unit);
-                }
-            }
+            dispatcher.CommandFromRay(ray, PointerRayDistance);
         }
 
         private void HandleBuildHotkeys()
@@ -495,15 +366,6 @@ namespace QuestCommandRTS
             selectDown = Input.GetMouseButtonDown(0);
             commandDown = Input.GetMouseButtonDown(1);
             cancelDown = Input.GetMouseButtonDown(2);
-        }
-
-        private static Vector3 FormationOffset(int index, int count)
-        {
-            int width = Mathf.Min(4, Mathf.Max(1, count));
-            int row = index / width;
-            int column = index % width;
-            float center = (width - 1) * 0.5f;
-            return new Vector3((column - center) * 1.45f, 0f, row * -1.45f);
         }
 
         private static Rect GetScreenRect(Vector2 start, Vector2 end)
