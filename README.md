@@ -63,7 +63,7 @@ The scene is intentionally empty. `RtsBootstrap` creates the map, units, buildin
 - Right controller ray: hover terrain, units, buildings, and resources.
 - X/left primary: open or close the command console.
 - Right trigger: select one friendly entity, or activate a command-console control when the console captures the ray.
-- Left trigger + right trigger: add the friendly entity to the current selection.
+- Left trigger + right trigger: add the friendly entity to the current selection, or area-select nearby friendly units when aimed at terrain.
 - A/right primary: issue the shared context command: attack enemy, harvest resource, set rally point, or move.
 - Left trigger + A/right primary: attack-move selected units.
 - A/right primary while placing: confirm the current valid structure placement.
@@ -116,7 +116,7 @@ See `docs/SAVE_SYSTEM.md`, `docs/LIFECYCLE_TEST_MATRIX.md`, `docs/PERFORMANCE_TE
 
 ## Current VR Limitations
 
-- No radial menus, lasso selection, hand tracking, passthrough, spatial anchors, locomotion, or board grabbing.
+- No radial menus, box/lasso selection volume, hand tracking, passthrough, spatial anchors, locomotion, or board grabbing.
 - Production queue cancellation applies to the last queued item, not the active item already in progress.
 - The VR console is still placeholder UI, but now uses a layered holographic-style world panel with color-coded row icon tiles and text labels.
 - Quest Link and device behavior still require manual headset verification.

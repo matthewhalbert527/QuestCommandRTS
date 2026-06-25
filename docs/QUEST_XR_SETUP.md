@@ -89,7 +89,7 @@ If the validator reports a failure, rerun `Tools > Quest RTS > Apply Recommended
 - Right controller ray: hover target or terrain.
 - X/left primary button: open or close the Quest command console.
 - Right trigger: select, or activate a Quest command-console control when the ray is over the console.
-- Left trigger held + right trigger: additive select.
+- Left trigger held + right trigger: additive select on a friendly entity, or area-select nearby friendly units when aimed at terrain.
 - A/right primary button: context command.
 - Left trigger held + A/right primary button: attack-move selected units.
 - A/right primary button while placing: confirm the current valid placement.
@@ -114,7 +114,7 @@ Open the console with X/left primary.
 - Battlefield appears at tabletop height, not floor height.
 - Right ray and reticle align with the controller.
 - Trigger selects a friendly unit or structure.
-- Left trigger modifier allows additive selection.
+- Left trigger modifier allows additive selection and terrain-centered area selection for nearby friendly units.
 - X opens and closes the Quest command console.
 - Right trigger activates console controls without selecting through the panel.
 - Build tab starts placement for every available player structure.

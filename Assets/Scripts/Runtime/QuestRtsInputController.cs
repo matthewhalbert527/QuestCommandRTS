@@ -26,6 +26,7 @@ namespace QuestCommandRTS
     public sealed class QuestRtsInputController : MonoBehaviour
     {
         public const float DeviceRefreshIntervalSeconds = 0.5f;
+        public const float AreaSelectionRadiusSimulationUnits = 7f;
 
         private RtsGame game;
         private RtsCommandDispatcher dispatcher;
@@ -219,6 +220,10 @@ namespace QuestCommandRTS
             if (rightTriggerDown && !uiCaptured)
             {
                 result = dispatcher.SelectFromRay(frame.PointerRay, frame.LeftTriggerHeld, settings.RayLengthSimulationUnits);
+                if (result == RtsCommandResult.None && frame.LeftTriggerHeld)
+                {
+                    result = dispatcher.SelectPlayerUnitsNearRay(frame.PointerRay, settings.RayLengthSimulationUnits, AreaSelectionRadiusSimulationUnits, true);
+                }
             }
 
             if (primaryDown && !uiCaptured)

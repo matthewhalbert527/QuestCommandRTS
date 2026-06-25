@@ -147,7 +147,7 @@ namespace QuestCommandRTS.Editor
             StringAssert.Contains("Power ", text.text);
             StringAssert.Contains("Selected ", text.text);
             StringAssert.Contains("Trigger: Select", text.text);
-            StringAssert.Contains("Left Trigger + Trigger: Add", text.text);
+            StringAssert.Contains("Left Trigger + Trigger: Add/Area", text.text);
             StringAssert.Contains("A: Command", text.text);
             StringAssert.Contains("B: Cancel/Clear", text.text);
         }
@@ -798,6 +798,29 @@ namespace QuestCommandRTS.Editor
             Assert.AreEqual(2, game.Selection.Count);
             Assert.AreSame(first, game.Selection[0]);
             Assert.AreSame(second, game.Selection[1]);
+        }
+
+        [Test]
+        public void QuestControllerAreaSelectsNearbyUnitsWithLeftTriggerModifier()
+        {
+            RtsGame game = CreateInitializedGame(RtsRuntimeMode.QuestVr);
+            QuestRtsInputController controller = game.GetComponent<QuestRtsInputController>();
+            Assert.IsNotNull(controller);
+
+            RtsUnit first = FindPlayerUnit(game, UnitKind.Rifleman);
+            RtsUnit second = FindSecondPlayerUnit(game, UnitKind.Rifleman, first);
+            Vector3 center = (first.GroundPosition + second.GroundPosition) * 0.5f;
+
+            game.ClearSelection();
+            Assert.AreEqual(RtsCommandResult.SelectionChanged, controller.ProcessInputFrameForTests(QuestFrame(RayAtPoint(center), true, true, false, false, false), false));
+
+            Assert.AreEqual(2, game.Selection.Count);
+            Assert.IsTrue(first.IsSelected);
+            Assert.IsTrue(second.IsSelected);
+            for (int i = 0; i < game.Selection.Count; i++)
+            {
+                Assert.IsInstanceOf<RtsUnit>(game.Selection[i], "Quest area selection should gather nearby units without selecting structures.");
+            }
         }
 
         [Test]
@@ -1725,6 +1748,21 @@ namespace QuestCommandRTS.Editor
             }
 
             Assert.Fail("Missing player unit " + kind);
+            return null;
+        }
+
+        private static RtsUnit FindSecondPlayerUnit(RtsGame game, UnitKind kind, RtsUnit first)
+        {
+            for (int i = 0; i < game.Entities.Count; i++)
+            {
+                RtsUnit unit = game.Entities[i] as RtsUnit;
+                if (unit != null && unit != first && unit.Team == RtsTeam.Player && unit.UnitKind == kind)
+                {
+                    return unit;
+                }
+            }
+
+            Assert.Fail("Missing second player unit " + kind);
             return null;
         }
 

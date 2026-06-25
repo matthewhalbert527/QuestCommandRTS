@@ -117,7 +117,7 @@ namespace QuestCommandRTS
                 "   Selected " + selectionCount +
                 "\n" + (paused ? "Paused" : status) +
                 "\nTrigger: Select" +
-                "\nLeft Trigger + Trigger: Add" +
+                "\nLeft Trigger + Trigger: Add/Area" +
                 "\nA: Command   B: Cancel/Clear";
         }
     }

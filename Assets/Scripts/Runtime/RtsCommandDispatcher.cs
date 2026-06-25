@@ -151,6 +151,35 @@ namespace QuestCommandRTS
             return additive ? RtsCommandResult.None : RtsCommandResult.SelectionCleared;
         }
 
+        public RtsCommandResult SelectPlayerUnitsNearRay(Ray ray, float maxDistance, float radius, bool additive)
+        {
+            if (game == null || !game.AcceptsPlayerInput)
+            {
+                return RtsCommandResult.None;
+            }
+
+            RaycastHit hit;
+            if (!Physics.Raycast(ray, out hit, maxDistance))
+            {
+                if (!additive)
+                {
+                    game.ClearSelection();
+                    return RtsCommandResult.SelectionCleared;
+                }
+
+                return RtsCommandResult.None;
+            }
+
+            int added = game.SelectPlayerUnitsInRadius(GetGroundPoint(hit), radius, additive);
+            if (added > 0)
+            {
+                game.SpawnFloatingText("Area select +" + added, GetGroundPoint(hit) + Vector3.up * 1.8f, new Color(0.55f, 0.95f, 1f));
+                return RtsCommandResult.SelectionChanged;
+            }
+
+            return additive ? RtsCommandResult.None : RtsCommandResult.SelectionCleared;
+        }
+
         public RtsContextCommandKind ResolveContextCommand(RaycastHit hit)
         {
             if (game == null || hit.collider == null)

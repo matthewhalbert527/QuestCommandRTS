@@ -432,6 +432,42 @@ namespace QuestCommandRTS
             }
         }
 
+        public int SelectPlayerUnitsInRadius(Vector3 center, float radius, bool additive)
+        {
+            if (!additive)
+            {
+                ClearSelection();
+            }
+
+            float safeRadius = Mathf.Max(0f, radius);
+            int added = 0;
+            for (int i = 0; i < entities.Count; i++)
+            {
+                RtsUnit unit = entities[i] as RtsUnit;
+                if (unit == null || unit.Team != RtsTeam.Player || !unit.IsAlive)
+                {
+                    continue;
+                }
+
+                float selectionRadius = safeRadius + Mathf.Max(0.45f, unit.SelectionRadius);
+                Vector3 offset = unit.GroundPosition - center;
+                offset.y = 0f;
+                if (offset.sqrMagnitude > selectionRadius * selectionRadius)
+                {
+                    continue;
+                }
+
+                bool wasSelected = unit.IsSelected;
+                SelectEntity(unit, true);
+                if (!wasSelected && unit.IsSelected)
+                {
+                    added++;
+                }
+            }
+
+            return added;
+        }
+
         public bool TryQueueUnit(UnitKind kind)
         {
             return PlayerCommands != null && PlayerCommands.QueueProduction(kind);
