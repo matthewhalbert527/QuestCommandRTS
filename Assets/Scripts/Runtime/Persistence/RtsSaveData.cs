@@ -19,6 +19,10 @@ namespace QuestCommandRTS
     public sealed class RtsMatchSaveData
     {
         public int schemaVersion = 1;
+        public string applicationVersion;
+        public string saveSlotId;
+        public string skirmishConfigId = "default_skirmish_v1";
+        public string difficultyId = "standard";
         public string mapId = "room_tabletop_v1";
         public int mapSeed = 527;
         public string savedUtc;
@@ -33,6 +37,28 @@ namespace QuestCommandRTS
         public RtsFogSaveData fog = new RtsFogSaveData();
         public RtsBuildPlacementSaveData buildPlacement = new RtsBuildPlacementSaveData();
         public RtsEnemyDirectorSaveData enemyDirector = new RtsEnemyDirectorSaveData();
+    }
+
+    [Serializable]
+    public sealed class RtsSaveMetadata
+    {
+        public string slotId;
+        public int schemaVersion;
+        public string gameVersion;
+        public string createdUtc;
+        public string applicationVersion;
+        public string skirmishConfigId;
+        public string difficultyId;
+        public string mapId;
+        public int mapSeed;
+        public string savedUtc;
+        public float matchTime;
+        public string matchState;
+        public string statusMessage;
+        public int playerCredits;
+        public int entityCount;
+        public int resourceNodeCount;
+        public bool readFromBackup;
     }
 
     [Serializable]

@@ -7,7 +7,7 @@ Each write stages the newest contents to a temporary file before replacing the p
 Current schema version: `1`.
 
 Captured state includes:
-- match metadata, match time, match state, and status text
+- match metadata, application version, slot id, skirmish config id, difficulty id, map id, map seed, match time, match state, and status text
 - player resources and power
 - stable IDs for units, structures, and resource nodes
 - unit position, health, move/attack orders, and harvester state
@@ -17,6 +17,8 @@ Captured state includes:
 - fog explored cells
 - active building placement
 - enemy commander credits plus wave, income, rebuild, production, and idle-order timers
+
+`RtsSaveSerializer.TryReadMetadata` and `RtsSaveService.TryGetSlotMetadata` read display-safe metadata only after validating the envelope checksum and schema. Metadata lookup uses the same primary-then-backup fallback policy as full loads, and `RtsSaveFileStore.ListSlots` includes backup-only slots so a valid `.bak` remains discoverable if the newest primary slot is removed or corrupt.
 
 Restore is a rebuild pass. The current generated battlefield entities/resources are destroyed, saved resource nodes are recreated, structures are recreated first, units are recreated second, then orders and cross-references are restored by stable ID.
 

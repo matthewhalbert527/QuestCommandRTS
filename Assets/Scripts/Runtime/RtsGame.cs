@@ -299,6 +299,22 @@ namespace QuestCommandRTS
             return SaveService != null && SaveService.HasSlot("manual");
         }
 
+        public string GetManualSaveSummary()
+        {
+            if (SaveService == null || !SaveService.HasSlot("manual"))
+            {
+                return "empty";
+            }
+
+            if (!SaveService.TryGetSlotMetadata("manual", out RtsSaveMetadata metadata, out _))
+            {
+                return "metadata unreadable";
+            }
+
+            string source = metadata.readFromBackup ? "backup" : "primary";
+            return source + " " + FormatSaveTime(metadata.matchTime) + " " + metadata.matchState;
+        }
+
         public bool TrySaveSlot(string slotId)
         {
             if (SaveService == null)
@@ -338,6 +354,16 @@ namespace QuestCommandRTS
         public void SetSaveServiceForTests(RtsSaveService service)
         {
             SaveService = service;
+        }
+
+        public void SetMatchTimeForTests(float time)
+        {
+            if (Clock != null)
+            {
+                Clock.SetSimulationTime(time);
+            }
+
+            MatchTime = Mathf.Max(0f, time);
         }
 #endif
 
@@ -1606,6 +1632,14 @@ namespace QuestCommandRTS
             float dx = a.x - b.x;
             float dz = a.z - b.z;
             return Mathf.Sqrt(dx * dx + dz * dz);
+        }
+
+        private static string FormatSaveTime(float seconds)
+        {
+            int totalSeconds = Mathf.Max(0, Mathf.RoundToInt(seconds));
+            int minutes = totalSeconds / 60;
+            int remainingSeconds = totalSeconds % 60;
+            return minutes + ":" + remainingSeconds.ToString("00");
         }
     }
 }

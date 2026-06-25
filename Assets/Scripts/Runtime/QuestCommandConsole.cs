@@ -470,7 +470,7 @@ namespace QuestCommandRTS
             systemText.text =
                 "Match " + FormatTime(game.MatchTime) + "\n" +
                 (game.IsUserPaused ? "Paused" : "Running") + "\n" +
-                "Manual save " + (game.CanLoadManualSave() ? "available" : "empty") + "\n\n" +
+                "Manual save " + game.GetManualSaveSummary() + "\n\n" +
                 game.StatusMessage;
 
             pauseButton.Label.text = game.IsUserPaused ? "Resume" : "Pause";

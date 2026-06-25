@@ -12,6 +12,8 @@ namespace QuestCommandRTS
         public static string Serialize(string slotId, RtsMatchSaveData data)
         {
             data.schemaVersion = CurrentSchemaVersion;
+            data.applicationVersion = Application.version;
+            data.saveSlotId = slotId;
             data.savedUtc = DateTime.UtcNow.ToString("o");
             string payload = JsonUtility.ToJson(data, true);
 
@@ -31,6 +33,76 @@ namespace QuestCommandRTS
         public static bool TryDeserialize(string json, out RtsMatchSaveData data, out string error)
         {
             data = null;
+
+            if (!TryReadEnvelope(json, out RtsSaveEnvelope envelope, out error))
+            {
+                return false;
+            }
+
+            return TryDeserializePayload(envelope, out data, out error);
+        }
+
+        public static bool TryReadMetadata(string json, out RtsSaveMetadata metadata, out string error)
+        {
+            metadata = null;
+            if (!TryReadEnvelope(json, out RtsSaveEnvelope envelope, out error))
+            {
+                return false;
+            }
+
+            if (!TryDeserializePayload(envelope, out RtsMatchSaveData data, out error))
+            {
+                return false;
+            }
+
+            metadata = new RtsSaveMetadata
+            {
+                slotId = envelope.slotId,
+                schemaVersion = envelope.schemaVersion,
+                gameVersion = envelope.gameVersion,
+                createdUtc = envelope.createdUtc,
+                applicationVersion = data.applicationVersion,
+                skirmishConfigId = data.skirmishConfigId,
+                difficultyId = data.difficultyId,
+                mapId = data.mapId,
+                mapSeed = data.mapSeed,
+                savedUtc = data.savedUtc,
+                matchTime = data.matchTime,
+                matchState = data.matchState,
+                statusMessage = data.statusMessage,
+                playerCredits = data.resources != null ? data.resources.credits : 0,
+                entityCount = data.entities != null ? data.entities.Count : 0,
+                resourceNodeCount = data.resourceNodes != null ? data.resourceNodes.Count : 0
+            };
+            return true;
+        }
+
+        private static bool TryDeserializePayload(RtsSaveEnvelope envelope, out RtsMatchSaveData data, out string error)
+        {
+            data = null;
+            error = string.Empty;
+            try
+            {
+                data = JsonUtility.FromJson<RtsMatchSaveData>(envelope.payloadJson);
+            }
+            catch (Exception exception)
+            {
+                error = "Save payload could not be parsed: " + exception.Message;
+                return false;
+            }
+
+            if (data == null)
+            {
+                error = "Save payload is empty.";
+                return false;
+            }
+
+            return RtsSaveMigration.TryMigrate(data, out error);
+        }
+
+        private static bool TryReadEnvelope(string json, out RtsSaveEnvelope envelope, out string error)
+        {
+            envelope = null;
             error = string.Empty;
 
             if (string.IsNullOrEmpty(json))
@@ -39,7 +111,6 @@ namespace QuestCommandRTS
                 return false;
             }
 
-            RtsSaveEnvelope envelope;
             try
             {
                 envelope = JsonUtility.FromJson<RtsSaveEnvelope>(json);
@@ -69,23 +140,7 @@ namespace QuestCommandRTS
                 return false;
             }
 
-            try
-            {
-                data = JsonUtility.FromJson<RtsMatchSaveData>(envelope.payloadJson);
-            }
-            catch (Exception exception)
-            {
-                error = "Save payload could not be parsed: " + exception.Message;
-                return false;
-            }
-
-            if (data == null)
-            {
-                error = "Save payload is empty.";
-                return false;
-            }
-
-            return RtsSaveMigration.TryMigrate(data, out error);
+            return true;
         }
 
         private static string ComputeChecksum(string value)

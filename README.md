@@ -89,6 +89,7 @@ The full battlefield remains approximately 224 simulation units wide. The Quest 
 - Runtime entities and resource nodes now receive stable save IDs.
 - `RtsSaveService` captures and restores the generated skirmish state through a versioned JSON envelope with checksum validation.
 - Save files are written through a temporary file plus `.bak` backup, and load falls back to the previous valid backup when the newest primary save is corrupt or missing.
+- Save metadata is validated before display and includes slot, app version, skirmish config, map, match time, match state, entity counts, resource-node counts, and backup/primary source.
 - Saved state includes resources, health, orders, production queues, harvest state, fog exploration, active placement, and enemy commander economy/timers.
 - `RtsLifecycleCoordinator` pauses simulation on app pause/focus loss, blocks commands while suspended or saving/loading, hides Quest pointer visuals when input focus is gone, and attempts autosave on pause/focus loss plus configurable periodic autosaves during active play.
 - `RtsProfileSettings` stores versioned player preferences separately from match saves and safely clamps Quest tabletop scale, tabletop height, pointer length, UI scale, volume, quality preset, and periodic autosave interval values before use.

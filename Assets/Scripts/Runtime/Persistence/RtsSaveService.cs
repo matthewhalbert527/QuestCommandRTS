@@ -28,6 +28,41 @@ namespace QuestCommandRTS
             return store.ListSlots();
         }
 
+        public bool TryGetSlotMetadata(string slotId, out RtsSaveMetadata metadata, out string error)
+        {
+            metadata = null;
+            if (TryReadAndDeserializeMetadata(slotId, false, out metadata, out error))
+            {
+                return true;
+            }
+
+            string primaryError = error;
+            if (TryReadAndDeserializeMetadata(slotId, true, out metadata, out string backupError))
+            {
+                metadata.readFromBackup = true;
+                error = string.Empty;
+                return true;
+            }
+
+            error = primaryError + " Backup metadata unavailable: " + backupError;
+            return false;
+        }
+
+        public System.Collections.Generic.List<RtsSaveMetadata> ListSlotMetadata()
+        {
+            System.Collections.Generic.List<RtsSaveMetadata> metadata = new System.Collections.Generic.List<RtsSaveMetadata>();
+            System.Collections.Generic.List<string> slots = ListSlots();
+            for (int i = 0; i < slots.Count; i++)
+            {
+                if (TryGetSlotMetadata(slots[i], out RtsSaveMetadata item, out _))
+                {
+                    metadata.Add(item);
+                }
+            }
+
+            return metadata;
+        }
+
         public bool TryWriteSlot(string slotId, out string error)
         {
             error = string.Empty;
@@ -112,6 +147,19 @@ namespace QuestCommandRTS
             }
 
             return RtsSaveSerializer.TryDeserialize(json, out data, out error);
+        }
+
+        private bool TryReadAndDeserializeMetadata(string slotId, bool backup, out RtsSaveMetadata metadata, out string error)
+        {
+            metadata = null;
+            string json;
+            bool read = backup ? store.TryReadBackup(slotId, out json, out error) : store.TryRead(slotId, out json, out error);
+            if (!read)
+            {
+                return false;
+            }
+
+            return RtsSaveSerializer.TryReadMetadata(json, out metadata, out error);
         }
     }
 }

@@ -246,6 +246,43 @@ namespace QuestCommandRTS.Editor
         }
 
         [Test]
+        public void SaveSerializerExposesValidatedMetadata()
+        {
+            RtsMatchSaveData data = new RtsMatchSaveData
+            {
+                matchTime = 123.4f,
+                matchState = RtsMatchState.Running.ToString(),
+                statusMessage = "Metadata test",
+                resources = new RtsResourceBankSaveData
+                {
+                    credits = 456,
+                    powerProvided = 12,
+                    powerUsed = 8
+                }
+            };
+            data.entities.Add(new RtsEntitySaveData { id = 7, entityType = "Unit", team = RtsTeam.Player.ToString() });
+            data.resourceNodes.Add(new RtsResourceNodeSaveData { id = 9, amount = 100, maxAmount = 200 });
+
+            string json = RtsSaveSerializer.Serialize("manual", data);
+
+            Assert.IsTrue(RtsSaveSerializer.TryReadMetadata(json, out RtsSaveMetadata metadata, out string error), error);
+            Assert.AreEqual("manual", metadata.slotId);
+            Assert.AreEqual(RtsSaveSerializer.CurrentSchemaVersion, metadata.schemaVersion);
+            Assert.AreEqual(Application.version, metadata.gameVersion);
+            Assert.AreEqual(Application.version, metadata.applicationVersion);
+            Assert.AreEqual("default_skirmish_v1", metadata.skirmishConfigId);
+            Assert.AreEqual("standard", metadata.difficultyId);
+            Assert.AreEqual("room_tabletop_v1", metadata.mapId);
+            Assert.AreEqual(527, metadata.mapSeed);
+            Assert.IsFalse(string.IsNullOrEmpty(metadata.savedUtc));
+            Assert.AreEqual(123.4f, metadata.matchTime, 0.001f);
+            Assert.AreEqual(RtsMatchState.Running.ToString(), metadata.matchState);
+            Assert.AreEqual(456, metadata.playerCredits);
+            Assert.AreEqual(1, metadata.entityCount);
+            Assert.AreEqual(1, metadata.resourceNodeCount);
+        }
+
+        [Test]
         public void SaveServiceFallsBackToBackupWhenPrimarySlotIsCorrupt()
         {
             string tempPath = Path.Combine(Path.GetTempPath(), "QuestCommandRTS-" + Guid.NewGuid().ToString("N"));
@@ -275,6 +312,50 @@ namespace QuestCommandRTS.Editor
                 Assert.IsTrue(service.TryLoadSlot("manual", out error), error);
                 Assert.AreEqual(backupCredits, game.Resources.Credits);
                 Assert.AreEqual(backupHealth, FindEntityById(game, entityId).Health, 0.001f);
+            }
+            finally
+            {
+                if (Directory.Exists(tempPath))
+                {
+                    Directory.Delete(tempPath, true);
+                }
+            }
+        }
+
+        [Test]
+        public void SaveServiceMetadataFallsBackToBackupAndListsBackupOnlySlots()
+        {
+            string tempPath = Path.Combine(Path.GetTempPath(), "QuestCommandRTS-" + Guid.NewGuid().ToString("N"));
+            try
+            {
+                RtsGame game = CreateInitializedGame();
+                RtsSaveFileStore store = new RtsSaveFileStore(tempPath);
+                RtsSaveService service = new RtsSaveService(game, store);
+                game.SetSaveServiceForTests(service);
+
+                game.SetMatchTimeForTests(42f);
+                Assert.IsTrue(service.TryWriteSlot("manual", out string error), error);
+
+                game.SetMatchTimeForTests(87f);
+                game.Resources.TrySpend(100);
+                Assert.IsTrue(service.TryWriteSlot("manual", out error), error);
+                Assert.IsTrue(File.Exists(store.GetBackupSlotPath("manual")));
+
+                File.WriteAllText(store.GetSlotPath("manual"), "{ corrupt primary metadata");
+
+                Assert.IsTrue(service.TryGetSlotMetadata("manual", out RtsSaveMetadata metadata, out error), error);
+                Assert.IsTrue(metadata.readFromBackup);
+                Assert.AreEqual(42f, metadata.matchTime, 0.001f);
+                Assert.AreEqual("backup 0:42 " + RtsMatchState.Running, game.GetManualSaveSummary());
+
+                File.Delete(store.GetSlotPath("manual"));
+                System.Collections.Generic.List<string> slots = service.ListSlots();
+                Assert.Contains("manual", slots);
+
+                System.Collections.Generic.List<RtsSaveMetadata> allMetadata = service.ListSlotMetadata();
+                Assert.AreEqual(1, allMetadata.Count);
+                Assert.IsTrue(allMetadata[0].readFromBackup);
+                Assert.AreEqual("manual", allMetadata[0].slotId);
             }
             finally
             {

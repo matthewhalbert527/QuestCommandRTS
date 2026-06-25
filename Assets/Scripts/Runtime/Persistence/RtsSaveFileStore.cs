@@ -98,6 +98,7 @@ namespace QuestCommandRTS
         public List<string> ListSlots()
         {
             List<string> slots = new List<string>();
+            HashSet<string> seen = new HashSet<string>();
             if (!Directory.Exists(rootPath))
             {
                 return slots;
@@ -106,10 +107,29 @@ namespace QuestCommandRTS
             string[] files = Directory.GetFiles(rootPath, "*.json");
             for (int i = 0; i < files.Length; i++)
             {
-                slots.Add(Path.GetFileNameWithoutExtension(files[i]));
+                AddSlot(slots, seen, Path.GetFileNameWithoutExtension(files[i]));
             }
 
+            string[] backups = Directory.GetFiles(rootPath, "*.json.bak");
+            for (int i = 0; i < backups.Length; i++)
+            {
+                string name = Path.GetFileName(backups[i]);
+                if (name.EndsWith(".json.bak", StringComparison.Ordinal))
+                {
+                    AddSlot(slots, seen, name.Substring(0, name.Length - ".json.bak".Length));
+                }
+            }
+
+            slots.Sort(StringComparer.Ordinal);
             return slots;
+        }
+
+        private static void AddSlot(List<string> slots, HashSet<string> seen, string slotId)
+        {
+            if (seen.Add(slotId))
+            {
+                slots.Add(slotId);
+            }
         }
 
         private static string SanitizeSlot(string slotId)
