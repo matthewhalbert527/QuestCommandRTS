@@ -74,6 +74,20 @@ namespace QuestCommandRTS.Editor
         }
 
         [Test]
+        public void DesktopInitializationParentsGeneratedCameraAndLightUnderRuntimeRoot()
+        {
+            RtsGame game = CreateInitializedGame(RtsRuntimeMode.Desktop);
+            GameObject sunObject = GameObject.Find("Sun");
+            Assert.IsNotNull(sunObject);
+            Light sun = sunObject.GetComponent<Light>();
+
+            Assert.IsNotNull(game.CommandCamera);
+            Assert.IsTrue(game.CommandCamera.transform.IsChildOf(game.transform), "Generated desktop camera should be cleaned up with the runtime root.");
+            Assert.IsNotNull(sun);
+            Assert.IsTrue(sun.transform.IsChildOf(game.transform), "Generated scene light should be cleaned up with the runtime root.");
+        }
+
+        [Test]
         public void ForcedQuestInitializationSkipsDesktopCameraInputAndHud()
         {
             RtsGame game = CreateInitializedGame(RtsRuntimeMode.QuestVr);
@@ -88,6 +102,20 @@ namespace QuestCommandRTS.Editor
             Assert.IsNotNull(game.GetComponent<QuestCommandConsole>());
             Assert.IsNotNull(game.QuestRig);
             Assert.AreSame(game.QuestRig.HeadCamera.transform, game.GetViewCameraTransform());
+        }
+
+        [Test]
+        public void QuestInitializationParentsGeneratedLightUnderRuntimeRootWithoutCommandCamera()
+        {
+            RtsGame game = CreateInitializedGame(RtsRuntimeMode.QuestVr);
+            GameObject sunObject = GameObject.Find("Sun");
+            Assert.IsNotNull(sunObject);
+            Light sun = sunObject.GetComponent<Light>();
+
+            Assert.IsNull(game.CommandCamera);
+            Assert.IsNull(GameObject.Find("Command Camera"));
+            Assert.IsNotNull(sun);
+            Assert.IsTrue(sun.transform.IsChildOf(game.transform), "Generated scene light should be cleaned up with the Quest runtime root.");
         }
 
         [Test]

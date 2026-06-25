@@ -1383,6 +1383,7 @@ namespace QuestCommandRTS
             if (CommandCamera == null)
             {
                 GameObject cameraObject = new GameObject("Command Camera");
+                cameraObject.transform.SetParent(transform, false);
                 CommandCamera = cameraObject.AddComponent<Camera>();
                 cameraObject.tag = "MainCamera";
             }
@@ -1404,6 +1405,7 @@ namespace QuestCommandRTS
             if (Object.FindObjectOfType<Light>() == null)
             {
                 GameObject lightObject = new GameObject("Sun");
+                lightObject.transform.SetParent(transform, false);
                 Light light = lightObject.AddComponent<Light>();
                 light.type = LightType.Directional;
                 light.intensity = 1.35f;

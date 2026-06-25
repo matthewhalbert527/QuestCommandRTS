@@ -16,7 +16,7 @@ This document records what has been implemented and what has actually been verif
 ## Architecture
 
 - `RtsRuntimeModeResolver` chooses `Desktop` or `QuestVr` from forced test settings, command-line/environment overrides, active XR device state, or an initialized Android OpenXR loader for Quest builds.
-- `RtsGame` owns runtime bootstrap and installs only the components for the resolved mode.
+- `RtsGame` owns runtime bootstrap and installs only the components for the resolved mode. Runtime-created camera and light objects are parented under the generated root so editor exporters can cleanly remove the generated runtime.
 - `RtsCommandDispatcher` centralizes ray/hit based RTS command semantics shared by desktop and Quest input. EditMode source checks guard it from directly reading mouse, keyboard, screen, or XR device APIs.
 - `RtsInputController` keeps desktop-only input, camera movement, drag selection, hotkeys, and control groups. Source checks guard it from duplicating context-command target resolution that belongs in `RtsCommandDispatcher`.
 - `QuestTabletopRig`, `QuestTabletopSettings`, `QuestTrackedNodePose`, `QuestRtsInputController`, `QuestWorldHud`, and `QuestCommandConsole` contain Quest-specific rigging, tracked pose, controller input, pointer, and world-space UI behavior. Source checks guard the Quest path from adding artificial locomotion, board grabbing, or continuous tracked-pose overrides.
@@ -36,13 +36,13 @@ This document records what has been implemented and what has actually been verif
 
 Automated verification last run locally:
 
-- EditMode tests: `82` total, `82` passed, `0` failed.
+- EditMode tests: `84` total, `84` passed, `0` failed.
 - XR setup validator: automated package/project-setting checks pass except for local Android Build Support, which is missing from this Unity install; manual headset and Android OpenXR UI verification remain manual.
 - Generated Quest runtime smoke report: automated object-graph checks pass in EditMode; physical headset behavior remains manual.
 - Generated desktop runtime smoke report: automated object-graph checks pass in EditMode; hands-on desktop control regression remains manual.
 - Screenshot exporter: produces a populated desktop-board showcase at `C:\Users\matth\Documents\Codex\2026-06-24\i-s\outputs\quest-command-rts-sample.png`, a Quest-view world-space UI showcase at `C:\Users\matth\Documents\Codex\2026-06-24\i-s\outputs\quest-command-rts-quest-sample.png`, and a room-sized Quest profile showcase at `C:\Users\matth\Documents\Codex\2026-06-24\i-s\outputs\quest-command-rts-quest-room-sample.png`.
 - Runtime diagnostics exporter: produces `C:\Users\matth\Documents\Codex\2026-06-24\i-s\outputs\quest-command-rts-diagnostics.json`.
-- Quest scene budget exporter: produces `C:\Users\matth\Documents\Codex\2026-06-24\i-s\outputs\quest-command-rts-quest-scene-budget.json`; latest generated Quest baseline is 941 GameObjects, 694 renderers, 79 unique shared materials, 76 enabled colliders, 1 camera, 1 light, 2 world-space canvases, 0 overlay canvases, and 0 set-dressing colliders.
+- Quest scene budget exporter: produces `C:\Users\matth\Documents\Codex\2026-06-24\i-s\outputs\quest-command-rts-quest-scene-budget.json`; latest generated Quest baseline is 942 GameObjects, 694 renderers, 79 unique shared materials, 76 enabled colliders, 1 camera, 1 light, 2 world-space canvases, 0 overlay canvases, and 0 set-dressing colliders.
 - Soak diagnostics exporter: produces `C:\Users\matth\Documents\Codex\2026-06-24\i-s\outputs\quest-command-rts-soak-diagnostics.json`.
 - Desktop build support validator: fails fast on this machine because the Unity 2022.3.62f3 install is missing `WindowsPlayer.exe` under the Windows standalone playback engine template. Repair Unity/Windows Build Support before treating desktop player builds as verified.
 
