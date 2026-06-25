@@ -1127,9 +1127,14 @@ namespace QuestCommandRTS.Editor
             {
                 "Assets/Scripts/Runtime/QuestRtsInputController.cs|private void Update(",
                 "Assets/Scripts/Runtime/QuestRtsInputController.cs|private RtsCommandResult ProcessInputFrame(",
+                "Assets/Scripts/Runtime/QuestRtsInputController.cs|private void UpdatePointer(Ray ray, bool hasHit, RaycastHit hit)",
+                "Assets/Scripts/Runtime/QuestRtsInputController.cs|private void UpdatePointer(Ray ray, bool hasHit, Vector3 hitPoint, Color color)",
                 "Assets/Scripts/Runtime/QuestTrackedNodePose.cs|private void Update(",
                 "Assets/Scripts/Runtime/QuestWorldHud.cs|private void Update(",
                 "Assets/Scripts/Runtime/QuestTacticalMap.cs|private void Update(",
+                "Assets/Scripts/Runtime/QuestTacticalMap.cs|private void Refresh(",
+                "Assets/Scripts/Runtime/QuestTacticalMap.cs|private void RefreshResourcePips(",
+                "Assets/Scripts/Runtime/QuestTacticalMap.cs|private void RefreshEntityPips(",
                 "Assets/Scripts/Runtime/QuestCommandConsole.cs|private void Update("
             };
 

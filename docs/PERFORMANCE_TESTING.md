@@ -17,7 +17,7 @@ Runtime profiler markers were added for the systems most likely to matter as the
 
 `Command RTS > Export Soak Diagnostics Snapshot` writes `C:\Users\matth\Documents\Codex\2026-06-24\i-s\outputs\quest-command-rts-soak-diagnostics.json`. This generated desktop scenario adds a player War Factory, a larger mixed player/enemy army, attack-move orders, active production queues, and a valid active placement preview. It is not a replacement for headset profiling, but it gives the Unity Profiler and later Quest device runs a repeatable populated baseline.
 
-Automated EditMode coverage also scans Quest input, pose, pointer, HUD, tactical map, and console hot loops for obvious allocation-heavy patterns such as per-frame GameObject/material creation, scene-wide object searches, or LINQ. Fog of war uses one texture-backed overlay with the same 56 x 56 logical visibility grid instead of thousands of per-cell renderers and materials.
+Automated EditMode coverage also scans Quest input, pointer feedback helpers, pose, HUD, tactical map refresh paths, and console hot loops for obvious allocation-heavy patterns such as per-frame GameObject/material creation, scene-wide object searches, or LINQ. Fog of war uses one texture-backed overlay with the same 56 x 56 logical visibility grid instead of thousands of per-cell renderers and materials.
 
 Suggested manual profiling pass:
 - Start a desktop match and capture a baseline with the Unity Profiler.
