@@ -25,6 +25,8 @@ namespace QuestCommandRTS
 
     public sealed class QuestRtsInputController : MonoBehaviour
     {
+        public const float DeviceRefreshIntervalSeconds = 0.5f;
+
         private RtsGame game;
         private RtsCommandDispatcher dispatcher;
         private QuestTabletopSettings settings;
@@ -37,6 +39,8 @@ namespace QuestCommandRTS
         private QuestCommandConsole commandConsole;
         private InputDevice rightDevice;
         private InputDevice leftDevice;
+        private float nextRightDeviceRefreshTime;
+        private float nextLeftDeviceRefreshTime;
         private bool previousRightTrigger;
         private bool previousPrimaryButton;
         private bool previousSecondaryButton;
@@ -61,8 +65,9 @@ namespace QuestCommandRTS
             reticle = hitReticle;
             reticleRenderer = reticle != null ? reticle.GetComponent<Renderer>() : null;
             reticleMaterial = reticleRenderer != null ? reticleRenderer.sharedMaterial : null;
-            rightDevice = InputDevices.GetDeviceAtXRNode(XRNode.RightHand);
-            leftDevice = InputDevices.GetDeviceAtXRNode(XRNode.LeftHand);
+            float now = Time.unscaledTime;
+            RefreshDevice(XRNode.RightHand, ref rightDevice, now, ref nextRightDeviceRefreshTime);
+            RefreshDevice(XRNode.LeftHand, ref leftDevice, now, ref nextLeftDeviceRefreshTime);
         }
 
         public void SetCommandConsole(QuestCommandConsole console)
@@ -89,15 +94,9 @@ namespace QuestCommandRTS
 
             SetPointerVisible(true);
 
-            if (!rightDevice.isValid)
-            {
-                rightDevice = InputDevices.GetDeviceAtXRNode(XRNode.RightHand);
-            }
-
-            if (!leftDevice.isValid)
-            {
-                leftDevice = InputDevices.GetDeviceAtXRNode(XRNode.LeftHand);
-            }
+            float now = Time.unscaledTime;
+            RefreshDeviceIfNeeded(XRNode.RightHand, ref rightDevice, now, ref nextRightDeviceRefreshTime);
+            RefreshDeviceIfNeeded(XRNode.LeftHand, ref leftDevice, now, ref nextLeftDeviceRefreshTime);
 
             Ray ray = new Ray(rightController.position, rightController.forward);
             bool leftTriggerHeld = ReadButton(leftDevice, CommonUsages.triggerButton, CommonUsages.trigger);
@@ -116,6 +115,11 @@ namespace QuestCommandRTS
         public RtsCommandResult ProcessInputFrameForTests(QuestRtsInputFrame frame, bool updatePointerFeedback)
         {
             return ProcessInputFrame(frame, updatePointerFeedback);
+        }
+
+        public static bool ShouldRefreshDeviceForTests(bool isDeviceValid, float now, float nextRefreshTime)
+        {
+            return ShouldRefreshDevice(isDeviceValid, now, nextRefreshTime);
         }
 #endif
 
@@ -377,6 +381,25 @@ namespace QuestCommandRTS
 
             float value;
             return device.isValid && device.TryGetFeatureValue(analogUsage, out value) && value >= 0.65f;
+        }
+
+        private static void RefreshDeviceIfNeeded(XRNode node, ref InputDevice device, float now, ref float nextRefreshTime)
+        {
+            if (ShouldRefreshDevice(device.isValid, now, nextRefreshTime))
+            {
+                RefreshDevice(node, ref device, now, ref nextRefreshTime);
+            }
+        }
+
+        private static void RefreshDevice(XRNode node, ref InputDevice device, float now, ref float nextRefreshTime)
+        {
+            device = InputDevices.GetDeviceAtXRNode(node);
+            nextRefreshTime = now + DeviceRefreshIntervalSeconds;
+        }
+
+        private static bool ShouldRefreshDevice(bool isDeviceValid, float now, float nextRefreshTime)
+        {
+            return !isDeviceValid && now >= nextRefreshTime;
         }
     }
 }

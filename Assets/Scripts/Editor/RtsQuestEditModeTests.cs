@@ -40,6 +40,21 @@ namespace QuestCommandRTS.Editor
         }
 
         [Test]
+        public void QuestDevicePollingBacksOffWhenDevicesAreMissing()
+        {
+            Assert.AreEqual(0.5f, QuestTrackedNodePose.DeviceRefreshIntervalSeconds, 0.001f);
+            Assert.AreEqual(0.5f, QuestRtsInputController.DeviceRefreshIntervalSeconds, 0.001f);
+
+            Assert.IsFalse(QuestTrackedNodePose.ShouldRefreshDeviceForTests(false, 0.24f, 0.5f));
+            Assert.IsTrue(QuestTrackedNodePose.ShouldRefreshDeviceForTests(false, 0.5f, 0.5f));
+            Assert.IsFalse(QuestTrackedNodePose.ShouldRefreshDeviceForTests(true, 10f, 0.5f));
+
+            Assert.IsFalse(QuestRtsInputController.ShouldRefreshDeviceForTests(false, 0.24f, 0.5f));
+            Assert.IsTrue(QuestRtsInputController.ShouldRefreshDeviceForTests(false, 0.5f, 0.5f));
+            Assert.IsFalse(QuestRtsInputController.ShouldRefreshDeviceForTests(true, 10f, 0.5f));
+        }
+
+        [Test]
         public void DesktopInitializationCreatesDesktopCameraInputAndHud()
         {
             RtsGame game = CreateInitializedGame(RtsRuntimeMode.Desktop);
