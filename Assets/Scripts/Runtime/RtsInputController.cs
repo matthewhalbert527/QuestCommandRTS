@@ -183,7 +183,7 @@ namespace QuestCommandRTS
             }
 
             RtsEntity entity = hit.collider.GetComponentInParent<RtsEntity>();
-            if (entity != null && entity.Team == RtsTeam.Enemy)
+            if (entity != null && entity.Team == RtsTeam.Enemy && game.IsEntityVisible(entity))
             {
                 IssueAttack(entity);
                 return;

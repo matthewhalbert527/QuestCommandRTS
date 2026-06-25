@@ -268,6 +268,11 @@ namespace QuestCommandRTS
                     continue;
                 }
 
+                if (entity.Team == RtsTeam.Enemy && game.FogOfWar != null && !game.FogOfWar.IsVisible(entity.GroundPosition))
+                {
+                    continue;
+                }
+
                 float pipSize = entity is RtsStructure ? 6f : 4f;
                 DrawMapPip(rect, entity.GroundPosition, RtsBalance.TeamColor(entity.Team), pipSize);
             }

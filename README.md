@@ -13,6 +13,7 @@ Unity prototype for a classic RTS inspired by Command and Conquer. The current b
 - Basic enemy wave director that periodically sends units at the player base.
 - RTS camera pan/zoom, drag selection, production rally points, control groups, minimap pips, and win/loss state.
 - Construction tech prerequisites plus repair and sell commands for player structures.
+- Lightweight fog of war with scouting reveal and hidden enemy minimap pips.
 - Editor menu item: `Command RTS > Open Battlefield Scene`.
 
 ## Open and run
@@ -43,5 +44,5 @@ The scene is intentionally empty. `RtsBootstrap` creates the camera, map, HUD, p
 
 - Merge these scripts into the Antigravity project once its path or repo is available.
 - Replace primitive visuals with production assets and tune camera/unit scale for desktop play.
-- Add real pathfinding/avoidance, fog of war, save/load, audio, and campaign/skirmish rules.
+- Add real pathfinding/avoidance, save/load, audio, and campaign/skirmish rules.
 - Move balance values from `RtsBalance` into ScriptableObjects when the design starts changing frequently.

@@ -26,6 +26,7 @@ namespace QuestCommandRTS
         public ResourceBank Resources { get; private set; }
         public Camera CommandCamera { get; private set; }
         public BuildManager BuildManager { get; private set; }
+        public RtsFogOfWar FogOfWar { get; private set; }
         public IReadOnlyList<RtsEntity> Entities => entities;
         public IReadOnlyList<RtsEntity> Selection => selection;
         public IReadOnlyList<ResourceNode> ResourceNodes => resourceNodes;
@@ -228,6 +229,16 @@ namespace QuestCommandRTS
             }
 
             return producer.QueueUnit(kind);
+        }
+
+        public bool IsWorldVisible(Vector3 point)
+        {
+            return FogOfWar == null || FogOfWar.IsVisible(point);
+        }
+
+        public bool IsEntityVisible(RtsEntity entity)
+        {
+            return entity == null || entity.Team != RtsTeam.Enemy || IsWorldVisible(entity.GroundPosition);
         }
 
         public bool CanBuildStructure(StructureKind kind)
@@ -684,6 +695,8 @@ namespace QuestCommandRTS
 
             BuildManager = gameObject.AddComponent<BuildManager>();
             BuildManager.Initialize(this);
+            FogOfWar = gameObject.AddComponent<RtsFogOfWar>();
+            FogOfWar.Initialize(this);
             gameObject.AddComponent<RtsInputController>().Initialize(this);
             gameObject.AddComponent<RtsHud>().Initialize(this);
             gameObject.AddComponent<EnemyDirector>().Initialize(this);
