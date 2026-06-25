@@ -120,6 +120,10 @@ namespace QuestCommandRTS
             y -= 62f;
 
             AddCommandButton(commandPanel, "Army", y, () => game.SelectCombatUnits(), () => true, () => "Select Army");
+            y -= 48f;
+            AddCommandButton(commandPanel, "Repair", y, () => game.TryRepairSelectedStructures(), () => game.CanRepairSelectedStructures(), () => "Repair  Z");
+            y -= 48f;
+            AddCommandButton(commandPanel, "Sell", y, () => game.SellSelectedStructures(), () => game.CanSellSelectedStructures(), () => "Sell  X");
 
             RectTransform selectionPanel = CreatePanel(canvasObject.transform, "Selection", new Vector2(0f, 0f), new Vector2(0.58f, 0f), new Vector2(0f, 0f), new Vector2(12f, 12f), new Vector2(0f, 118f), new Color(0.02f, 0.024f, 0.026f, 0.8f));
             selectionText = CreateText(selectionPanel, "Selection Text", "", 17, TextAnchor.UpperLeft);
@@ -130,7 +134,7 @@ namespace QuestCommandRTS
         private void AddBuildButton(RectTransform parent, StructureKind kind, float y)
         {
             StructureStats stats = RtsBalance.GetStructure(kind);
-            AddCommandButton(parent, stats.Name, y, () => game.BuildManager.BeginPlacement(kind), () => CanAfford(stats.Cost), () => stats.Name + "  " + stats.Cost);
+            AddCommandButton(parent, stats.Name, y, () => game.BuildManager.BeginPlacement(kind), () => CanAfford(stats.Cost) && game.CanBuildStructure(kind), () => GetBuildButtonText(kind, stats));
         }
 
         private void AddCommandButton(RectTransform parent, string name, float y, UnityEngine.Events.UnityAction action, Func<bool> enabled, Func<string> text)
@@ -168,6 +172,17 @@ namespace QuestCommandRTS
         private bool CanAfford(int cost)
         {
             return game != null && game.Resources != null && game.Resources.CanAfford(cost);
+        }
+
+        private string GetBuildButtonText(StructureKind kind, StructureStats stats)
+        {
+            string requirement = game.GetStructureRequirement(kind);
+            if (!string.IsNullOrEmpty(requirement))
+            {
+                return stats.Name + "  " + requirement;
+            }
+
+            return stats.Name + "  " + stats.Cost;
         }
 
         private string BuildSelectionText()

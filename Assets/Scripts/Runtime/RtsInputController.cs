@@ -1,20 +1,14 @@
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.EventSystems;
-using UnityEngine.XR;
 
 namespace QuestCommandRTS
 {
     public sealed class RtsInputController : MonoBehaviour
     {
-        private readonly List<InputDevice> xrDevices = new List<InputDevice>();
         private readonly List<RtsUnit> commandUnits = new List<RtsUnit>();
         private readonly List<RtsEntity>[] controlGroups = new List<RtsEntity>[5];
         private RtsGame game;
-        private bool lastTrigger;
-        private bool lastGrip;
-        private bool lastPrimary;
-        private bool lastSecondary;
         private bool mouseSelectionActive;
         private bool mouseDragging;
         private Vector2 mouseSelectionStart;
@@ -350,6 +344,14 @@ namespace QuestCommandRTS
             {
                 game.BuildManager.BeginPlacement(StructureKind.Turret);
             }
+            else if (Input.GetKeyDown(KeyCode.Z))
+            {
+                game.TryRepairSelectedStructures();
+            }
+            else if (Input.GetKeyDown(KeyCode.X))
+            {
+                game.SellSelectedStructures();
+            }
         }
 
         private void HandleControlGroups()
@@ -485,70 +487,14 @@ namespace QuestCommandRTS
 
         private Ray GetPointerRay()
         {
-            if (TryGetXrRay(out Ray xrRay))
-            {
-                return xrRay;
-            }
-
             return game.CommandCamera.ScreenPointToRay(Input.mousePosition);
-        }
-
-        private bool TryGetXrRay(out Ray ray)
-        {
-            xrDevices.Clear();
-            InputDevices.GetDevicesWithCharacteristics(InputDeviceCharacteristics.Controller | InputDeviceCharacteristics.HeldInHand | InputDeviceCharacteristics.Right, xrDevices);
-
-            if (xrDevices.Count == 0)
-            {
-                InputDevices.GetDevicesWithCharacteristics(InputDeviceCharacteristics.Controller | InputDeviceCharacteristics.HeldInHand | InputDeviceCharacteristics.Left, xrDevices);
-            }
-
-            for (int i = 0; i < xrDevices.Count; i++)
-            {
-                InputDevice device = xrDevices[i];
-                if (device.TryGetFeatureValue(CommonUsages.devicePosition, out Vector3 position) &&
-                    device.TryGetFeatureValue(CommonUsages.deviceRotation, out Quaternion rotation))
-                {
-                    ray = new Ray(position, rotation * Vector3.forward);
-                    return true;
-                }
-            }
-
-            ray = default(Ray);
-            return false;
         }
 
         private void ReadButtons(out bool selectDown, out bool commandDown, out bool cancelDown)
         {
-            bool trigger = ReadXrButton(CommonUsages.triggerButton);
-            bool grip = ReadXrButton(CommonUsages.gripButton);
-            bool primary = ReadXrButton(CommonUsages.primaryButton);
-            bool secondary = ReadXrButton(CommonUsages.secondaryButton);
-
-            selectDown = Input.GetMouseButtonDown(0) || (trigger && !lastTrigger);
-            commandDown = Input.GetMouseButtonDown(1) || (grip && !lastGrip) || (primary && !lastPrimary);
-            cancelDown = Input.GetMouseButtonDown(2) || (secondary && !lastSecondary);
-
-            lastTrigger = trigger;
-            lastGrip = grip;
-            lastPrimary = primary;
-            lastSecondary = secondary;
-        }
-
-        private bool ReadXrButton(InputFeatureUsage<bool> usage)
-        {
-            xrDevices.Clear();
-            InputDevices.GetDevicesWithCharacteristics(InputDeviceCharacteristics.Controller | InputDeviceCharacteristics.HeldInHand, xrDevices);
-
-            for (int i = 0; i < xrDevices.Count; i++)
-            {
-                if (xrDevices[i].TryGetFeatureValue(usage, out bool pressed) && pressed)
-                {
-                    return true;
-                }
-            }
-
-            return false;
+            selectDown = Input.GetMouseButtonDown(0);
+            commandDown = Input.GetMouseButtonDown(1);
+            cancelDown = Input.GetMouseButtonDown(2);
         }
 
         private static Vector3 FormationOffset(int index, int count)

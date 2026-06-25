@@ -230,6 +230,141 @@ namespace QuestCommandRTS
             return producer.QueueUnit(kind);
         }
 
+        public bool CanBuildStructure(StructureKind kind)
+        {
+            switch (kind)
+            {
+                case StructureKind.CommandCenter:
+                    return false;
+                case StructureKind.PowerPlant:
+                case StructureKind.Refinery:
+                    return HasPlayerStructure(StructureKind.CommandCenter);
+                case StructureKind.Barracks:
+                    return HasPlayerStructure(StructureKind.PowerPlant);
+                case StructureKind.WarFactory:
+                    return HasPlayerStructure(StructureKind.Barracks) && HasPlayerStructure(StructureKind.Refinery);
+                case StructureKind.Turret:
+                    return HasPlayerStructure(StructureKind.Barracks) && HasPlayerStructure(StructureKind.PowerPlant);
+                default:
+                    return false;
+            }
+        }
+
+        public string GetStructureRequirement(StructureKind kind)
+        {
+            switch (kind)
+            {
+                case StructureKind.PowerPlant:
+                case StructureKind.Refinery:
+                    return HasPlayerStructure(StructureKind.CommandCenter) ? string.Empty : "Needs Command Center";
+                case StructureKind.Barracks:
+                    return HasPlayerStructure(StructureKind.PowerPlant) ? string.Empty : "Needs Power Plant";
+                case StructureKind.WarFactory:
+                    if (!HasPlayerStructure(StructureKind.Barracks))
+                    {
+                        return "Needs Barracks";
+                    }
+
+                    return HasPlayerStructure(StructureKind.Refinery) ? string.Empty : "Needs Refinery";
+                case StructureKind.Turret:
+                    if (!HasPlayerStructure(StructureKind.Barracks))
+                    {
+                        return "Needs Barracks";
+                    }
+
+                    return HasPlayerStructure(StructureKind.PowerPlant) ? string.Empty : "Needs Power Plant";
+                default:
+                    return "Unavailable";
+            }
+        }
+
+        public bool TryRepairSelectedStructures()
+        {
+            RtsStructure target = FindMostDamagedSelectedStructure();
+            if (target == null)
+            {
+                SpawnFloatingText("Select damaged building", GetPlayerBaseCenter() + Vector3.up * 2.2f, Color.yellow);
+                return false;
+            }
+
+            float missingHealth = target.MaxHealth - target.Health;
+            int cost = Mathf.Clamp(Mathf.CeilToInt(missingHealth * 0.22f), 25, 180);
+            if (!Resources.TrySpend(cost))
+            {
+                SpawnFloatingText("Need credits", target.transform.position + Vector3.up * 2.2f, Color.yellow);
+                return false;
+            }
+
+            float repairAmount = cost / 0.22f;
+            target.Repair(repairAmount);
+            SpawnFloatingText("Repair -" + cost, target.transform.position + Vector3.up * 2.2f, new Color(0.7f, 1f, 0.75f));
+            return true;
+        }
+
+        public bool CanRepairSelectedStructures()
+        {
+            return FindMostDamagedSelectedStructure() != null && Resources != null && Resources.Credits >= 25;
+        }
+
+        public bool SellSelectedStructures()
+        {
+            List<RtsStructure> soldStructures = new List<RtsStructure>();
+            int refund = 0;
+
+            for (int i = 0; i < selection.Count; i++)
+            {
+                RtsStructure structure = selection[i] as RtsStructure;
+                if (structure == null || structure.Team != RtsTeam.Player || !structure.IsAlive)
+                {
+                    continue;
+                }
+
+                StructureStats stats = RtsBalance.GetStructure(structure.StructureKind);
+                int structureRefund = Mathf.RoundToInt(stats.Cost * 0.5f * structure.HealthPercent);
+                refund += Mathf.Max(0, structureRefund);
+                soldStructures.Add(structure);
+            }
+
+            if (soldStructures.Count == 0)
+            {
+                SpawnFloatingText("Select building", GetPlayerBaseCenter() + Vector3.up * 2.2f, Color.yellow);
+                return false;
+            }
+
+            ClearSelection();
+            if (refund > 0)
+            {
+                Resources.Add(refund);
+            }
+
+            for (int i = 0; i < soldStructures.Count; i++)
+            {
+                RtsStructure structure = soldStructures[i];
+                if (structure != null)
+                {
+                    SpawnFloatingText("Sold +" + Mathf.RoundToInt(RtsBalance.GetStructure(structure.StructureKind).Cost * 0.5f * structure.HealthPercent), structure.transform.position + Vector3.up * 2.2f, new Color(0.55f, 1f, 0.65f));
+                    Destroy(structure.gameObject);
+                }
+            }
+
+            RecalculatePower();
+            return true;
+        }
+
+        public bool CanSellSelectedStructures()
+        {
+            for (int i = 0; i < selection.Count; i++)
+            {
+                RtsStructure structure = selection[i] as RtsStructure;
+                if (structure != null && structure.Team == RtsTeam.Player && structure.IsAlive)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
         public Vector3 ClampWorldPoint(Vector3 position)
         {
             return ClampToGround(position);
@@ -476,6 +611,20 @@ namespace QuestCommandRTS
             return count;
         }
 
+        public bool HasPlayerStructure(StructureKind kind)
+        {
+            for (int i = 0; i < entities.Count; i++)
+            {
+                RtsStructure structure = entities[i] as RtsStructure;
+                if (structure != null && structure.Team == RtsTeam.Player && structure.StructureKind == kind && structure.IsAlive)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
         public Vector3 GetPlayerBaseCenter()
         {
             RtsEntity target = FindPlayerPrimaryTarget();
@@ -595,6 +744,30 @@ namespace QuestCommandRTS
             }
 
             StatusMessage = "Destroy enemy base - enemy structures " + enemyStructures;
+        }
+
+        private RtsStructure FindMostDamagedSelectedStructure()
+        {
+            RtsStructure best = null;
+            float bestMissingHealth = 0f;
+
+            for (int i = 0; i < selection.Count; i++)
+            {
+                RtsStructure structure = selection[i] as RtsStructure;
+                if (structure == null || structure.Team != RtsTeam.Player || !structure.IsAlive)
+                {
+                    continue;
+                }
+
+                float missingHealth = structure.MaxHealth - structure.Health;
+                if (missingHealth > bestMissingHealth + 0.5f)
+                {
+                    bestMissingHealth = missingHealth;
+                    best = structure;
+                }
+            }
+
+            return best;
         }
 
         private void EndMatch(RtsMatchState state, string message)

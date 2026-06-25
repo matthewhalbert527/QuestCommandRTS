@@ -21,6 +21,12 @@ namespace QuestCommandRTS
         public bool BeginPlacement(StructureKind kind)
         {
             StructureStats stats = RtsBalance.GetStructure(kind);
+            if (!game.CanBuildStructure(kind))
+            {
+                game.SpawnFloatingText(game.GetStructureRequirement(kind), game.GetPlayerBaseCenter() + Vector3.up * 2f, Color.yellow);
+                return false;
+            }
+
             if (!game.Resources.CanAfford(stats.Cost))
             {
                 game.SpawnFloatingText("Need credits", game.GetPlayerBaseCenter() + Vector3.up * 2f, Color.yellow);

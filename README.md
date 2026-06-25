@@ -9,9 +9,11 @@ Unity prototype for a classic RTS inspired by Command and Conquer. The current b
 - Resource harvesting loop with refineries and crystal fields.
 - Base construction with placement ghosts, footprint validation, build radius checks, and credit costs.
 - HUD buttons for production, construction, and army selection.
-- Mouse controls for editor testing and XR controller ray support through `UnityEngine.XR`.
+- Mouse and keyboard controls for editor testing.
 - Basic enemy wave director that periodically sends units at the player base.
 - RTS camera pan/zoom, drag selection, production rally points, control groups, minimap pips, and win/loss state.
+- Construction tech prerequisites plus repair and sell commands for player structures.
+- Editor menu item: `Command RTS > Open Battlefield Scene`.
 
 ## Open and run
 
@@ -27,17 +29,19 @@ The scene is intentionally empty. `RtsBootstrap` creates the camera, map, HUD, p
 - Left click or drag: select.
 - Shift + left click: add to selection.
 - Right click: command selected units, harvest resources, attack enemies, or set a selected production building's rally point.
-- Middle click, secondary controller button, or Escape: cancel/clear.
+- Middle click or Escape: cancel/clear.
 - Arrow keys or screen-edge mouse: pan camera.
 - Mouse wheel: zoom camera.
 - Number keys 1-3: train rifleman, harvester, and tank.
 - Q/W/E/R/T: place power plant, barracks, refinery, war factory, and turret.
+- Z: repair the most damaged selected structure.
+- X: sell selected structures for a partial refund.
 - Ctrl + 5-9: assign control group; 5-9: recall control group.
 - HUD buttons train units and place buildings.
 
 ## Next takeover steps
 
 - Merge these scripts into the Antigravity project once its path or repo is available.
-- Replace primitive visuals with production assets and tune scale for Quest comfort.
+- Replace primitive visuals with production assets and tune camera/unit scale for desktop play.
 - Add real pathfinding/avoidance, fog of war, save/load, audio, and campaign/skirmish rules.
 - Move balance values from `RtsBalance` into ScriptableObjects when the design starts changing frequently.

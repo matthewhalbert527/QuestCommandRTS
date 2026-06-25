@@ -8,5 +8,4 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/Scenes/Battlefield.unity
     guid: 6e760724b8cb4ce49ad5a77b53b5c245
-  m_configObjects:
-    com.unity.xr.openxr.settings4: {fileID: 11400000, guid: c1881dde161e42a40bba632c2fcd173f, type: 2}
+  m_configObjects: {}
