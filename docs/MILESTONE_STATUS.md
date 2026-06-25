@@ -9,7 +9,7 @@ This document records what has been implemented and what has actually been verif
 - Desktop mode keeps the generated battlefield, command camera, mouse and keyboard RTS controls, desktop HUD, build hotkeys, production, control groups, save/load, fog of war, and enemy waves.
 - Quest VR mode creates a scaled tabletop rig, uses an XR head camera, tracks left and right controller nodes through Unity XR input, and does not install the desktop camera/input/HUD path.
 - Right controller ray feedback, reticle, single-target trigger selection, additive selection modifier, context command button, cancel/clear button, attack-move/stop modifiers, building placement, and the Quest command console all route into shared game command services. Pointer feedback colors distinguish attack, harvest, rally, move, UI, and invalid targets. Quest console build, produce, cancel-queue, repair, sell, pause, save/load, and new-match buttons are covered through panel-ray activation tests. Selected and damaged entities now show lightweight health bars for tabletop readability.
-- Quest mode uses a compact world-space status panel for credits, power, selected count, status text, and core control hints, with cached refreshes that update only when displayed state changes.
+- Quest mode uses a compact world-space status panel for credits, power, selected count, status text, and core control hints, with cached refreshes that update only when displayed state changes. The Quest command console uses a layered holographic-style panel frame while keeping text-first placeholder controls.
 - Quest tabletop scale now includes editor profile presets and screenshot export paths for the default approximately 1.78m board and a room-sized approximately 4.0m board with longer pointer reach.
 - The generated battlefield includes original primitive set dressing for a tabletop war-room read: sandy terrain accents, projected water channels, ridges, rocks, scorches, rails, and corner pylons. The set dressing is visual-only so it does not steal command raycasts from the battlefield.
 
@@ -35,7 +35,7 @@ This document records what has been implemented and what has actually been verif
 
 Automated verification last run locally:
 
-- EditMode tests: `78` total, `78` passed, `0` failed.
+- EditMode tests: `79` total, `79` passed, `0` failed.
 - XR setup validator: automated package/project-setting checks pass except for local Android Build Support, which is missing from this Unity install; manual headset and Android OpenXR UI verification remain manual.
 - Generated Quest runtime smoke report: automated object-graph checks pass in EditMode; physical headset behavior remains manual.
 - Generated desktop runtime smoke report: automated object-graph checks pass in EditMode; hands-on desktop control regression remains manual.
@@ -72,5 +72,5 @@ Automated verification last run locally:
 ## Known Limitations
 
 - No full VR construction/production radial UI, lasso/box selection, hand tracking, passthrough, spatial anchors, artificial locomotion, multiplayer, campaign, or final art/audio.
-- The Quest command console is a functional placeholder for build/produce/selected/system commands.
+- The Quest command console is a functional text-first placeholder for build/produce/selected/system commands.
 - Physical Quest tracking, controller feel, comfort, and performance are not claimed as verified until run on headset hardware.

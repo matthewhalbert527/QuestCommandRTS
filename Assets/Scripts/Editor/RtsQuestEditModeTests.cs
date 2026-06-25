@@ -153,6 +153,26 @@ namespace QuestCommandRTS.Editor
         }
 
         [Test]
+        public void QuestCommandConsoleBuildsLayeredHolographicPanelFrame()
+        {
+            RtsGame game = CreateInitializedGame(RtsRuntimeMode.QuestVr);
+            QuestCommandConsole console = game.GetComponent<QuestCommandConsole>();
+            Assert.IsNotNull(console);
+
+            console.SetOpen(true);
+
+            AssertPanelImage("Console Top Glow", 0.7f);
+            AssertPanelImage("Console Left Glow", 0.5f);
+            AssertPanelImage("Console Header Underline", 0.4f);
+            AssertPanelImage("Console Tab Rail", 0.5f);
+            AssertPanelImage("Console Content Backplate", 0.4f);
+
+            Text header = FindRectTransform("Console Header").GetComponent<Text>();
+            Assert.IsNotNull(header);
+            StringAssert.Contains("RTS COMMAND", header.text);
+        }
+
+        [Test]
         public void EntityHealthBarsTrackSelectionDamageRepairAndFog()
         {
             RtsGame game = CreateInitializedGame(RtsRuntimeMode.Desktop);
@@ -1473,6 +1493,13 @@ namespace QuestCommandRTS.Editor
             GameObject sceneObject = GameObject.Find(objectName);
             Assert.IsNotNull(sceneObject, "Missing generated scene object " + objectName);
             Assert.IsNull(sceneObject.GetComponent<Collider>(), objectName + " should be visual-only and should not block selection or command raycasts.");
+        }
+
+        private static void AssertPanelImage(string objectName, float minimumAlpha)
+        {
+            Image image = FindRectTransform(objectName).GetComponent<Image>();
+            Assert.IsNotNull(image, objectName + " should have an Image component.");
+            Assert.GreaterOrEqual(image.color.a, minimumAlpha, objectName + " should be visible in the world-space console frame.");
         }
 
         private static void AssertVectorNear(Vector3 expected, Vector3 actual)

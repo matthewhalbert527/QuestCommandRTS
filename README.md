@@ -116,7 +116,7 @@ See `docs/SAVE_SYSTEM.md`, `docs/LIFECYCLE_TEST_MATRIX.md`, `docs/PERFORMANCE_TE
 
 - No radial menus, lasso selection, hand tracking, passthrough, spatial anchors, locomotion, or board grabbing.
 - Production queue cancellation applies to the last queued item, not the active item already in progress.
-- The VR console uses simple placeholder styling and text-only controls.
+- The VR console is still placeholder UI, but now uses a layered holographic-style world panel with text-first controls.
 - Quest Link and device behavior still require manual headset verification.
 - Primitive placeholder art remains intentionally lightweight.
 

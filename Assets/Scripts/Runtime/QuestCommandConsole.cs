@@ -37,28 +37,28 @@ namespace QuestCommandRTS
 
                 if (!Interactable)
                 {
-                    Image.color = new Color(0.08f, 0.09f, 0.095f, 0.88f);
+                    Image.color = new Color(0.045f, 0.055f, 0.06f, 0.82f);
                 }
                 else if (Time.unscaledTime < PressedUntilTime)
                 {
-                    Image.color = new Color(0.32f, 0.52f, 0.54f, 0.98f);
+                    Image.color = new Color(0.26f, 0.58f, 0.62f, 0.98f);
                 }
                 else if (Selected)
                 {
-                    Image.color = new Color(0.08f, 0.34f, 0.38f, 0.94f);
+                    Image.color = new Color(0.05f, 0.38f, 0.43f, 0.95f);
                 }
                 else if (hovered)
                 {
-                    Image.color = new Color(0.18f, 0.26f, 0.27f, 0.96f);
+                    Image.color = new Color(0.12f, 0.28f, 0.31f, 0.96f);
                 }
                 else
                 {
-                    Image.color = new Color(0.11f, 0.145f, 0.15f, 0.93f);
+                    Image.color = new Color(0.055f, 0.09f, 0.1f, 0.9f);
                 }
 
                 if (Label != null)
                 {
-                    Label.color = Interactable ? new Color(0.9f, 0.97f, 0.98f) : new Color(0.52f, 0.58f, 0.6f);
+                    Label.color = Interactable ? new Color(0.88f, 0.98f, 1f) : new Color(0.48f, 0.56f, 0.58f);
                 }
             }
         }
@@ -222,7 +222,15 @@ namespace QuestCommandRTS
             scaler.dynamicPixelsPerUnit = 12f;
 
             Image background = canvasObject.AddComponent<Image>();
-            background.color = new Color(0.014f, 0.02f, 0.024f, 0.94f);
+            background.color = new Color(0.01f, 0.022f, 0.028f, 0.88f);
+
+            CreatePanelImage(panelRect, "Console Top Glow", new Color(0.36f, 0.9f, 1f, 0.78f), new Vector2(0f, 0f), new Vector2(panelRect.sizeDelta.x, 3f));
+            CreatePanelImage(panelRect, "Console Bottom Glow", new Color(0.18f, 0.72f, 0.9f, 0.58f), new Vector2(0f, -panelRect.sizeDelta.y + 3f), new Vector2(panelRect.sizeDelta.x, 3f));
+            CreatePanelImage(panelRect, "Console Left Glow", new Color(0.25f, 0.82f, 1f, 0.58f), new Vector2(0f, 0f), new Vector2(3f, panelRect.sizeDelta.y));
+            CreatePanelImage(panelRect, "Console Right Glow", new Color(0.16f, 0.68f, 0.84f, 0.48f), new Vector2(panelRect.sizeDelta.x - 3f, 0f), new Vector2(3f, panelRect.sizeDelta.y));
+            CreatePanelImage(panelRect, "Console Header Underline", new Color(0.23f, 0.77f, 0.92f, 0.48f), new Vector2(18f, -54f), new Vector2(700f, 2f));
+            CreatePanelImage(panelRect, "Console Tab Rail", new Color(0.08f, 0.26f, 0.32f, 0.62f), new Vector2(18f, -106f), new Vector2(700f, 2f));
+            CreatePanelImage(panelRect, "Console Content Backplate", new Color(0.018f, 0.038f, 0.045f, 0.46f), new Vector2(14f, -112f), new Vector2(712f, 392f));
 
             headerText = CreateText(panelRect, "Console Header", "", 24, TextAnchor.MiddleLeft, new Vector2(18f, -16f), new Vector2(530f, 42f));
             placementText = CreateText(panelRect, "Placement Status", "", 16, TextAnchor.MiddleRight, new Vector2(548f, -17f), new Vector2(170f, 40f));
@@ -334,7 +342,7 @@ namespace QuestCommandRTS
             SetTopLeft(rect, position, size);
 
             Image image = buttonObject.AddComponent<Image>();
-            image.color = new Color(0.11f, 0.145f, 0.15f, 0.93f);
+            image.color = new Color(0.055f, 0.09f, 0.1f, 0.9f);
 
             ConsoleButton button = new ConsoleButton
             {
@@ -370,6 +378,17 @@ namespace QuestCommandRTS
             return text;
         }
 
+        private static Image CreatePanelImage(RectTransform parent, string name, Color color, Vector2 position, Vector2 size)
+        {
+            GameObject imageObject = new GameObject(name);
+            imageObject.transform.SetParent(parent, false);
+            RectTransform rect = imageObject.AddComponent<RectTransform>();
+            SetTopLeft(rect, position, size);
+            Image image = imageObject.AddComponent<Image>();
+            image.color = color;
+            return image;
+        }
+
         private void Refresh(bool force)
         {
             if (game == null || game.Resources == null)
@@ -377,7 +396,7 @@ namespace QuestCommandRTS
                 return;
             }
 
-            headerText.text = "Command Console   Credits " + game.Resources.Credits + "   Power " + game.Resources.PowerUsed + "/" + game.Resources.PowerProvided;
+            headerText.text = "RTS COMMAND   Credits " + game.Resources.Credits + "   Power " + game.Resources.PowerUsed + "/" + game.Resources.PowerProvided;
             placementText.text = game.BuildManager != null && game.BuildManager.IsPlacing ? game.BuildManager.GetPlacementStatusText() : "X: Close";
 
             RefreshBuildTab();
