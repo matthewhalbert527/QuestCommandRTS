@@ -129,7 +129,7 @@ namespace QuestCommandRTS.Editor
             try
             {
                 Directory.CreateDirectory(tempPath);
-                File.WriteAllText(settingsPath, "{ \"schemaVersion\": 1, \"masterVolume\": 2.5, \"musicVolume\": -1, \"effectsVolume\": 4, \"pointerLength\": -9, \"tabletopScale\": 2, \"tabletopHeight\": -3, \"uiScale\": 0.1, \"qualityPreset\": \"Ultra\" }");
+                File.WriteAllText(settingsPath, "{ \"schemaVersion\": 1, \"masterVolume\": 2.5, \"musicVolume\": -1, \"effectsVolume\": 4, \"pointerLength\": -9, \"tabletopScale\": 2, \"tabletopHeight\": -3, \"uiScale\": 0.1, \"qualityPreset\": \"Ultra\", \"periodicAutosaveIntervalSeconds\": 9999 }");
 
                 RtsProfileSettings settings = new RtsProfileSettings(settingsPath);
                 Assert.IsTrue(settings.TryLoad(out string error), error);
@@ -140,6 +140,7 @@ namespace QuestCommandRTS.Editor
                 Assert.AreEqual(1.5f, settings.Data.tabletopScale, 0.001f);
                 Assert.AreEqual(0.82f, settings.Data.tabletopHeight, 0.001f);
                 Assert.AreEqual(0.75f, settings.Data.uiScale, 0.001f);
+                Assert.AreEqual(900f, settings.Data.periodicAutosaveIntervalSeconds, 0.001f);
                 Assert.AreEqual("Balanced", settings.Data.qualityPreset);
 
                 settings.Data.masterVolume = 7f;
@@ -274,6 +275,42 @@ namespace QuestCommandRTS.Editor
                 Assert.IsTrue(service.TryLoadSlot("manual", out error), error);
                 Assert.AreEqual(backupCredits, game.Resources.Credits);
                 Assert.AreEqual(backupHealth, FindEntityById(game, entityId).Health, 0.001f);
+            }
+            finally
+            {
+                if (Directory.Exists(tempPath))
+                {
+                    Directory.Delete(tempPath, true);
+                }
+            }
+        }
+
+        [Test]
+        public void LifecyclePeriodicAutosaveUsesConfiguredIntervalAndRequiresActiveInput()
+        {
+            string tempPath = Path.Combine(Path.GetTempPath(), "QuestCommandRTS-" + Guid.NewGuid().ToString("N"));
+            try
+            {
+                RtsGame game = CreateInitializedGame();
+                RtsSaveFileStore store = new RtsSaveFileStore(tempPath);
+                game.SetSaveServiceForTests(new RtsSaveService(game, store));
+                game.ProfileSettings.Data.periodicAutosaveIntervalSeconds = 30f;
+
+                game.Lifecycle.ScheduleNextPeriodicAutosaveForTests(0f);
+                Assert.IsFalse(game.Lifecycle.EvaluatePeriodicAutosaveForTests(29f));
+                Assert.IsFalse(store.HasSlot(RtsLifecycleCoordinator.PeriodicAutosaveSlot));
+
+                game.Lifecycle.SetInputFocusForTests(false);
+                game.Lifecycle.ScheduleNextPeriodicAutosaveForTests(0f);
+                Assert.IsFalse(game.Lifecycle.EvaluatePeriodicAutosaveForTests(30f));
+                Assert.IsFalse(store.HasSlot(RtsLifecycleCoordinator.PeriodicAutosaveSlot));
+                Assert.IsTrue(store.HasSlot("focus-autosave"));
+
+                game.Lifecycle.SetInputFocusForTests(true);
+                game.Lifecycle.ScheduleNextPeriodicAutosaveForTests(0f);
+                Assert.IsTrue(game.Lifecycle.EvaluatePeriodicAutosaveForTests(30f));
+                Assert.IsTrue(store.HasSlot(RtsLifecycleCoordinator.PeriodicAutosaveSlot));
+                Assert.IsFalse(game.Lifecycle.EvaluatePeriodicAutosaveForTests(30.5f));
             }
             finally
             {

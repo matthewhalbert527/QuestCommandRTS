@@ -4,16 +4,20 @@ namespace QuestCommandRTS
 {
     public sealed class RtsLifecycleCoordinator : MonoBehaviour
     {
+        public const string PeriodicAutosaveSlot = "periodic-autosave";
+
         public bool HasInputFocus { get; private set; } = true;
         public bool IsApplicationPaused { get; private set; }
         public bool AcceptsInput => !IsApplicationPaused && HasInputFocus && !IsSavingOrLoading;
         public bool IsSavingOrLoading { get; private set; }
 
         private RtsGame game;
+        private float nextPeriodicAutosaveTime;
 
         public void Initialize(RtsGame owner)
         {
             game = owner;
+            ScheduleNextPeriodicAutosave(Time.unscaledTime);
         }
 
         private void OnApplicationPause(bool pauseStatus)
@@ -24,6 +28,11 @@ namespace QuestCommandRTS
         private void OnApplicationFocus(bool hasFocus)
         {
             SetInputFocus(hasFocus);
+        }
+
+        private void Update()
+        {
+            EvaluatePeriodicAutosave(Time.unscaledTime);
         }
 
         public void SetUserPaused(bool paused)
@@ -73,6 +82,7 @@ namespace QuestCommandRTS
             if (paused)
             {
                 TryAutosave("autosave");
+                ScheduleNextPeriodicAutosave(Time.unscaledTime);
             }
         }
 
@@ -89,6 +99,7 @@ namespace QuestCommandRTS
             if (!hasFocus)
             {
                 TryAutosave("focus-autosave");
+                ScheduleNextPeriodicAutosave(Time.unscaledTime);
             }
         }
 
@@ -102,20 +113,81 @@ namespace QuestCommandRTS
         {
             SetInputFocus(hasFocus);
         }
+
+        public void ScheduleNextPeriodicAutosaveForTests(float now)
+        {
+            ScheduleNextPeriodicAutosave(now);
+        }
+
+        public bool EvaluatePeriodicAutosaveForTests(float now)
+        {
+            return EvaluatePeriodicAutosave(now);
+        }
 #endif
 
-        private void TryAutosave(string slot)
+        private bool EvaluatePeriodicAutosave(float now)
+        {
+            if (now < nextPeriodicAutosaveTime)
+            {
+                return false;
+            }
+
+            if (!CanPeriodicAutosave())
+            {
+                ScheduleNextPeriodicAutosave(now);
+                return false;
+            }
+
+            bool saved = TryAutosave(PeriodicAutosaveSlot);
+            ScheduleNextPeriodicAutosave(now);
+            return saved;
+        }
+
+        private bool CanPeriodicAutosave()
+        {
+            if (game == null || game.SaveService == null || game.IsMatchOver || IsApplicationPaused || !HasInputFocus || IsSavingOrLoading || game.SaveService.IsBusy)
+            {
+                return false;
+            }
+
+            if (game.ProfileSettings != null && !game.ProfileSettings.Data.periodicAutosaveEnabled)
+            {
+                return false;
+            }
+
+            return game.Clock == null || !game.Clock.IsPaused;
+        }
+
+        private void ScheduleNextPeriodicAutosave(float now)
+        {
+            nextPeriodicAutosaveTime = now + GetPeriodicAutosaveIntervalSeconds();
+        }
+
+        private float GetPeriodicAutosaveIntervalSeconds()
+        {
+            if (game == null || game.ProfileSettings == null || game.ProfileSettings.Data == null)
+            {
+                return 180f;
+            }
+
+            game.ProfileSettings.Data.Normalize();
+            return game.ProfileSettings.Data.periodicAutosaveIntervalSeconds;
+        }
+
+        private bool TryAutosave(string slot)
         {
             if (game == null || game.SaveService == null || game.IsMatchOver)
             {
-                return;
+                return false;
             }
 
-            game.SaveService.TryWriteSlot(slot, out string error);
+            bool saved = game.SaveService.TryWriteSlot(slot, out string error);
             if (!string.IsNullOrEmpty(error))
             {
                 Debug.LogWarning("Autosave failed: " + error);
             }
+
+            return saved;
         }
 
         private void SetPauseReason(RtsPauseReason reason, bool paused)

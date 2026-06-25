@@ -334,6 +334,13 @@ namespace QuestCommandRTS
             return success;
         }
 
+#if UNITY_EDITOR
+        public void SetSaveServiceForTests(RtsSaveService service)
+        {
+            SaveService = service;
+        }
+#endif
+
         public void SelectPlayerEntitiesInScreenRect(Rect screenRect, bool additive)
         {
             if (!additive)

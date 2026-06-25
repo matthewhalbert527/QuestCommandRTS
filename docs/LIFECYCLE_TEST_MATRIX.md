@@ -9,6 +9,7 @@ Implemented lifecycle behavior:
 - Quest pointer visuals are hidden when input is blocked.
 - Active placement previews are suspended during pause/focus loss and restored when focus returns.
 - Autosave is attempted on application pause and focus loss.
+- Periodic autosave writes to `periodic-autosave` only while an active match has input focus, is not application-paused, and is not already saving or loading. The interval is configured by `RtsProfileSettingsData.periodicAutosaveIntervalSeconds`.
 
 Manual Quest checks still needed on headset:
 - Open the Universal Menu during placement, return, and confirm the placement preview resumes cleanly.
@@ -17,5 +18,5 @@ Manual Quest checks still needed on headset:
 - Save during active production and reload to verify queue progress.
 - Save with explored fog and reload to verify explored areas remain known.
 
-Automated coverage currently verifies clock pause behavior, focus-loss command blocking, Quest pointer hiding when system input is blocked, user-pause system input, checksum rejection, future-version migration rejection, backup fallback after primary save corruption, profile settings clamping/future-version handling, stable IDs, file-backed manual save/load, and a core save/restore round trip.
+Automated coverage currently verifies clock pause behavior, focus-loss command blocking, Quest pointer hiding when system input is blocked, user-pause system input, periodic autosave interval/focus gating, checksum rejection, future-version migration rejection, backup fallback after primary save corruption, profile settings clamping/future-version handling, stable IDs, file-backed manual save/load, and a core save/restore round trip.
 Command coverage also verifies stop and attack-move order persistence.

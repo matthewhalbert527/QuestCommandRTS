@@ -25,6 +25,6 @@ The manual slot is exposed in-game:
 - Desktop HUD: `System` buttons save, load, and pause/resume.
 - Quest: command console `System` tab saves, loads, and pauses/resumes.
 
-Profile settings are stored separately in `profile-settings.json` under `Application.persistentDataPath`. The profile uses schema version `1`, clamps unsafe values on load/save, rejects unsupported future schemas with a clear error, and applies Quest tabletop scale, tabletop height, pointer length, and world-space UI scale during rig creation.
+Profile settings are stored separately in `profile-settings.json` under `Application.persistentDataPath`. The profile uses schema version `1`, clamps unsafe values on load/save, rejects unsupported future schemas with a clear error, and applies Quest tabletop scale, tabletop height, pointer length, world-space UI scale, and the periodic autosave interval during runtime.
 
 The file format is intentionally human-readable for this prototype. Future versions should add migrations in `RtsSaveMigration` or an equivalent DTO-to-DTO migration layer before changing version `1` fields.

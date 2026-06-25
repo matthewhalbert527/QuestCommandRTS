@@ -22,6 +22,8 @@ namespace QuestCommandRTS
         public bool highContrast;
         public bool reducedFlashing;
         public string qualityPreset = "Balanced";
+        public bool periodicAutosaveEnabled = true;
+        public float periodicAutosaveIntervalSeconds = 180f;
 
         public void Normalize()
         {
@@ -33,6 +35,7 @@ namespace QuestCommandRTS
             tabletopScale = NormalizePositiveRange(tabletopScale, 1f, 0.75f, 1.5f);
             tabletopHeight = NormalizePositiveRange(tabletopHeight, 0.82f, 0.35f, 1.25f);
             uiScale = NormalizePositiveRange(uiScale, 1f, 0.75f, 1.35f);
+            periodicAutosaveIntervalSeconds = NormalizePositiveRange(periodicAutosaveIntervalSeconds, 180f, 30f, 900f);
             qualityPreset = NormalizeQualityPreset(qualityPreset);
         }
 
