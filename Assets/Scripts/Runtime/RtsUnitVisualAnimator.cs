@@ -38,6 +38,7 @@ namespace QuestCommandRTS
 
         public bool HasLegRigForTests => legParts.Count > 0;
         public bool HasWheelRigForTests => wheelParts.Count > 0 || trackPads.Count > 0;
+        public bool HasRoundWheelRigForTests => wheelParts.Count > 0;
         public bool HasTrackRigForTests => trackPads.Count > 0;
         public bool HasHarvestRigForTests => harvestParts.Count > 0;
         public bool HasTurretRigForTests => turretPivot != null;

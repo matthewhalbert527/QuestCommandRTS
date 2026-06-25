@@ -50,7 +50,8 @@ namespace QuestCommandRTS.Editor
 
             Require(infantryAnimator.HasLegRigForTests, "Infantry leg rig", "Infantry should have procedural walk legs.");
             Require(tankAnimator.HasTrackRigForTests && tankAnimator.HasTurretRigForTests, "Tank rig", "Tanks should have procedural tracks and turret.");
-            Require(harvesterAnimator.HasWheelRigForTests && harvesterAnimator.HasHarvestRigForTests && !harvesterAnimator.HasTurretRigForTests, "Harvester motion rig", "Harvesters should roll and have a harvesting rig without a turret rig.");
+            Require(harvesterAnimator.HasTrackRigForTests && harvesterAnimator.HasHarvestRigForTests && !harvesterAnimator.HasTurretRigForTests, "Harvester motion rig", "Harvesters should use treads and have a harvesting rig without a turret rig.");
+            Require(!harvesterAnimator.HasRoundWheelRigForTests && harvester.transform.Find("Roll Wheel LF") == null, "Harvester tread rig", "Harvesters should not use the old rotating round wheel primitives.");
         }
 
         private static void ValidateVisualAnimation(RtsGame game)
@@ -78,6 +79,13 @@ namespace QuestCommandRTS.Editor
 
             HarvesterUnit harvester = game.CreateUnit(RtsTeam.Player, UnitKind.Harvester, new Vector3(-46f, 0f, -56f)) as HarvesterUnit;
             RtsUnitVisualAnimator harvesterAnimator = RequireAnimator(harvester, "Harvester harvest animation");
+            Transform harvesterTrack = harvesterAnimator.FirstTrackPadForTests;
+            Require(harvesterTrack != null, "Harvester track part", "Harvester should expose animated tread pads.");
+            Vector3 harvesterTrackStart = harvesterTrack.localPosition;
+            harvester.transform.position += harvester.transform.forward * 1.1f;
+            harvesterAnimator.TickVisualsForTests(0.2f);
+            Require((harvesterTrack.localPosition - harvesterTrackStart).sqrMagnitude > 0.0001f, "Harvester track animation", "Harvester tread pads should move when the unit rolls.");
+
             Transform harvestPart = harvesterAnimator.FirstHarvestPartForTests;
             Require(harvestPart != null, "Harvester harvest part", "Harvester should expose a visible harvest motion part.");
             Quaternion harvestStartRotation = harvestPart.localRotation;

@@ -420,7 +420,8 @@ namespace QuestCommandRTS.Editor
             Assert.IsTrue(tankAnimator.HasTrackRigForTests);
             Assert.IsTrue(tankAnimator.HasTurretRigForTests);
             Assert.IsNotNull(harvesterAnimator);
-            Assert.IsTrue(harvesterAnimator.HasWheelRigForTests);
+            Assert.IsTrue(harvesterAnimator.HasTrackRigForTests);
+            Assert.IsFalse(harvesterAnimator.HasRoundWheelRigForTests);
             Assert.IsFalse(harvesterAnimator.HasTurretRigForTests);
         }
 

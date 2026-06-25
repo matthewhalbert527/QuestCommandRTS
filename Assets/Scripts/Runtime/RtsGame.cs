@@ -2298,7 +2298,7 @@ namespace QuestCommandRTS
 
             if (kind == UnitKind.Harvester)
             {
-                CreateVehicleWheelRig(root, kind);
+                CreateVehicleTrackRig(root, kind);
                 CreateHarvesterHarvestRig(root);
             }
         }
@@ -2444,6 +2444,13 @@ namespace QuestCommandRTS
         {
             switch (RtsBalance.NormalizeUnitKind(kind))
             {
+                case UnitKind.Harvester:
+                    sideOffset = 0.72f;
+                    centerY = 0.3f;
+                    trackLength = 1.92f;
+                    trackHeight = 0.32f;
+                    trackWidth = 0.28f;
+                    return;
                 case UnitKind.LightTank:
                     sideOffset = 0.62f;
                     centerY = 0.31f;
