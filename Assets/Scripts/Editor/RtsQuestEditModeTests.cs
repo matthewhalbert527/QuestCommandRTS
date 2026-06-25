@@ -877,6 +877,39 @@ namespace QuestCommandRTS.Editor
         }
 
         [Test]
+        public void QuestConsoleNewMatchButtonResetsMatchThroughPointer()
+        {
+            RtsGame game = CreateInitializedGame(RtsRuntimeMode.QuestVr);
+            QuestCommandConsole console = game.GetComponent<QuestCommandConsole>();
+            Assert.IsNotNull(console);
+
+            int startingEntities = game.Entities.Count;
+            int startingResources = game.ResourceNodes.Count;
+            game.ResourceNodes[0].Harvest(600);
+            Assert.IsTrue(game.Resources.TrySpend(900));
+            game.CreateUnit(RtsTeam.Player, UnitKind.Tank, new Vector3(-38f, 0f, -36f));
+            game.SetUserPaused(true);
+            game.ForceEndMatchForTests(RtsMatchState.Defeat);
+
+            Assert.IsTrue(game.IsMatchOver);
+            Assert.IsTrue(game.Clock.IsPaused);
+
+            console.SetOpen(true);
+            ClickConsoleButton(console, "System Tab");
+            ClickConsoleButton(console, "New Match Button");
+
+            Assert.AreEqual(RtsMatchState.Running, game.MatchState);
+            Assert.AreEqual(0f, game.MatchTime, 0.001f);
+            Assert.AreEqual(3400, game.Resources.Credits);
+            Assert.AreEqual(startingEntities, game.Entities.Count);
+            Assert.AreEqual(startingResources, game.ResourceNodes.Count);
+            Assert.IsFalse(game.IsUserPaused);
+            Assert.IsFalse(game.Clock.IsPaused);
+            Assert.AreEqual(2, game.Selection.Count);
+            Assert.AreEqual(game.ResourceNodes[0].MaxAmount, game.ResourceNodes[0].Amount);
+        }
+
+        [Test]
         public void ClosingMatchCancelsActivePlacement()
         {
             RtsGame game = CreateInitializedGame(RtsRuntimeMode.Desktop);
@@ -943,6 +976,32 @@ namespace QuestCommandRTS.Editor
         private static void ReleaseButtons(QuestRtsInputController controller, Ray ray)
         {
             controller.ProcessInputFrameForTests(QuestFrame(ray, false, false, false, false, false), false);
+        }
+
+        private static void ClickConsoleButton(QuestCommandConsole console, string objectName)
+        {
+            RectTransform rect = FindRectTransform(objectName);
+            Assert.IsTrue(rect.gameObject.activeInHierarchy, objectName + " should be active before it can be clicked.");
+
+            Vector3 center = rect.TransformPoint(rect.rect.center);
+            Ray ray = new Ray(center - console.PanelRect.forward * 8f, console.PanelRect.forward);
+            Assert.IsTrue(console.TryHandlePointer(ray, true), objectName + " should capture pointer activation.");
+            Assert.IsTrue(console.TryHandlePointer(ray, false), objectName + " should capture pointer hover.");
+        }
+
+        private static RectTransform FindRectTransform(string objectName)
+        {
+            RectTransform[] rects = Object.FindObjectsOfType<RectTransform>(true);
+            for (int i = 0; i < rects.Length; i++)
+            {
+                if (rects[i] != null && rects[i].name == objectName)
+                {
+                    return rects[i];
+                }
+            }
+
+            Assert.Fail("Missing RectTransform " + objectName);
+            return null;
         }
 
         private static void AssertVectorNear(Vector3 expected, Vector3 actual)
