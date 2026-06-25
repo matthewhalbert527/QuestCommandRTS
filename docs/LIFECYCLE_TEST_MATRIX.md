@@ -17,5 +17,5 @@ Manual Quest checks still needed on headset:
 - Save during active production and reload to verify queue progress.
 - Save with explored fog and reload to verify explored areas remain known.
 
-Automated coverage currently verifies clock pause behavior, focus-loss command blocking, user-pause system input, checksum rejection, future-version migration rejection, stable IDs, file-backed manual save/load, and a core save/restore round trip.
+Automated coverage currently verifies clock pause behavior, focus-loss command blocking, Quest pointer hiding when system input is blocked, user-pause system input, checksum rejection, future-version migration rejection, stable IDs, file-backed manual save/load, and a core save/restore round trip.
 Command coverage also verifies stop and attack-move order persistence.

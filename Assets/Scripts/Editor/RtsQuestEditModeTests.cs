@@ -390,6 +390,7 @@ namespace QuestCommandRTS.Editor
             Assert.IsNotNull(settings);
             Assert.IsNotNull(controller.PointerLineForTests);
             Assert.IsNotNull(controller.ReticleForTests);
+            Assert.AreEqual(settings.RayWidthSimulationUnits, controller.PointerLineForTests.widthMultiplier, 0.001f);
 
             Vector3 hitPoint = new Vector3(-24f, 0f, -34f);
             Ray hitRay = RayAtPoint(hitPoint);
@@ -400,6 +401,8 @@ namespace QuestCommandRTS.Editor
             AssertVectorNear(hitPoint, controller.PointerLineForTests.GetPosition(1));
             Assert.IsTrue(controller.ReticleForTests.gameObject.activeSelf);
             AssertVectorNear(hitPoint, controller.ReticleForTests.position);
+            AssertVectorNear(Vector3.one * settings.ReticleSizeMeters, controller.ReticleForTests.localScale);
+            AssertVectorNear(Vector3.one * settings.ReticleSizeSimulationUnits, controller.ReticleForTests.lossyScale);
 
             Ray missRay = new Ray(new Vector3(180f, 12f, 180f), Vector3.up);
             controller.ProcessInputFrameForTests(QuestFrame(missRay, false, false, false, false, false), true);
@@ -407,6 +410,25 @@ namespace QuestCommandRTS.Editor
             Assert.IsTrue(controller.PointerLineForTests.enabled);
             AssertVectorNear(missRay.origin, controller.PointerLineForTests.GetPosition(0));
             AssertVectorNear(missRay.GetPoint(settings.RayLengthSimulationUnits), controller.PointerLineForTests.GetPosition(1));
+            Assert.IsFalse(controller.ReticleForTests.gameObject.activeSelf);
+        }
+
+        [Test]
+        public void QuestPointerFeedbackHidesWhenSystemInputIsBlocked()
+        {
+            RtsGame game = CreateInitializedGame(RtsRuntimeMode.QuestVr);
+            QuestRtsInputController controller = game.GetComponent<QuestRtsInputController>();
+            Assert.IsNotNull(controller);
+
+            Ray terrainRay = RayAtPoint(new Vector3(-24f, 0f, -34f));
+            controller.ProcessInputFrameForTests(QuestFrame(terrainRay, false, false, false, false, false), true);
+            Assert.IsTrue(controller.PointerLineForTests.enabled);
+            Assert.IsTrue(controller.ReticleForTests.gameObject.activeSelf);
+
+            game.Lifecycle.SetInputFocusForTests(false);
+
+            Assert.AreEqual(RtsCommandResult.None, controller.ProcessInputFrameForTests(QuestFrame(terrainRay, false, true, true, true, false), true));
+            Assert.IsFalse(controller.PointerLineForTests.enabled);
             Assert.IsFalse(controller.ReticleForTests.gameObject.activeSelf);
         }
 
