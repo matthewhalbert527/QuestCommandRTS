@@ -18,7 +18,7 @@ The project manifest pins:
 - `com.unity.inputsystem` 1.18.0
 - `com.unity.test-framework` 1.1.33
 
-Android support is not required for the current desktop-focused prototype workflow.
+Android modules are not needed for desktop/editor play, but they are required for Quest device development builds.
 
 ## Runtime Modes
 

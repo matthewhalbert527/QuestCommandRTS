@@ -87,6 +87,31 @@ namespace QuestCommandRTS.Editor
         }
 
         [Test]
+        public void QuestValidatorReportsCorePackageAndAndroidSettings()
+        {
+            var report = QuestXrProjectValidator.BuildValidationReport();
+
+            AssertValidationPassed(report, "Unity version");
+            AssertValidationPassed(report, "XR Management package");
+            AssertValidationPassed(report, "OpenXR package");
+            AssertValidationPassed(report, "XR Interaction Toolkit package");
+            AssertValidationPassed(report, "Input System package");
+            AssertValidationPassed(report, "Android min API");
+            AssertValidationPassed(report, "Android target API");
+            AssertValidationPassed(report, "Android scripting backend");
+            AssertValidationPassed(report, "Android architecture");
+            AssertValidationPassed(report, "Android package id");
+            AssertValidationPassed(report, "Active input handling");
+            AssertValidationPassed(report, "Android multithreaded rendering");
+            AssertValidationPassed(report, "Android graphics API");
+            AssertValidationPassed(report, "Standalone OpenXR loader");
+            AssertValidationPassed(report, "Android OpenXR loader");
+            AssertValidationPassed(report, "Standalone Single Pass Instanced");
+            AssertValidationPassed(report, "Standalone Oculus Touch profile");
+            AssertValidationManual(report, "Headset setup");
+        }
+
+        [Test]
         public void DispatcherSelectsClearsAndAddsFromWorldRays()
         {
             RtsGame game = CreateInitializedGame(RtsRuntimeMode.QuestVr);
@@ -426,6 +451,34 @@ namespace QuestCommandRTS.Editor
 
             Assert.Fail("No valid build point found for " + kind);
             return Vector3.zero;
+        }
+
+        private static void AssertValidationPassed(System.Collections.Generic.List<QuestXrProjectValidator.ValidationItem> report, string label)
+        {
+            QuestXrProjectValidator.ValidationItem item = FindValidationItem(report, label);
+            Assert.IsTrue(item.Passed, label + " should pass. Detail: " + item.Detail);
+            Assert.IsFalse(item.WarningOnly, label + " should be a hard validation item.");
+        }
+
+        private static void AssertValidationManual(System.Collections.Generic.List<QuestXrProjectValidator.ValidationItem> report, string label)
+        {
+            QuestXrProjectValidator.ValidationItem item = FindValidationItem(report, label);
+            Assert.IsFalse(item.Passed, label + " should remain manually verified.");
+            Assert.IsTrue(item.WarningOnly, label + " should be warning-only.");
+        }
+
+        private static QuestXrProjectValidator.ValidationItem FindValidationItem(System.Collections.Generic.List<QuestXrProjectValidator.ValidationItem> report, string label)
+        {
+            for (int i = 0; i < report.Count; i++)
+            {
+                if (report[i].Label == label)
+                {
+                    return report[i];
+                }
+            }
+
+            Assert.Fail("Missing validation item " + label);
+            return default;
         }
     }
 }
