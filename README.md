@@ -85,6 +85,8 @@ Building placement follows the existing desktop build rules. The preview snaps t
 
 The full battlefield remains approximately 224 simulation units wide. The Quest rig defaults to 126 simulation units per physical meter, so the board appears roughly 1.78 meters wide while gameplay coordinates and movement logic stay unchanged. `Command RTS > Profile > Use Room-Sized Quest Tabletop Scale` writes a local profile preset that expands the board to roughly 4.0 meters wide and increases pointer reach; `Use Default Quest Tabletop Scale` restores the default. `QuestTabletopSettings.BoardHeightMeters` defaults to 0.82m, which shifts the generated battlefield to tabletop height above the physical tracking origin instead of leaving the board on the floor.
 
+The generated battlefield uses original primitive placeholder art with sandy terrain accents, projected water channels, ridges, rocks, scorches, rails, and corner pylons. These set-dressing pieces are visual-only and have their colliders removed so pointer raycasts and build placement still use the underlying battlefield.
+
 ## Persistence And Lifecycle
 
 - Runtime entities and resource nodes now receive stable save IDs.

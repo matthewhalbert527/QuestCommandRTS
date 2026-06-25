@@ -61,6 +61,10 @@ namespace QuestCommandRTS
         private Material enemyMaterial;
         private Material neutralMaterial;
         private Material groundMaterial;
+        private Material terrainAccentMaterial;
+        private Material waterMaterial;
+        private Material ridgeMaterial;
+        private Material craterMaterial;
         private Material resourceMaterial;
         private Material depletedResourceMaterial;
         private Material darkMaterial;
@@ -1351,7 +1355,11 @@ namespace QuestCommandRTS
             playerMaterial = CreateMaterial(RtsBalance.TeamColor(RtsTeam.Player));
             enemyMaterial = CreateMaterial(RtsBalance.TeamColor(RtsTeam.Enemy));
             neutralMaterial = CreateMaterial(new Color(0.42f, 0.4f, 0.34f));
-            groundMaterial = CreateMaterial(new Color(0.18f, 0.27f, 0.21f));
+            groundMaterial = CreateMaterial(new Color(0.54f, 0.43f, 0.27f));
+            terrainAccentMaterial = CreateMaterial(new Color(0.34f, 0.27f, 0.19f));
+            waterMaterial = CreateTransparentMaterial(new Color(0.08f, 0.42f, 0.54f, 0.72f));
+            ridgeMaterial = CreateMaterial(new Color(0.44f, 0.36f, 0.27f));
+            craterMaterial = CreateTransparentMaterial(new Color(0.055f, 0.047f, 0.04f, 0.58f));
             resourceMaterial = CreateMaterial(new Color(0.2f, 0.95f, 0.62f));
             depletedResourceMaterial = CreateMaterial(new Color(0.11f, 0.18f, 0.14f));
             darkMaterial = CreateMaterial(new Color(0.075f, 0.08f, 0.09f));
@@ -1390,13 +1398,16 @@ namespace QuestCommandRTS
 
         private void SetupLight()
         {
+            RenderSettings.ambientMode = UnityEngine.Rendering.AmbientMode.Flat;
+            RenderSettings.ambientLight = new Color(0.34f, 0.36f, 0.38f);
+
             if (Object.FindObjectOfType<Light>() == null)
             {
                 GameObject lightObject = new GameObject("Sun");
                 Light light = lightObject.AddComponent<Light>();
                 light.type = LightType.Directional;
-                light.intensity = 1.15f;
-                lightObject.transform.rotation = Quaternion.Euler(50f, -35f, 0f);
+                light.intensity = 1.35f;
+                lightObject.transform.rotation = Quaternion.Euler(58f, -32f, 0f);
             }
         }
 
@@ -1408,6 +1419,8 @@ namespace QuestCommandRTS
             ground.transform.position = Vector3.zero;
             ground.transform.localScale = Vector3.one * (RtsBalance.MapHalfSize * 2f / 10f);
             ground.GetComponent<Renderer>().sharedMaterial = groundMaterial;
+
+            CreateTerrainSetDressing();
 
             for (int i = -5; i <= 5; i++)
             {
@@ -1428,6 +1441,52 @@ namespace QuestCommandRTS
             line.SetPosition(1, b);
             line.widthMultiplier = 0.025f;
             line.material = CreateMaterial(new Color(0.35f, 0.42f, 0.36f, 0.55f));
+        }
+
+        private void CreateTerrainSetDressing()
+        {
+            CreateTerrainDisk("Projected Water Channel A", new Vector3(8f, 0.034f, -6f), new Vector3(34f, 0.018f, 13f), -8f, waterMaterial);
+            CreateTerrainDisk("Projected Water Channel B", new Vector3(34f, 0.033f, 16f), new Vector3(28f, 0.018f, 9f), 24f, waterMaterial);
+            CreateTerrainDisk("Projected Water Inlet", new Vector3(70f, 0.032f, -14f), new Vector3(22f, 0.018f, 8f), -20f, waterMaterial);
+
+            CreateTerrainDisk("West Dune Shelf", new Vector3(-76f, 0.031f, -28f), new Vector3(26f, 0.02f, 15f), 15f, terrainAccentMaterial);
+            CreateTerrainDisk("North Dune Shelf", new Vector3(-24f, 0.031f, 76f), new Vector3(38f, 0.02f, 13f), -12f, terrainAccentMaterial);
+            CreateTerrainDisk("East Dune Shelf", new Vector3(78f, 0.031f, 54f), new Vector3(24f, 0.02f, 18f), 34f, terrainAccentMaterial);
+
+            CreateTerrainBlock("West Mesa Ridge", new Vector3(-101f, 0.72f, 6f), new Vector3(9f, 1.45f, 34f), -12f, ridgeMaterial);
+            CreateTerrainBlock("North Mesa Ridge", new Vector3(-12f, 0.64f, 102f), new Vector3(48f, 1.28f, 7f), 7f, ridgeMaterial);
+            CreateTerrainBlock("East Mesa Ridge", new Vector3(101f, 0.68f, 28f), new Vector3(8f, 1.36f, 31f), 18f, ridgeMaterial);
+
+            CreateTerrainDisk("Southwest Blast Scorch", new Vector3(-48f, 0.036f, -38f), new Vector3(7f, 0.012f, 4.8f), 22f, craterMaterial);
+            CreateTerrainDisk("Central Blast Scorch", new Vector3(20f, 0.036f, 34f), new Vector3(8f, 0.012f, 5.2f), -18f, craterMaterial);
+            CreateRockCluster("Southwest", new Vector3(-92f, 0f, -6f), 7);
+            CreateRockCluster("Northeast", new Vector3(88f, 0f, 70f), 6);
+            CreateRockCluster("Midfield", new Vector3(36f, 0f, -42f), 5);
+        }
+
+        private void CreateTerrainDisk(string name, Vector3 position, Vector3 scale, float yawDegrees, Material material)
+        {
+            GameObject disk = CreatePrimitive(PrimitiveType.Cylinder, transform, name, position, scale, material);
+            disk.transform.localRotation = Quaternion.Euler(0f, yawDegrees, 0f);
+        }
+
+        private void CreateTerrainBlock(string name, Vector3 position, Vector3 scale, float yawDegrees, Material material)
+        {
+            GameObject block = CreatePrimitive(PrimitiveType.Cube, transform, name, position, scale, material);
+            block.transform.localRotation = Quaternion.Euler(0f, yawDegrees, 0f);
+        }
+
+        private void CreateRockCluster(string clusterName, Vector3 center, int count)
+        {
+            for (int i = 0; i < count; i++)
+            {
+                float angle = i * 1.618f;
+                float radius = 2.2f + (i % 3) * 1.45f;
+                float height = 0.45f + (i % 4) * 0.18f;
+                Vector3 position = center + new Vector3(Mathf.Cos(angle) * radius, height, Mathf.Sin(angle) * radius);
+                Vector3 scale = new Vector3(0.75f + (i % 3) * 0.22f, height, 0.65f + (i % 2) * 0.28f);
+                CreateTerrainDisk(clusterName + " Rock " + (i + 1), position, scale, i * 23f, ridgeMaterial);
+            }
         }
 
         private void CreateResourceFields()
@@ -1544,6 +1603,12 @@ namespace QuestCommandRTS
             CreatePrimitive(PrimitiveType.Cube, transform, "South Board Glow", new Vector3(0f, 0.08f, -glowEdge), new Vector3(span - 5f, 0.04f, 0.28f), glowMaterial);
             CreatePrimitive(PrimitiveType.Cube, transform, "East Board Glow", new Vector3(glowEdge, 0.08f, 0f), new Vector3(0.28f, 0.04f, span - 5f), glowMaterial);
             CreatePrimitive(PrimitiveType.Cube, transform, "West Board Glow", new Vector3(-glowEdge, 0.08f, 0f), new Vector3(0.28f, 0.04f, span - 5f), glowMaterial);
+
+            float pylonEdge = RtsBalance.MapHalfSize + 3.4f;
+            CreatePrimitive(PrimitiveType.Cube, transform, "Northwest Table Pylon", new Vector3(-pylonEdge, 1.35f, pylonEdge), new Vector3(3.4f, 2.7f, 3.4f), frameMaterial);
+            CreatePrimitive(PrimitiveType.Cube, transform, "Northeast Table Pylon", new Vector3(pylonEdge, 1.35f, pylonEdge), new Vector3(3.4f, 2.7f, 3.4f), frameMaterial);
+            CreatePrimitive(PrimitiveType.Cube, transform, "Southwest Table Pylon", new Vector3(-pylonEdge, 1.35f, -pylonEdge), new Vector3(3.4f, 2.7f, 3.4f), frameMaterial);
+            CreatePrimitive(PrimitiveType.Cube, transform, "Southeast Table Pylon", new Vector3(pylonEdge, 1.35f, -pylonEdge), new Vector3(3.4f, 2.7f, 3.4f), frameMaterial);
         }
 
         private void BuildUnitVisual(Transform root, UnitKind kind, RtsTeam team)

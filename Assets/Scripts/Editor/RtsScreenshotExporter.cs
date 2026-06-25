@@ -124,9 +124,9 @@ namespace QuestCommandRTS.Editor
             if (mode == RtsRuntimeMode.QuestVr && game.QuestRig != null && game.QuestRig.HeadCamera != null)
             {
                 Camera questCamera = game.QuestRig.HeadCamera;
-                questCamera.transform.position = new Vector3(-96f, 104f, -206f);
-                questCamera.transform.rotation = Quaternion.Euler(52f, 22f, 0f);
-                questCamera.fieldOfView = 78f;
+                questCamera.transform.position = new Vector3(-78f, 86f, -152f);
+                questCamera.transform.rotation = Quaternion.Euler(55f, 24f, 0f);
+                questCamera.fieldOfView = 82f;
                 return questCamera;
             }
 

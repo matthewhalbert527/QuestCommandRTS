@@ -192,6 +192,22 @@ namespace QuestCommandRTS.Editor
         }
 
         [Test]
+        public void GeneratedBattlefieldSetDressingDoesNotBlockPointerRaycasts()
+        {
+            CreateInitializedGame(RtsRuntimeMode.Desktop);
+
+            AssertSceneObjectHasNoCollider("Projected Water Channel A");
+            AssertSceneObjectHasNoCollider("Projected Water Channel B");
+            AssertSceneObjectHasNoCollider("West Mesa Ridge");
+            AssertSceneObjectHasNoCollider("Southwest Rock 1");
+            AssertSceneObjectHasNoCollider("Northwest Table Pylon");
+
+            RaycastHit hit;
+            Assert.IsTrue(Physics.Raycast(new Ray(new Vector3(8f, 18f, -6f), Vector3.down), out hit, 500f));
+            Assert.AreEqual("Battlefield", hit.collider.gameObject.name);
+        }
+
+        [Test]
         public void ForcedQuestInitializationMakesHeadCameraMainAndDisablesSceneCameras()
         {
             GameObject sceneCameraObject = new GameObject("Scene Main Camera");
@@ -1450,6 +1466,13 @@ namespace QuestCommandRTS.Editor
 
             Assert.Fail("Missing RectTransform " + objectName);
             return null;
+        }
+
+        private static void AssertSceneObjectHasNoCollider(string objectName)
+        {
+            GameObject sceneObject = GameObject.Find(objectName);
+            Assert.IsNotNull(sceneObject, "Missing generated scene object " + objectName);
+            Assert.IsNull(sceneObject.GetComponent<Collider>(), objectName + " should be visual-only and should not block selection or command raycasts.");
         }
 
         private static void AssertVectorNear(Vector3 expected, Vector3 actual)
