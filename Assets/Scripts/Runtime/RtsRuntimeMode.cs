@@ -33,31 +33,31 @@ namespace QuestCommandRTS
             }
 
             XRGeneralSettings settings = XRGeneralSettings.Instance;
-            bool hasActiveLoader = settings != null && settings.Manager != null && settings.Manager.activeLoader != null;
+            bool hasOpenXrLoader = HasOpenXrLoader(settings);
             return ResolveFromState(
                 Environment.GetCommandLineArgs(),
                 Environment.GetEnvironmentVariable(ForceModeEnvironmentVariable),
                 XRSettings.enabled,
                 XRSettings.isDeviceActive,
-                hasActiveLoader,
+                hasOpenXrLoader,
                 Application.platform);
         }
 
         public static bool IsXrRuntimeActive()
         {
             XRGeneralSettings settings = XRGeneralSettings.Instance;
-            bool hasActiveLoader = settings != null && settings.Manager != null && settings.Manager.activeLoader != null;
-            return IsXrRuntimeActiveForState(XRSettings.enabled, XRSettings.isDeviceActive, hasActiveLoader, Application.platform);
+            bool hasOpenXrLoader = HasOpenXrLoader(settings);
+            return IsXrRuntimeActiveForState(XRSettings.enabled, XRSettings.isDeviceActive, hasOpenXrLoader, Application.platform);
         }
 
-        internal static bool IsXrRuntimeActiveForState(bool xrSettingsEnabled, bool xrDeviceActive, bool hasActiveLoader, RuntimePlatform platform)
+        internal static bool IsXrRuntimeActiveForState(bool xrSettingsEnabled, bool xrDeviceActive, bool hasOpenXrLoader, RuntimePlatform platform)
         {
             if (xrDeviceActive)
             {
                 return true;
             }
 
-            if (!xrSettingsEnabled || !hasActiveLoader)
+            if (!xrSettingsEnabled || !hasOpenXrLoader)
             {
                 return false;
             }
@@ -66,18 +66,18 @@ namespace QuestCommandRTS
         }
 
 #if UNITY_EDITOR
-        public static bool EvaluateXrRuntimeStateForTests(bool xrSettingsEnabled, bool xrDeviceActive, bool hasActiveLoader, RuntimePlatform platform)
+        public static bool EvaluateXrRuntimeStateForTests(bool xrSettingsEnabled, bool xrDeviceActive, bool hasOpenXrLoader, RuntimePlatform platform)
         {
-            return IsXrRuntimeActiveForState(xrSettingsEnabled, xrDeviceActive, hasActiveLoader, platform);
+            return IsXrRuntimeActiveForState(xrSettingsEnabled, xrDeviceActive, hasOpenXrLoader, platform);
         }
 
-        public static RtsRuntimeMode ResolveFromStateForTests(string[] arguments, string environmentMode, bool xrSettingsEnabled, bool xrDeviceActive, bool hasActiveLoader, RuntimePlatform platform)
+        public static RtsRuntimeMode ResolveFromStateForTests(string[] arguments, string environmentMode, bool xrSettingsEnabled, bool xrDeviceActive, bool hasOpenXrLoader, RuntimePlatform platform)
         {
-            return ResolveFromState(arguments, environmentMode, xrSettingsEnabled, xrDeviceActive, hasActiveLoader, platform);
+            return ResolveFromState(arguments, environmentMode, xrSettingsEnabled, xrDeviceActive, hasOpenXrLoader, platform);
         }
 #endif
 
-        private static RtsRuntimeMode ResolveFromState(string[] arguments, string environmentValue, bool xrSettingsEnabled, bool xrDeviceActive, bool hasActiveLoader, RuntimePlatform platform)
+        private static RtsRuntimeMode ResolveFromState(string[] arguments, string environmentValue, bool xrSettingsEnabled, bool xrDeviceActive, bool hasOpenXrLoader, RuntimePlatform platform)
         {
             RtsRuntimeMode commandLineMode;
             if (TryGetCommandLineMode(arguments, out commandLineMode))
@@ -91,7 +91,13 @@ namespace QuestCommandRTS
                 return environmentMode;
             }
 
-            return IsXrRuntimeActiveForState(xrSettingsEnabled, xrDeviceActive, hasActiveLoader, platform) ? RtsRuntimeMode.QuestVr : RtsRuntimeMode.Desktop;
+            return IsXrRuntimeActiveForState(xrSettingsEnabled, xrDeviceActive, hasOpenXrLoader, platform) ? RtsRuntimeMode.QuestVr : RtsRuntimeMode.Desktop;
+        }
+
+        private static bool HasOpenXrLoader(XRGeneralSettings settings)
+        {
+            XRLoader loader = settings != null && settings.Manager != null ? settings.Manager.activeLoader : null;
+            return loader != null && loader.GetType().FullName == "UnityEngine.XR.OpenXR.OpenXRLoader";
         }
 
         private static bool TryGetCommandLineMode(string[] arguments, out RtsRuntimeMode mode)
