@@ -28,6 +28,7 @@ namespace QuestCommandRTS
         public Vector3 Velocity = new Vector3(0f, 1.1f, 0f);
 
         private TextMesh textMesh;
+        private Transform viewCamera;
         private Color startColor;
 
         private void Awake()
@@ -47,9 +48,14 @@ namespace QuestCommandRTS
             Lifetime -= deltaTime;
             transform.position += Velocity * deltaTime;
 
-            if (Camera.main != null)
+            if (viewCamera == null)
             {
-                transform.rotation = Quaternion.LookRotation(transform.position - Camera.main.transform.position, Vector3.up);
+                viewCamera = ResolveViewCamera();
+            }
+
+            if (viewCamera != null)
+            {
+                transform.rotation = Quaternion.LookRotation(transform.position - viewCamera.position, Vector3.up);
             }
 
             if (textMesh != null)
@@ -63,6 +69,17 @@ namespace QuestCommandRTS
             {
                 Destroy(gameObject);
             }
+        }
+
+        private static Transform ResolveViewCamera()
+        {
+            if (RtsGame.HasInstance)
+            {
+                return RtsGame.Instance.GetViewCameraTransform();
+            }
+
+            Camera mainCamera = Camera.main;
+            return mainCamera != null ? mainCamera.transform : null;
         }
     }
 }

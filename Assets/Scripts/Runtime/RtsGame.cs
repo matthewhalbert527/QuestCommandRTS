@@ -138,6 +138,22 @@ namespace QuestCommandRTS
             return material;
         }
 
+        public Transform GetViewCameraTransform()
+        {
+            if (RuntimeMode == RtsRuntimeMode.QuestVr && QuestRig != null && QuestRig.HeadCamera != null)
+            {
+                return QuestRig.HeadCamera.transform;
+            }
+
+            if (CommandCamera != null)
+            {
+                return CommandCamera.transform;
+            }
+
+            Camera mainCamera = Camera.main;
+            return mainCamera != null ? mainCamera.transform : null;
+        }
+
         public void RegisterEntity(RtsEntity entity)
         {
             if (entity == null || entities.Contains(entity))

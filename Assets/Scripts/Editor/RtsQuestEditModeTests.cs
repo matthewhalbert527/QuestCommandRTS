@@ -39,6 +39,7 @@ namespace QuestCommandRTS.Editor
             Assert.IsNotNull(game.GetComponent<RtsHud>());
             Assert.IsNull(game.GetComponent<QuestRtsInputController>());
             Assert.IsNull(game.QuestRig);
+            Assert.AreSame(game.CommandCamera.transform, game.GetViewCameraTransform());
         }
 
         [Test]
@@ -55,6 +56,7 @@ namespace QuestCommandRTS.Editor
             Assert.IsNotNull(game.GetComponent<QuestWorldHud>());
             Assert.IsNotNull(game.GetComponent<QuestCommandConsole>());
             Assert.IsNotNull(game.QuestRig);
+            Assert.AreSame(game.QuestRig.HeadCamera.transform, game.GetViewCameraTransform());
         }
 
         [Test]
