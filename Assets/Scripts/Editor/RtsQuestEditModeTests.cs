@@ -274,6 +274,28 @@ namespace QuestCommandRTS.Editor
         }
 
         [Test]
+        public void DesktopRuntimeSmokeReportCoversGeneratedDesktopObjects()
+        {
+            RtsGame game = CreateInitializedGame(RtsRuntimeMode.Desktop);
+            var report = DesktopRuntimeSmokeReport.Build(game);
+
+            AssertDesktopSmokePassed(report, "Runtime mode");
+            AssertDesktopSmokePassed(report, "Command camera present");
+            AssertDesktopSmokePassed(report, "View camera uses command camera");
+            AssertDesktopSmokePassed(report, "Desktop input present");
+            AssertDesktopSmokePassed(report, "Desktop HUD present");
+            AssertDesktopSmokePassed(report, "Desktop event system present");
+            AssertDesktopSmokePassed(report, "Quest rig absent");
+            AssertDesktopSmokePassed(report, "Quest world HUD absent");
+            AssertDesktopSmokePassed(report, "Quest command console absent");
+            AssertDesktopSmokePassed(report, "Command dispatcher present");
+            AssertDesktopSmokePassed(report, "Build manager present");
+            AssertDesktopSmokePassed(report, "Initial entities spawned");
+            AssertDesktopSmokePassed(report, "Initial selection present");
+            AssertDesktopSmokeManual(report, "Desktop control regression");
+        }
+
+        [Test]
         public void DesktopBuildArtifactValidationRequiresExistingNonEmptyFile()
         {
             string directory = Path.Combine(Path.GetTempPath(), "QuestCommandRTS-BuildValidation");
@@ -1095,6 +1117,34 @@ namespace QuestCommandRTS.Editor
             }
 
             Assert.Fail("Missing smoke item " + label);
+            return default;
+        }
+
+        private static void AssertDesktopSmokePassed(System.Collections.Generic.List<DesktopRuntimeSmokeItem> report, string label)
+        {
+            DesktopRuntimeSmokeItem item = FindDesktopSmokeItem(report, label);
+            Assert.IsTrue(item.Passed, label + " should pass. Detail: " + item.Detail);
+            Assert.IsFalse(item.Manual, label + " should be an automated smoke item.");
+        }
+
+        private static void AssertDesktopSmokeManual(System.Collections.Generic.List<DesktopRuntimeSmokeItem> report, string label)
+        {
+            DesktopRuntimeSmokeItem item = FindDesktopSmokeItem(report, label);
+            Assert.IsFalse(item.Passed, label + " should remain manually verified.");
+            Assert.IsTrue(item.Manual, label + " should be warning-only.");
+        }
+
+        private static DesktopRuntimeSmokeItem FindDesktopSmokeItem(System.Collections.Generic.List<DesktopRuntimeSmokeItem> report, string label)
+        {
+            for (int i = 0; i < report.Count; i++)
+            {
+                if (report[i].Label == label)
+                {
+                    return report[i];
+                }
+            }
+
+            Assert.Fail("Missing desktop smoke item " + label);
             return default;
         }
     }

@@ -112,6 +112,7 @@ See `docs/SAVE_SYSTEM.md`, `docs/LIFECYCLE_TEST_MATRIX.md`, `docs/PERFORMANCE_TE
 
 - `Command RTS > Open Battlefield Scene`
 - `Command RTS > Export Sample Screenshot`
+- `Command RTS > Validate Generated Desktop Runtime`
 - `Command RTS > Build > Validate Desktop Build Support`
 - `Command RTS > Build > Desktop Development Build`
 - `Tools > Quest RTS > Apply Recommended Quest Settings`

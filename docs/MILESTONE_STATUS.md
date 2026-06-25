@@ -20,14 +20,16 @@ This document records what has been implemented and what has actually been verif
 - `QuestTabletopRig`, `QuestTabletopSettings`, `QuestTrackedNodePose`, `QuestRtsInputController`, `QuestWorldHud`, and `QuestCommandConsole` contain Quest-specific rigging, tracked pose, controller input, pointer, and world-space UI behavior.
 - `QuestXrProjectValidator` validates package and project settings, and separates automated checks from manual headset/setup checks.
 - `QuestRuntimeSmokeReport` validates the generated Quest runtime object graph locally while keeping physical headset behavior marked manual.
+- `DesktopRuntimeSmokeReport` validates the generated desktop runtime object graph locally while keeping hands-on desktop controls marked manual.
 
 ## Verification Run
 
 Automated verification last run locally:
 
-- EditMode tests: `49` total, `49` passed, `0` failed.
+- EditMode tests: `50` total, `50` passed, `0` failed.
 - XR setup validator: automated package/project-setting checks pass except for local Android Build Support, which is missing from this Unity install; manual headset and Android OpenXR UI verification remain manual.
 - Generated Quest runtime smoke report: automated object-graph checks pass in EditMode; physical headset behavior remains manual.
+- Generated desktop runtime smoke report: automated object-graph checks pass in EditMode; hands-on desktop control regression remains manual.
 - Screenshot exporter: produced `C:\Users\matth\Documents\Codex\2026-06-24\i-s\outputs\quest-command-rts-sample.png`.
 - Desktop build support validator: fails fast on this machine because the Unity 2022.3.62f3 install is missing `WindowsPlayer.exe` under the Windows standalone playback engine template. Repair Unity/Windows Build Support before treating desktop player builds as verified.
 
@@ -36,7 +38,7 @@ Automated verification last run locally:
 | Item | Status | Evidence |
 | --- | --- | --- |
 | Project resolves packages and compiles in Unity 2022.3.62f3 with zero C# compilation errors | Pass | Full EditMode test run completed with no compiler failures. |
-| Desktop version remains playable with prior controls | Partially verified | Desktop initialization, dispatcher behavior, production/building, save/load, and lifecycle are covered by EditMode tests. Manual desktop play remains recommended. |
+| Desktop version remains playable with prior controls | Strong simulated pass, manual playthrough still recommended | Desktop generated-runtime smoke checks, dispatcher behavior, production/building, save/load, and lifecycle are covered by EditMode tests. Manual camera/control regression remains recommended. |
 | Quest runtime uses an OpenXR-tracked camera and controllers | Implemented, physical device unverified | Quest rig creates XR head/hand nodes and applies Unity XR device pose data. No physical headset run has been performed from this environment. |
 | Right controller can select and command existing units | Simulated pass, physical device unverified | EditMode tests cover trigger selection, additive selection, A/right-primary context commands, cancel/clear, attack-move, stop, pointer feedback, and placement flow through Quest input frames. |
 | Desktop and Quest input share the same RTS command dispatcher | Pass | Desktop and Quest controllers both delegate selection, placement, context commands, attack-move, stop, and clear/cancel through `RtsCommandDispatcher` and `RtsPlayerCommandService`. |
