@@ -22,8 +22,9 @@ namespace QuestCommandRTS.Editor
                 ValidateUnitMotionRigs(game);
                 ValidateVisualAnimation(game);
                 ValidatePaletteTinting(game);
+                ValidateContrastDetailing(game);
                 ValidateProductionExit(game);
-                Debug.Log("[Command RTS Visuals] PASS - Visual motion rigs, palette tinting, and production exits validated.");
+                Debug.Log("[Command RTS Visuals] PASS - Visual motion rigs, palette tinting, contrast detailing, and production exits validated.");
             }
             finally
             {
@@ -90,6 +91,23 @@ namespace QuestCommandRTS.Editor
             Require(teamRenderer != null, "Team plate renderer", "Team plate should have a renderer.");
             Require(modelRenderer.GetComponent<RtsTeamTintTarget>() == null, "Palette preserved", "Imported model renderers should not be team-tint targets.");
             Require(teamRenderer.GetComponent<RtsTeamTintTarget>() != null, "Team tint target", "Only explicit recognition plates should be team-tint targets.");
+        }
+
+        private static void ValidateContrastDetailing(RtsGame game)
+        {
+            RtsUnit rifleman = game.CreateUnit(RtsTeam.Player, UnitKind.Rifleman, new Vector3(-54f, 0f, -62f));
+            RtsUnit tank = game.CreateUnit(RtsTeam.Player, UnitKind.MediumTank, new Vector3(-50f, 0f, -62f));
+            RtsUnit harvester = game.CreateUnit(RtsTeam.Player, UnitKind.Harvester, new Vector3(-46f, 0f, -62f));
+            RtsStructure command = game.CreateStructure(RtsTeam.Player, StructureKind.CommandCenter, new Vector3(-62f, 0f, -62f));
+
+            Require(rifleman.transform.Find("Infantry Left Shoulder Highlight") != null, "Infantry highlights", "Infantry should have bright shoulder edge highlights.");
+            Require(rifleman.transform.Find("Infantry Left Boot Shadow") != null, "Infantry shadows", "Infantry should have dark boot shadows for leg separation.");
+            Require(tank.transform.Find("Tank Front Edge Highlight") != null, "Tank edge highlights", "Tanks should have visible hull edge highlights.");
+            Require(tank.transform.Find("Tank Rear Recess Shadow") != null, "Tank shadow panels", "Tanks should have dark recessed panels.");
+            Require(harvester.transform.Find("Harvester Caution Intake Strip") != null, "Harvester contrast strip", "Harvesters should have caution-color detail contrast.");
+            Require(command.transform.Find("Structure Base Shadow Plinth") != null, "Structure base contrast", "Structures should have dark base plinths.");
+            Require(command.transform.Find("Structure Roof Lip Highlight") != null, "Structure roof highlight", "Structures should have bright roof lip highlights.");
+            Require(command.transform.Find("Structure Caution Threshold") != null, "Structure caution detail", "Major structures should have caution accent strips.");
         }
 
         private static void ValidateProductionExit(RtsGame game)

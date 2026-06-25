@@ -70,6 +70,9 @@ namespace QuestCommandRTS
         private Material darkMaterial;
         private Material vehicleDetailMaterial;
         private Material structureDetailMaterial;
+        private Material edgeHighlightMaterial;
+        private Material shadowPanelMaterial;
+        private Material cautionStripeMaterial;
         private bool initialized;
         private float nextObjectiveCheckTime;
         private int nextEntityId = 1;
@@ -1856,6 +1859,9 @@ namespace QuestCommandRTS
             resourceMaterial = CreateMaterial(new Color(0.2f, 0.95f, 0.62f));
             depletedResourceMaterial = CreateMaterial(new Color(0.11f, 0.18f, 0.14f));
             darkMaterial = CreateMaterial(new Color(0.16f, 0.18f, 0.17f));
+            shadowPanelMaterial = CreateMaterial(new Color(0.055f, 0.065f, 0.06f));
+            edgeHighlightMaterial = CreateMaterial(new Color(0.76f, 0.8f, 0.68f));
+            cautionStripeMaterial = CreateMaterial(new Color(0.95f, 0.67f, 0.18f));
             vehicleDetailMaterial = CreateTexturedMaterial(
                 new Color(0.42f, 0.47f, 0.39f),
                 armorPlateTexture,
@@ -2547,6 +2553,10 @@ namespace QuestCommandRTS
             CreatePrimitive(PrimitiveType.Cube, root, "Infantry Team Band", new Vector3(0f, 1.14f, -0.17f), new Vector3(0.46f, 0.08f, 0.1f), teamMaterial);
             CreatePrimitive(PrimitiveType.Cube, root, "Infantry Team Top Plate", new Vector3(0f, 1.52f, -0.02f), new Vector3(0.32f, 0.045f, 0.24f), teamMaterial);
             CreatePrimitive(PrimitiveType.Cube, root, "Infantry Kit Detail Plate", new Vector3(0f, 0.78f, 0.2f), new Vector3(0.3f, 0.06f, 0.18f), vehicleDetailMaterial);
+            CreatePrimitive(PrimitiveType.Cube, root, "Infantry Left Shoulder Highlight", new Vector3(-0.26f, 1.16f, 0.04f), new Vector3(0.16f, 0.055f, 0.18f), edgeHighlightMaterial);
+            CreatePrimitive(PrimitiveType.Cube, root, "Infantry Right Shoulder Highlight", new Vector3(0.26f, 1.16f, 0.04f), new Vector3(0.16f, 0.055f, 0.18f), edgeHighlightMaterial);
+            CreatePrimitive(PrimitiveType.Cube, root, "Infantry Left Boot Shadow", new Vector3(-0.13f, 0.08f, 0.02f), new Vector3(0.18f, 0.06f, 0.24f), shadowPanelMaterial);
+            CreatePrimitive(PrimitiveType.Cube, root, "Infantry Right Boot Shadow", new Vector3(0.13f, 0.08f, 0.02f), new Vector3(0.18f, 0.06f, 0.24f), shadowPanelMaterial);
         }
 
         private void CreateHarvesterReadabilityPanels(Transform root, Material teamMaterial)
@@ -2556,6 +2566,11 @@ namespace QuestCommandRTS
             CreatePrimitive(PrimitiveType.Cube, root, "Harvester Team Left Plate", new Vector3(-0.72f, 0.58f, -0.04f), new Vector3(0.08f, 0.24f, 0.9f), teamMaterial);
             CreatePrimitive(PrimitiveType.Cube, root, "Harvester Team Right Plate", new Vector3(0.72f, 0.58f, -0.04f), new Vector3(0.08f, 0.24f, 0.9f), teamMaterial);
             CreatePrimitive(PrimitiveType.Cube, root, "Harvester Armor Detail Plate", new Vector3(0f, 0.48f, 0.72f), new Vector3(1.08f, 0.08f, 0.32f), vehicleDetailMaterial);
+            CreatePrimitive(PrimitiveType.Cube, root, "Harvester Front Edge Highlight", new Vector3(0f, 0.84f, 1.0f), new Vector3(1.18f, 0.055f, 0.08f), edgeHighlightMaterial);
+            CreatePrimitive(PrimitiveType.Cube, root, "Harvester Rear Recess Shadow", new Vector3(0f, 0.46f, -1.05f), new Vector3(1.2f, 0.12f, 0.08f), shadowPanelMaterial);
+            CreatePrimitive(PrimitiveType.Cube, root, "Harvester Left Lower Shadow", new Vector3(-0.76f, 0.32f, 0.06f), new Vector3(0.06f, 0.16f, 1.28f), shadowPanelMaterial);
+            CreatePrimitive(PrimitiveType.Cube, root, "Harvester Right Lower Shadow", new Vector3(0.76f, 0.32f, 0.06f), new Vector3(0.06f, 0.16f, 1.28f), shadowPanelMaterial);
+            CreatePrimitive(PrimitiveType.Cube, root, "Harvester Caution Intake Strip", new Vector3(0f, 0.36f, 1.16f), new Vector3(0.82f, 0.045f, 0.07f), cautionStripeMaterial);
         }
 
         private void CreateTankReadabilityPanels(Transform root, UnitKind kind, Material teamMaterial)
@@ -2592,6 +2607,11 @@ namespace QuestCommandRTS
             CreatePrimitive(PrimitiveType.Cube, root, "Tank Team Left Plate", new Vector3(-sideOffset, 0.52f, -0.05f), sideSize, teamMaterial);
             CreatePrimitive(PrimitiveType.Cube, root, "Tank Team Right Plate", new Vector3(sideOffset, 0.52f, -0.05f), sideSize, teamMaterial);
             CreatePrimitive(PrimitiveType.Cube, root, "Tank Armor Detail Plate", new Vector3(0f, 0.46f, 0.56f), new Vector3(roofSize.x * 0.82f, 0.07f, 0.22f), vehicleDetailMaterial);
+            CreatePrimitive(PrimitiveType.Cube, root, "Tank Front Edge Highlight", new Vector3(0f, roofPosition.y - 0.18f, 1.03f), new Vector3(roofSize.x * 1.2f, 0.055f, 0.08f), edgeHighlightMaterial);
+            CreatePrimitive(PrimitiveType.Cube, root, "Tank Rear Recess Shadow", new Vector3(0f, 0.42f, -1.04f), new Vector3(roofSize.x * 1.08f, 0.09f, 0.08f), shadowPanelMaterial);
+            CreatePrimitive(PrimitiveType.Cube, root, "Tank Left Track Shadow", new Vector3(-sideOffset, 0.26f, 0f), new Vector3(0.08f, 0.2f, sideSize.z * 1.28f), shadowPanelMaterial);
+            CreatePrimitive(PrimitiveType.Cube, root, "Tank Right Track Shadow", new Vector3(sideOffset, 0.26f, 0f), new Vector3(0.08f, 0.2f, sideSize.z * 1.28f), shadowPanelMaterial);
+            CreatePrimitive(PrimitiveType.Cube, root, "Tank Turret Edge Highlight", roofPosition + new Vector3(0f, 0.12f, 0.26f), new Vector3(roofSize.x * 0.72f, 0.045f, 0.07f), edgeHighlightMaterial);
         }
 
         private Transform BuildStructureVisual(Transform root, StructureKind kind, RtsTeam team)
@@ -2745,11 +2765,63 @@ namespace QuestCommandRTS
                 renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
                 renderer.receiveShadows = false;
                 renderer.GetPropertyBlock(block);
-                block.SetColor("_Color", materialBoost);
-                block.SetColor("_BaseColor", materialBoost);
+                Color tint = ResolveImportedRendererTint(renderer, materialBoost);
+                block.SetColor("_Color", tint);
+                block.SetColor("_BaseColor", tint);
                 renderer.SetPropertyBlock(block);
                 block.Clear();
             }
+        }
+
+        private static Color ResolveImportedRendererTint(Renderer renderer, Color materialBoost)
+        {
+            Material material = renderer != null ? renderer.sharedMaterial : null;
+            bool hasPaletteTexture = material != null && material.mainTexture != null;
+            if (hasPaletteTexture)
+            {
+                return new Color(
+                    Mathf.Clamp(1f + (materialBoost.r - 1f) * 0.38f, 0.92f, 1.16f),
+                    Mathf.Clamp(1f + (materialBoost.g - 1f) * 0.38f, 0.92f, 1.16f),
+                    Mathf.Clamp(1f + (materialBoost.b - 1f) * 0.38f, 0.92f, 1.12f),
+                    1f);
+            }
+
+            Color baseColor = GetMaterialColor(material);
+            Color boosted = new Color(
+                Mathf.Clamp01(baseColor.r * materialBoost.r + 0.035f),
+                Mathf.Clamp01(baseColor.g * materialBoost.g + 0.035f),
+                Mathf.Clamp01(baseColor.b * materialBoost.b + 0.025f),
+                baseColor.a);
+            return IncreaseColorContrast(boosted, 1.16f);
+        }
+
+        private static Color GetMaterialColor(Material material)
+        {
+            if (material == null)
+            {
+                return new Color(0.58f, 0.62f, 0.52f, 1f);
+            }
+
+            if (material.HasProperty("_BaseColor"))
+            {
+                return material.GetColor("_BaseColor");
+            }
+
+            if (material.HasProperty("_Color"))
+            {
+                return material.GetColor("_Color");
+            }
+
+            return material.color;
+        }
+
+        private static Color IncreaseColorContrast(Color color, float contrast)
+        {
+            return new Color(
+                Mathf.Clamp01((color.r - 0.5f) * contrast + 0.5f),
+                Mathf.Clamp01((color.g - 0.5f) * contrast + 0.5f),
+                Mathf.Clamp01((color.b - 0.5f) * contrast + 0.5f),
+                color.a);
         }
 
         private static Color GetImportedUnitMaterialBoost(UnitKind kind)
@@ -2801,6 +2873,17 @@ namespace QuestCommandRTS
             CreatePrimitive(PrimitiveType.Cube, root, "Structure Team Right Plate", new Vector3(sideOffset, sideSize.y + 0.22f, 0f), sideSize, teamMaterial);
             CreatePrimitive(PrimitiveType.Cube, root, "Structure Armor Detail Plate", detailPosition, detailSize, structureDetailMaterial);
             CreatePrimitive(PrimitiveType.Cube, root, "Structure Dark Panel Line", detailPosition + new Vector3(0f, 0.07f, -detailSize.z * 0.65f), new Vector3(detailSize.x * 0.76f, 0.035f, 0.045f), darkMaterial);
+            Vector3 contrastSize = GetStructureContrastBaseSize(kind);
+            CreatePrimitive(PrimitiveType.Cube, root, "Structure Base Shadow Plinth", new Vector3(0f, 0.075f, 0f), new Vector3(contrastSize.x, 0.075f, contrastSize.z), shadowPanelMaterial);
+            CreatePrimitive(PrimitiveType.Cube, root, "Structure Front Edge Highlight", new Vector3(0f, detailPosition.y + 0.28f, -contrastSize.z * 0.48f), new Vector3(contrastSize.x * 0.56f, 0.045f, 0.07f), edgeHighlightMaterial);
+            CreatePrimitive(PrimitiveType.Cube, root, "Structure Rear Recess Shadow", new Vector3(0f, detailPosition.y + 0.08f, contrastSize.z * 0.48f), new Vector3(contrastSize.x * 0.58f, 0.07f, 0.08f), shadowPanelMaterial);
+            CreatePrimitive(PrimitiveType.Cube, root, "Structure Left Edge Highlight", new Vector3(-contrastSize.x * 0.49f, detailPosition.y + 0.42f, 0f), new Vector3(0.055f, 0.42f, contrastSize.z * 0.38f), edgeHighlightMaterial);
+            CreatePrimitive(PrimitiveType.Cube, root, "Structure Right Edge Highlight", new Vector3(contrastSize.x * 0.49f, detailPosition.y + 0.42f, 0f), new Vector3(0.055f, 0.42f, contrastSize.z * 0.38f), edgeHighlightMaterial);
+            CreatePrimitive(PrimitiveType.Cube, root, "Structure Roof Lip Highlight", roofPosition + new Vector3(0f, 0.09f, roofSize.z * 0.5f), new Vector3(roofSize.x * 0.82f, 0.04f, 0.055f), edgeHighlightMaterial);
+            if (kind == StructureKind.CommandCenter || kind == StructureKind.WarFactory || kind == StructureKind.Refinery)
+            {
+                CreatePrimitive(PrimitiveType.Cube, root, "Structure Caution Threshold", detailPosition + new Vector3(0f, 0.13f, detailSize.z * 0.82f), new Vector3(detailSize.x * 0.72f, 0.035f, 0.055f), cautionStripeMaterial);
+            }
         }
 
         private static string GetStructureModelResourcePath(StructureKind kind)
@@ -3013,6 +3096,29 @@ namespace QuestCommandRTS
                     return new Vector3(0.75f, 0.08f, 0.12f);
                 default:
                     return new Vector3(1.6f, 0.08f, 0.16f);
+            }
+        }
+
+        private static Vector3 GetStructureContrastBaseSize(StructureKind kind)
+        {
+            switch (kind)
+            {
+                case StructureKind.CommandCenter:
+                    return new Vector3(6.8f, 0.08f, 5.6f);
+                case StructureKind.WarFactory:
+                    return new Vector3(5.5f, 0.08f, 4.7f);
+                case StructureKind.Refinery:
+                    return new Vector3(4.6f, 0.08f, 4.0f);
+                case StructureKind.PowerPlant:
+                    return new Vector3(3.4f, 0.08f, 3.0f);
+                case StructureKind.GunTower:
+                    return new Vector3(2.0f, 0.08f, 2.0f);
+                case StructureKind.AdvancedGunTower:
+                    return new Vector3(2.4f, 0.08f, 2.4f);
+                case StructureKind.Turret:
+                    return new Vector3(1.8f, 0.08f, 1.8f);
+                default:
+                    return new Vector3(3.0f, 0.08f, 2.8f);
             }
         }
 
