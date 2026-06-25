@@ -175,11 +175,6 @@ namespace QuestCommandRTS
                 }
             }
 
-            if (!uiCaptured && game.BuildManager != null && game.BuildManager.IsPlacing)
-            {
-                dispatcher.UpdatePlacement(frame.PointerRay, settings.RayLengthSimulationUnits);
-            }
-
             if (!game.AcceptsPlayerInput)
             {
                 return RtsCommandResult.None;
@@ -192,6 +187,11 @@ namespace QuestCommandRTS
 
             if (game.BuildManager != null && game.BuildManager.IsPlacing)
             {
+                if (!uiCaptured)
+                {
+                    dispatcher.UpdatePlacement(frame.PointerRay, settings.RayLengthSimulationUnits);
+                }
+
                 RtsCommandResult placementResult = RtsCommandResult.None;
                 if (primaryDown && !uiCaptured)
                 {

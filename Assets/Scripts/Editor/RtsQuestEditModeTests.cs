@@ -196,6 +196,7 @@ namespace QuestCommandRTS.Editor
             StringAssert.Contains("Left Trigger + Trigger: Add/Area", text.text);
             StringAssert.Contains("A: Command", text.text);
             StringAssert.Contains("B: Cancel/Clear", text.text);
+            StringAssert.Contains("X: Command Console", text.text);
         }
 
         [Test]
