@@ -14,11 +14,13 @@ namespace QuestCommandRTS
         private Transform reticle;
         private Renderer reticleRenderer;
         private Material reticleMaterial;
+        private QuestCommandConsole commandConsole;
         private InputDevice rightDevice;
         private InputDevice leftDevice;
         private bool previousRightTrigger;
         private bool previousPrimaryButton;
         private bool previousSecondaryButton;
+        private bool previousLeftPrimaryButton;
         private readonly Color moveColor = new Color(0.3f, 0.88f, 1f, 0.95f);
         private readonly Color attackColor = new Color(1f, 0.32f, 0.22f, 0.95f);
         private readonly Color harvestColor = new Color(0.25f, 1f, 0.48f, 0.95f);
@@ -38,6 +40,11 @@ namespace QuestCommandRTS
             reticleMaterial = reticleRenderer != null ? reticleRenderer.sharedMaterial : null;
             rightDevice = InputDevices.GetDeviceAtXRNode(XRNode.RightHand);
             leftDevice = InputDevices.GetDeviceAtXRNode(XRNode.LeftHand);
+        }
+
+        public void SetCommandConsole(QuestCommandConsole console)
+        {
+            commandConsole = console;
         }
 
         private void Update()
@@ -71,17 +78,42 @@ namespace QuestCommandRTS
             bool rightTrigger = ReadButton(rightDevice, CommonUsages.triggerButton, CommonUsages.trigger);
             bool primaryButton = ReadButton(rightDevice, CommonUsages.primaryButton);
             bool secondaryButton = ReadButton(rightDevice, CommonUsages.secondaryButton);
+            bool leftPrimaryButton = ReadButton(leftDevice, CommonUsages.primaryButton);
 
             bool rightTriggerDown = rightTrigger && !previousRightTrigger;
             bool primaryDown = primaryButton && !previousPrimaryButton;
             bool secondaryDown = secondaryButton && !previousSecondaryButton;
+            bool leftPrimaryDown = leftPrimaryButton && !previousLeftPrimaryButton;
 
             previousRightTrigger = rightTrigger;
             previousPrimaryButton = primaryButton;
             previousSecondaryButton = secondaryButton;
+            previousLeftPrimaryButton = leftPrimaryButton;
+
+            if (leftPrimaryDown && commandConsole != null)
+            {
+                commandConsole.ToggleOpen();
+            }
+
+            bool uiCaptured = commandConsole != null && commandConsole.TryHandlePointer(ray, rightTriggerDown);
 
             if (game.IsMatchOver)
             {
+                return;
+            }
+
+            if (game.BuildManager != null && game.BuildManager.IsPlacing)
+            {
+                if (primaryDown && !uiCaptured)
+                {
+                    dispatcher.ConfirmPlacement();
+                }
+
+                if (secondaryDown)
+                {
+                    dispatcher.CancelPlacement();
+                }
+
                 return;
             }
 
@@ -91,12 +123,12 @@ namespace QuestCommandRTS
                 return;
             }
 
-            if (rightTriggerDown)
+            if (rightTriggerDown && !uiCaptured)
             {
                 dispatcher.SelectFromRay(ray, leftTriggerHeld, settings.RayLengthSimulationUnits);
             }
 
-            if (primaryDown)
+            if (primaryDown && !uiCaptured)
             {
                 dispatcher.CommandFromRay(ray, settings.RayLengthSimulationUnits);
             }

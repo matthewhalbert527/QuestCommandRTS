@@ -49,13 +49,12 @@ namespace QuestCommandRTS
 
         public RtsCommandResult CancelPlacement()
         {
-            if (game == null || game.BuildManager == null || !game.BuildManager.IsPlacing)
+            if (game == null || game.PlayerCommands == null)
             {
                 return RtsCommandResult.None;
             }
 
-            game.BuildManager.CancelPlacement();
-            return RtsCommandResult.PlacementCanceled;
+            return game.PlayerCommands.CancelConstructionPlacement() ? RtsCommandResult.PlacementCanceled : RtsCommandResult.None;
         }
 
         public RtsCommandResult CancelPlacementOrClearSelection()
@@ -66,23 +65,22 @@ namespace QuestCommandRTS
 
         public RtsCommandResult UpdatePlacement(Ray ray)
         {
-            if (game == null || game.BuildManager == null || !game.BuildManager.IsPlacing)
+            if (game == null || game.PlayerCommands == null)
             {
                 return RtsCommandResult.None;
             }
 
-            game.BuildManager.UpdatePlacement(ray);
-            return RtsCommandResult.PlacementUpdated;
+            return game.PlayerCommands.UpdateConstructionPlacement(ray) ? RtsCommandResult.PlacementUpdated : RtsCommandResult.None;
         }
 
         public RtsCommandResult ConfirmPlacement()
         {
-            if (game == null || game.BuildManager == null || !game.BuildManager.IsPlacing)
+            if (game == null || game.PlayerCommands == null)
             {
                 return RtsCommandResult.None;
             }
 
-            return game.BuildManager.TryConfirmPlacement() ? RtsCommandResult.PlacementConfirmed : RtsCommandResult.None;
+            return game.PlayerCommands.ConfirmConstructionPlacement() ? RtsCommandResult.PlacementConfirmed : RtsCommandResult.None;
         }
 
         public RtsCommandResult SelectFromRay(Ray ray, bool additive, float maxDistance)
@@ -189,8 +187,7 @@ namespace QuestCommandRTS
                     IssueHarvest(hit.collider.GetComponentInParent<ResourceNode>());
                     return RtsCommandResult.HarvestIssued;
                 case RtsContextCommandKind.Rally:
-                    TrySetRallyPoint(GetGroundPoint(hit));
-                    return RtsCommandResult.RallyPointSet;
+                    return game.PlayerCommands != null && game.PlayerCommands.SetSelectedRallyPoint(GetGroundPoint(hit)) ? RtsCommandResult.RallyPointSet : RtsCommandResult.None;
                 case RtsContextCommandKind.Move:
                     IssueMove(GetGroundPoint(hit));
                     return RtsCommandResult.MoveIssued;
@@ -267,32 +264,6 @@ namespace QuestCommandRTS
             {
                 commandUnits[i].IssueMove(point + FormationOffset(i, count));
             }
-        }
-
-        private bool TrySetRallyPoint(Vector3 point)
-        {
-            if (!CanSetRallyPoint(point))
-            {
-                return false;
-            }
-
-            bool setAny = false;
-            for (int i = 0; i < game.Selection.Count; i++)
-            {
-                ProductionStructure producer = game.Selection[i] as ProductionStructure;
-                if (producer != null && producer.Team == RtsTeam.Player)
-                {
-                    producer.SetRallyPoint(point);
-                    setAny = true;
-                }
-            }
-
-            if (setAny)
-            {
-                game.SpawnFloatingText("Rally set", point + Vector3.up * 1.4f, new Color(0.5f, 0.95f, 1f));
-            }
-
-            return setAny;
         }
 
         private bool CanSetRallyPoint(Vector3 point)

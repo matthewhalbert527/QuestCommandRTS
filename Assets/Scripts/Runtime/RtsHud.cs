@@ -98,11 +98,11 @@ namespace QuestCommandRTS
             CreateText(commandPanel, "Production Label", "Production", 17, TextAnchor.MiddleLeft, new Vector2(14f, -26f), new Vector2(198f, 26f));
 
             float y = -68f;
-            AddCommandButton(commandPanel, "Rifleman", y, () => game.TryQueueUnit(UnitKind.Rifleman), () => CanAfford(RtsBalance.GetUnit(UnitKind.Rifleman).Cost), () => "Rifleman  " + RtsBalance.GetUnit(UnitKind.Rifleman).Cost);
+            AddCommandButton(commandPanel, "Rifleman", y, () => game.PlayerCommands.QueueProduction(UnitKind.Rifleman), () => CanQueue(UnitKind.Rifleman), () => "Rifleman  " + RtsBalance.GetUnit(UnitKind.Rifleman).Cost);
             y -= 48f;
-            AddCommandButton(commandPanel, "Harvester", y, () => game.TryQueueUnit(UnitKind.Harvester), () => CanAfford(RtsBalance.GetUnit(UnitKind.Harvester).Cost), () => "Harvester  " + RtsBalance.GetUnit(UnitKind.Harvester).Cost);
+            AddCommandButton(commandPanel, "Harvester", y, () => game.PlayerCommands.QueueProduction(UnitKind.Harvester), () => CanQueue(UnitKind.Harvester), () => "Harvester  " + RtsBalance.GetUnit(UnitKind.Harvester).Cost);
             y -= 48f;
-            AddCommandButton(commandPanel, "Tank", y, () => game.TryQueueUnit(UnitKind.Tank), () => CanAfford(RtsBalance.GetUnit(UnitKind.Tank).Cost), () => "Tank  " + RtsBalance.GetUnit(UnitKind.Tank).Cost);
+            AddCommandButton(commandPanel, "Tank", y, () => game.PlayerCommands.QueueProduction(UnitKind.Tank), () => CanQueue(UnitKind.Tank), () => "Tank  " + RtsBalance.GetUnit(UnitKind.Tank).Cost);
             y -= 62f;
 
             CreateText(commandPanel, "Build Label", "Build", 17, TextAnchor.MiddleLeft, new Vector2(14f, y), new Vector2(198f, 26f));
@@ -121,9 +121,9 @@ namespace QuestCommandRTS
 
             AddCommandButton(commandPanel, "Army", y, () => game.SelectCombatUnits(), () => true, () => "Select Army");
             y -= 48f;
-            AddCommandButton(commandPanel, "Repair", y, () => game.TryRepairSelectedStructures(), () => game.CanRepairSelectedStructures(), () => "Repair  Z");
+            AddCommandButton(commandPanel, "Repair", y, () => game.PlayerCommands.RepairSelectedStructures(), () => game.CanRepairSelectedStructures(), () => "Repair  Z");
             y -= 48f;
-            AddCommandButton(commandPanel, "Sell", y, () => game.SellSelectedStructures(), () => game.CanSellSelectedStructures(), () => "Sell  X");
+            AddCommandButton(commandPanel, "Sell", y, () => game.PlayerCommands.SellSelectedStructures(), () => game.CanSellSelectedStructures(), () => "Sell  X");
 
             RectTransform selectionPanel = CreatePanel(canvasObject.transform, "Selection", new Vector2(0f, 0f), new Vector2(0.58f, 0f), new Vector2(0f, 0f), new Vector2(12f, 12f), new Vector2(0f, 118f), new Color(0.02f, 0.024f, 0.026f, 0.8f));
             selectionText = CreateText(selectionPanel, "Selection Text", "", 17, TextAnchor.UpperLeft);
@@ -134,7 +134,7 @@ namespace QuestCommandRTS
         private void AddBuildButton(RectTransform parent, StructureKind kind, float y)
         {
             StructureStats stats = RtsBalance.GetStructure(kind);
-            AddCommandButton(parent, stats.Name, y, () => game.BuildManager.BeginPlacement(kind), () => CanAfford(stats.Cost) && game.CanBuildStructure(kind), () => GetBuildButtonText(kind, stats));
+            AddCommandButton(parent, stats.Name, y, () => game.PlayerCommands.RequestConstruction(kind), () => CanBuild(kind), () => GetBuildButtonText(kind, stats));
         }
 
         private void AddCommandButton(RectTransform parent, string name, float y, UnityEngine.Events.UnityAction action, Func<bool> enabled, Func<string> text)
@@ -172,6 +172,18 @@ namespace QuestCommandRTS
         private bool CanAfford(int cost)
         {
             return game != null && game.Resources != null && game.Resources.CanAfford(cost);
+        }
+
+        private bool CanBuild(StructureKind kind)
+        {
+            string reason;
+            return game != null && game.PlayerCommands != null && game.PlayerCommands.CanRequestConstruction(kind, out reason);
+        }
+
+        private bool CanQueue(UnitKind kind)
+        {
+            string reason;
+            return game != null && game.PlayerCommands != null && game.PlayerCommands.CanQueueProduction(kind, out reason);
         }
 
         private string GetBuildButtonText(StructureKind kind, StructureStats stats)

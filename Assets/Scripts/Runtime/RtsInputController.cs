@@ -185,43 +185,43 @@ namespace QuestCommandRTS
 
             if (Input.GetKeyDown(KeyCode.Alpha1))
             {
-                game.TryQueueUnit(UnitKind.Rifleman);
+                game.PlayerCommands.QueueProduction(UnitKind.Rifleman);
             }
             else if (Input.GetKeyDown(KeyCode.Alpha2))
             {
-                game.TryQueueUnit(UnitKind.Harvester);
+                game.PlayerCommands.QueueProduction(UnitKind.Harvester);
             }
             else if (Input.GetKeyDown(KeyCode.Alpha3))
             {
-                game.TryQueueUnit(UnitKind.Tank);
+                game.PlayerCommands.QueueProduction(UnitKind.Tank);
             }
             else if (Input.GetKeyDown(KeyCode.Q))
             {
-                game.BuildManager.BeginPlacement(StructureKind.PowerPlant);
+                game.PlayerCommands.RequestConstruction(StructureKind.PowerPlant);
             }
             else if (Input.GetKeyDown(KeyCode.W))
             {
-                game.BuildManager.BeginPlacement(StructureKind.Barracks);
+                game.PlayerCommands.RequestConstruction(StructureKind.Barracks);
             }
             else if (Input.GetKeyDown(KeyCode.E))
             {
-                game.BuildManager.BeginPlacement(StructureKind.Refinery);
+                game.PlayerCommands.RequestConstruction(StructureKind.Refinery);
             }
             else if (Input.GetKeyDown(KeyCode.R))
             {
-                game.BuildManager.BeginPlacement(StructureKind.WarFactory);
+                game.PlayerCommands.RequestConstruction(StructureKind.WarFactory);
             }
             else if (Input.GetKeyDown(KeyCode.T))
             {
-                game.BuildManager.BeginPlacement(StructureKind.Turret);
+                game.PlayerCommands.RequestConstruction(StructureKind.Turret);
             }
             else if (Input.GetKeyDown(KeyCode.Z))
             {
-                game.TryRepairSelectedStructures();
+                game.PlayerCommands.RepairSelectedStructures();
             }
             else if (Input.GetKeyDown(KeyCode.X))
             {
-                game.SellSelectedStructures();
+                game.PlayerCommands.SellSelectedStructures();
             }
         }
 

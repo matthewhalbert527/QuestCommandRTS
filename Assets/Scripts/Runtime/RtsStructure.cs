@@ -46,10 +46,15 @@ namespace QuestCommandRTS
     public sealed class ProductionStructure : RtsStructure
     {
         public int QueueCount => queue.Count + (activeKind.HasValue ? 1 : 0);
+        public int PendingQueueCount => queue.Count;
+        public bool HasActiveProduction => activeKind.HasValue;
+        public UnitKind ActiveProductionKind => activeKind.HasValue ? activeKind.Value : UnitKind.Rifleman;
+        public float ActiveProductionProgress => activeDuration <= 0f || !activeKind.HasValue ? 0f : 1f - Mathf.Clamp01(activeRemaining / activeDuration);
+        public bool CanCancelLastQueuedUnit => queue.Count > 0;
         public bool HasRallyPoint { get; private set; }
         public Vector3 RallyPoint { get; private set; }
 
-        private readonly Queue<UnitKind> queue = new Queue<UnitKind>();
+        private readonly List<UnitKind> queue = new List<UnitKind>();
         private UnitKind? activeKind;
         private float activeRemaining;
         private float activeDuration;
@@ -123,9 +128,42 @@ namespace QuestCommandRTS
                 return false;
             }
 
-            queue.Enqueue(kind);
-            RtsGame.Instance.SpawnFloatingText(stats.Name, transform.position + Vector3.up * 2.2f, Color.white);
+            queue.Add(kind);
+            RtsGame.Instance.SpawnFloatingText(stats.Name + " queued", transform.position + Vector3.up * 2.2f, Color.white);
             return true;
+        }
+
+        public bool TryCancelLastQueuedUnit(out UnitKind canceledKind, out int refund)
+        {
+            canceledKind = UnitKind.Rifleman;
+            refund = 0;
+
+            if (queue.Count <= 0 || !RtsGame.HasInstance)
+            {
+                return false;
+            }
+
+            int index = queue.Count - 1;
+            canceledKind = queue[index];
+            queue.RemoveAt(index);
+
+            UnitStats stats = RtsBalance.GetUnit(canceledKind);
+            refund = stats.Cost;
+            RtsGame.Instance.Resources.Add(refund);
+            RtsGame.Instance.SpawnFloatingText("Canceled +" + refund, transform.position + Vector3.up * 2.2f, new Color(0.75f, 1f, 0.82f));
+            return true;
+        }
+
+        public bool TryGetQueuedUnit(int index, out UnitKind kind)
+        {
+            if (index >= 0 && index < queue.Count)
+            {
+                kind = queue[index];
+                return true;
+            }
+
+            kind = UnitKind.Rifleman;
+            return false;
         }
 
         public void SetRallyPoint(Vector3 point)
@@ -170,7 +208,8 @@ namespace QuestCommandRTS
                 return;
             }
 
-            activeKind = queue.Dequeue();
+            activeKind = queue[0];
+            queue.RemoveAt(0);
             UnitStats stats = RtsBalance.GetUnit(activeKind.Value);
             activeDuration = Mathf.Max(0.1f, stats.BuildTime);
             activeRemaining = activeDuration;

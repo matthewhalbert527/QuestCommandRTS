@@ -15,6 +15,8 @@ namespace QuestCommandRTS
         public float CameraFarClipMeters = 6f;
         public Vector3 StatusPanelLocalPositionMeters = new Vector3(-0.72f, 1.15f, 0.48f);
         public Vector2 StatusPanelSizeMeters = new Vector2(0.58f, 0.22f);
+        public Vector3 CommandConsoleLocalPositionMeters = new Vector3(-0.78f, 0.96f, 0.12f);
+        public Vector2 CommandConsoleSizeMeters = new Vector2(0.74f, 0.52f);
 
         public float RayLengthSimulationUnits => RayLengthMeters * SimulationUnitsPerMeter;
         public float RayWidthSimulationUnits => RayWidthMeters * SimulationUnitsPerMeter;

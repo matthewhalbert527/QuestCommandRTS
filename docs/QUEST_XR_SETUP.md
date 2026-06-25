@@ -85,10 +85,21 @@ If the validator reports a failure, rerun `Tools > Quest RTS > Apply Recommended
 ## Expected Controller Mapping
 
 - Right controller ray: hover target or terrain.
-- Right trigger: select.
+- X/left primary button: open or close the Quest command console.
+- Right trigger: select, or activate a Quest command-console control when the ray is over the console.
 - Left trigger held + right trigger: additive select.
 - A/right primary button: context command.
-- B/right secondary button: cancel placement or clear selection.
+- A/right primary button while placing: confirm the current valid placement.
+- B/right secondary button while placing: cancel placement.
+- B/right secondary button while not placing: clear selection.
+
+## Quest Command Console Flow
+
+Open the console with X/left primary.
+
+- Build tab: choose a structure. The row shows cost, power effect, availability, and any disabled reason. After choosing, aim at the battlefield with the right ray. A confirms a valid preview; B cancels.
+- Produce tab: select a Command Center, Barracks, Refinery, or War Factory first. The tab shows trainable units, cost, build time, queue state, active progress, and a Cancel Last control for the last queued unit.
+- Selected tab: inspect health, selected counts, queue/rally status, and use Repair or Sell when a player structure is eligible. Rally points are set by selecting a production structure and pressing A on terrain.
 
 ## Manual Smoke Test Checklist
 
@@ -98,6 +109,15 @@ If the validator reports a failure, rerun `Tools > Quest RTS > Apply Recommended
 - Right ray and reticle align with the controller.
 - Trigger selects a friendly unit or structure.
 - Left trigger modifier allows additive selection.
+- X opens and closes the Quest command console.
+- Right trigger activates console controls without selecting through the panel.
+- Build tab starts placement for every available player structure.
+- Placement preview follows the right ray, snaps to valid points, and shows valid/invalid state.
+- A confirms valid placement and spends credits once.
+- B cancels placement without spending credits.
+- Produce tab queues every supported unit from an eligible selected structure.
+- Cancel Last refunds the last queued unit.
+- Selected tab can repair or sell eligible player structures.
 - A moves selected units to terrain.
 - A attacks a visible enemy.
 - A sends a selected harvester to a resource.
@@ -146,6 +166,13 @@ If the validator reports a failure, rerun `Tools > Quest RTS > Apply Recommended
 - This milestone reads OpenXR controller state through Unity XR input feature usages.
 - Active Input Handling should still be Both because the project supports legacy desktop input and package-based XR tooling.
 - Verify the controller profile and OpenXR loader before debugging actions.
+
+### Console Does Not Open Or Clicks Through
+
+- Confirm the left controller is tracked and X/left primary is available through the Oculus Touch profile.
+- In Quest mode, a `Quest Command Console` object should exist under the tabletop rig.
+- The right trigger activates console controls only while the right ray intersects the panel. If the ray misses the panel, right trigger returns to battlefield selection.
+- If battlefield selection happens while pointing at the panel, verify the app is running the latest scripts and that `QuestCommandConsole.TryHandlePointer` is returning capture for the panel ray.
 
 ### Vulkan Or Android Build Errors
 

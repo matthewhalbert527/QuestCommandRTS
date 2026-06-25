@@ -2,16 +2,34 @@ using UnityEngine;
 
 namespace QuestCommandRTS
 {
+    public enum BuildPlacementFailureReason
+    {
+        None,
+        NoGroundHit,
+        OutsideMap,
+        OutsideBuildRadius,
+        BlockedFootprint,
+        MissingPrerequisite,
+        InsufficientCredits,
+        MatchOver
+    }
+
     public sealed class BuildManager : MonoBehaviour
     {
         public bool IsPlacing => preview != null;
         public StructureKind PendingKind => pendingKind;
+        public bool PlacementValid => placementValid;
+        public bool HasPlacementPoint => hasPlacementPoint;
+        public Vector3 PlacementPoint => placementPoint;
+        public BuildPlacementFailureReason LastFailureReason => lastFailureReason;
 
         private RtsGame game;
         private StructureKind pendingKind;
         private GameObject preview;
         private Vector3 placementPoint;
         private bool placementValid;
+        private bool hasPlacementPoint;
+        private BuildPlacementFailureReason lastFailureReason = BuildPlacementFailureReason.None;
 
         public void Initialize(RtsGame owner)
         {
@@ -21,15 +39,23 @@ namespace QuestCommandRTS
         public bool BeginPlacement(StructureKind kind)
         {
             StructureStats stats = RtsBalance.GetStructure(kind);
+            if (game.IsMatchOver)
+            {
+                game.SpawnFloatingText(GetFailureText(BuildPlacementFailureReason.MatchOver), game.GetPlayerBaseCenter() + Vector3.up * 2f, Color.yellow);
+                return false;
+            }
+
             if (!game.CanBuildStructure(kind))
             {
+                lastFailureReason = BuildPlacementFailureReason.MissingPrerequisite;
                 game.SpawnFloatingText(game.GetStructureRequirement(kind), game.GetPlayerBaseCenter() + Vector3.up * 2f, Color.yellow);
                 return false;
             }
 
             if (!game.Resources.CanAfford(stats.Cost))
             {
-                game.SpawnFloatingText("Need credits", game.GetPlayerBaseCenter() + Vector3.up * 2f, Color.yellow);
+                lastFailureReason = BuildPlacementFailureReason.InsufficientCredits;
+                game.SpawnFloatingText(GetFailureText(lastFailureReason), game.GetPlayerBaseCenter() + Vector3.up * 2f, Color.yellow);
                 return false;
             }
 
@@ -37,6 +63,9 @@ namespace QuestCommandRTS
             pendingKind = kind;
             preview = game.CreateStructurePreview(kind);
             placementValid = false;
+            hasPlacementPoint = false;
+            lastFailureReason = BuildPlacementFailureReason.NoGroundHit;
+            game.SpawnFloatingText(stats.Name + " ready", game.GetPlayerBaseCenter() + Vector3.up * 2f, new Color(0.55f, 0.9f, 1f));
             return true;
         }
 
@@ -44,11 +73,20 @@ namespace QuestCommandRTS
         {
             if (preview != null)
             {
-                Destroy(preview);
+                if (Application.isPlaying)
+                {
+                    Destroy(preview);
+                }
+                else
+                {
+                    DestroyImmediate(preview);
+                }
             }
 
             preview = null;
             placementValid = false;
+            hasPlacementPoint = false;
+            lastFailureReason = BuildPlacementFailureReason.None;
         }
 
         public void UpdatePlacement(Ray ray)
@@ -61,13 +99,26 @@ namespace QuestCommandRTS
             if (!TryProjectToGround(ray, out placementPoint))
             {
                 placementValid = false;
+                hasPlacementPoint = false;
+                lastFailureReason = BuildPlacementFailureReason.NoGroundHit;
                 game.SetPreviewValid(preview, false);
                 return;
             }
 
-            placementPoint = Snap(placementPoint);
+            UpdatePlacementAtPoint(placementPoint);
+        }
+
+        public void UpdatePlacementAtPoint(Vector3 point)
+        {
+            if (preview == null)
+            {
+                return;
+            }
+
+            placementPoint = Snap(point);
+            hasPlacementPoint = true;
             preview.transform.position = placementPoint;
-            placementValid = CanPlaceAt(placementPoint, pendingKind);
+            placementValid = CanPlaceAt(placementPoint, pendingKind, out lastFailureReason);
             game.SetPreviewValid(preview, placementValid);
         }
 
@@ -80,29 +131,42 @@ namespace QuestCommandRTS
 
             if (!placementValid)
             {
-                game.SpawnFloatingText("Blocked", placementPoint + Vector3.up * 2f, Color.yellow);
+                game.SpawnFloatingText(GetFailureText(lastFailureReason), GetFeedbackPoint(), Color.yellow);
                 return false;
             }
 
             StructureStats stats = RtsBalance.GetStructure(pendingKind);
             if (!game.Resources.TrySpend(stats.Cost))
             {
-                game.SpawnFloatingText("Need credits", placementPoint + Vector3.up * 2f, Color.yellow);
+                lastFailureReason = BuildPlacementFailureReason.InsufficientCredits;
+                game.SpawnFloatingText(GetFailureText(lastFailureReason), placementPoint + Vector3.up * 2f, Color.yellow);
                 return false;
             }
 
             game.CreateStructure(RtsTeam.Player, pendingKind, placementPoint);
+            game.SpawnFloatingText(stats.Name + " built", placementPoint + Vector3.up * 2f, new Color(0.55f, 1f, 0.65f));
             CancelPlacement();
             return true;
         }
 
-        private bool CanPlaceAt(Vector3 point, StructureKind kind)
+        public string GetPlacementStatusText()
+        {
+            if (preview == null)
+            {
+                return string.Empty;
+            }
+
+            return placementValid ? "Valid placement" : GetFailureText(lastFailureReason);
+        }
+
+        public bool CanPlaceAt(Vector3 point, StructureKind kind, out BuildPlacementFailureReason reason)
         {
             StructureStats stats = RtsBalance.GetStructure(kind);
             float footprint = stats.FootprintRadius;
 
             if (Mathf.Abs(point.x) + footprint > RtsBalance.MapHalfSize || Mathf.Abs(point.z) + footprint > RtsBalance.MapHalfSize)
             {
+                reason = BuildPlacementFailureReason.OutsideMap;
                 return false;
             }
 
@@ -125,6 +189,7 @@ namespace QuestCommandRTS
 
             if (!nearAnchor)
             {
+                reason = BuildPlacementFailureReason.OutsideBuildRadius;
                 return false;
             }
 
@@ -139,11 +204,46 @@ namespace QuestCommandRTS
 
                 if (hit.GetComponentInParent<RtsEntity>() != null || hit.GetComponentInParent<ResourceNode>() != null)
                 {
+                    reason = BuildPlacementFailureReason.BlockedFootprint;
                     return false;
                 }
             }
 
+            reason = BuildPlacementFailureReason.None;
             return true;
+        }
+
+        public static string GetFailureText(BuildPlacementFailureReason reason)
+        {
+            switch (reason)
+            {
+                case BuildPlacementFailureReason.NoGroundHit:
+                    return "Aim at battlefield";
+                case BuildPlacementFailureReason.OutsideMap:
+                    return "Outside map";
+                case BuildPlacementFailureReason.OutsideBuildRadius:
+                    return "Outside build radius";
+                case BuildPlacementFailureReason.BlockedFootprint:
+                    return "Blocked footprint";
+                case BuildPlacementFailureReason.MissingPrerequisite:
+                    return "Missing prerequisite";
+                case BuildPlacementFailureReason.InsufficientCredits:
+                    return "Need credits";
+                case BuildPlacementFailureReason.MatchOver:
+                    return "Match complete";
+                default:
+                    return "Cannot place";
+            }
+        }
+
+        private Vector3 GetFeedbackPoint()
+        {
+            if (hasPlacementPoint)
+            {
+                return placementPoint + Vector3.up * 2f;
+            }
+
+            return game.GetPlayerBaseCenter() + Vector3.up * 2f;
         }
 
         private static bool TryProjectToGround(Ray ray, out Vector3 point)

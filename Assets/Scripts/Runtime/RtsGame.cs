@@ -28,6 +28,7 @@ namespace QuestCommandRTS
         public BuildManager BuildManager { get; private set; }
         public RtsFogOfWar FogOfWar { get; private set; }
         public RtsCommandDispatcher CommandDispatcher { get; private set; }
+        public RtsPlayerCommandService PlayerCommands { get; private set; }
         public RtsRuntimeMode RuntimeMode { get; private set; }
         public QuestTabletopRig QuestRig { get; private set; }
         public IReadOnlyList<RtsEntity> Entities => entities;
@@ -219,19 +220,7 @@ namespace QuestCommandRTS
 
         public bool TryQueueUnit(UnitKind kind)
         {
-            ProductionStructure producer = FindProducer(kind, true);
-            if (producer == null)
-            {
-                producer = FindProducer(kind, false);
-            }
-
-            if (producer == null)
-            {
-                SpawnFloatingText("Need producer", GetPlayerBaseCenter() + Vector3.up * 2f, Color.yellow);
-                return false;
-            }
-
-            return producer.QueueUnit(kind);
+            return PlayerCommands != null && PlayerCommands.QueueProduction(kind);
         }
 
         public bool IsWorldVisible(Vector3 point)
@@ -694,6 +683,8 @@ namespace QuestCommandRTS
 
             initialized = true;
             RuntimeMode = RtsRuntimeModeResolver.Resolve();
+            PlayerCommands = new RtsPlayerCommandService();
+            PlayerCommands.Initialize(this);
             CommandDispatcher = new RtsCommandDispatcher();
             CommandDispatcher.Initialize(this);
             Resources = new ResourceBank(3400);
@@ -818,8 +809,20 @@ namespace QuestCommandRTS
 
             MatchState = state;
             StatusMessage = message;
+            if (BuildManager != null)
+            {
+                BuildManager.CancelPlacement();
+            }
+
             SpawnFloatingText(message, GetPlayerBaseCenter() + Vector3.up * 4f, state == RtsMatchState.Victory ? Color.cyan : Color.red);
         }
+
+#if UNITY_EDITOR
+        public void ForceEndMatchForTests(RtsMatchState state)
+        {
+            EndMatch(state, state == RtsMatchState.Victory ? "Victory" : "Defeat");
+        }
+#endif
 
         private void CreateMaterials()
         {

@@ -10,6 +10,7 @@ namespace QuestCommandRTS
         public Transform Head { get; private set; }
         public Transform LeftController { get; private set; }
         public Transform RightController { get; private set; }
+        public QuestCommandConsole CommandConsole { get; private set; }
 
         private QuestTabletopSettings settings;
 
@@ -53,6 +54,11 @@ namespace QuestCommandRTS
 
             QuestWorldHud hud = gameObject.AddComponent<QuestWorldHud>();
             hud.Initialize(game, RigRoot, settings);
+
+            CommandConsole = gameObject.AddComponent<QuestCommandConsole>();
+            CommandConsole.Initialize(game, RigRoot, settings);
+
+            input.SetCommandConsole(CommandConsole);
         }
 
         private Transform CreateTrackedNode(string nodeName, XRNode node)
