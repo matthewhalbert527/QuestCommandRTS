@@ -2294,6 +2294,7 @@ namespace QuestCommandRTS
             if (kind == UnitKind.Harvester)
             {
                 CreateVehicleWheelRig(root, kind);
+                CreateHarvesterHarvestRig(root);
             }
         }
 
@@ -2310,6 +2311,34 @@ namespace QuestCommandRTS
             CreateWheel(root, "Roll Wheel RF", new Vector3(sideOffset, centerY, forwardZ), wheelRadius, wheelThickness);
             CreateWheel(root, "Roll Wheel LR", new Vector3(-sideOffset, centerY, -forwardZ), wheelRadius, wheelThickness);
             CreateWheel(root, "Roll Wheel RR", new Vector3(sideOffset, centerY, -forwardZ), wheelRadius, wheelThickness);
+        }
+
+        private void CreateHarvesterHarvestRig(Transform root)
+        {
+            GameObject collector = CreatePrimitive(
+                PrimitiveType.Cylinder,
+                root,
+                "Harvest Motion Collector",
+                new Vector3(0f, 0.34f, 1.2f),
+                new Vector3(0.46f, 0.08f, 0.46f),
+                resourceMaterial);
+            collector.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
+
+            CreatePrimitive(
+                PrimitiveType.Cube,
+                root,
+                "Harvest Motion Intake Arm",
+                new Vector3(0f, 0.46f, 0.95f),
+                new Vector3(0.18f, 0.1f, 0.7f),
+                vehicleDetailMaterial);
+
+            CreatePrimitive(
+                PrimitiveType.Cube,
+                root,
+                "Harvest Motion Glow Bar",
+                new Vector3(0f, 0.42f, 1.36f),
+                new Vector3(0.82f, 0.045f, 0.08f),
+                resourceMaterial);
         }
 
         private void CreateVehicleTrackRig(Transform root, UnitKind kind)

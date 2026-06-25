@@ -99,6 +99,8 @@ namespace QuestCommandRTS
         private ConsoleButton produceTabButton;
         private ConsoleButton selectedTabButton;
         private ConsoleButton systemTabButton;
+        private Image queueProgressFill;
+        private Text queueProgressText;
         private ConsoleButton cancelQueueButton;
         private ConsoleButton selectedCancelQueueButton;
         private ConsoleButton repairButton;
@@ -304,6 +306,9 @@ namespace QuestCommandRTS
 
             CreatePanelImage(produceRoot, "Production Queue Backplate", new Color(0.025f, 0.06f, 0.07f, 0.76f), new Vector2(0f, -324f), new Vector2(704f, 82f));
             CreateText(produceRoot, "Queue Label", "Queue", 16, TextAnchor.MiddleLeft, new Vector2(18f, -330f), new Vector2(260f, 24f));
+            Image progressBackplate = CreatePanelImage(produceRoot, "Quest Queue Progress Backplate", new Color(0.012f, 0.035f, 0.04f, 0.92f), new Vector2(88f, -336f), new Vector2(250f, 10f));
+            queueProgressFill = CreatePanelImage(progressBackplate.rectTransform, "Quest Queue Progress Fill", new Color(0.22f, 0.82f, 1f, 0.88f), Vector2.zero, new Vector2(0f, 10f));
+            queueProgressText = CreateText(produceRoot, "Quest Queue Progress Text", "", 12, TextAnchor.MiddleLeft, new Vector2(350f, -329f), new Vector2(98f, 20f));
             for (int i = 0; i < queueLines.Length; i++)
             {
                 queueLines[i] = CreateText(produceRoot, "Queue " + i, "", 12, TextAnchor.MiddleLeft, new Vector2(18f, -354f - i * 16f), new Vector2(414f, 15f));
@@ -714,6 +719,8 @@ namespace QuestCommandRTS
                 queueLines[i].text = model.GetProductionQueueLine(i);
             }
 
+            RefreshQueueProgressMeter();
+
             RtsSelectedEntityView selected = model.GetSelectedEntityView();
             if (cancelQueueButton != null && cancelQueueButton.Rect != null && cancelQueueButton.Rect.IsChildOf(produceRoot))
             {
@@ -750,6 +757,36 @@ namespace QuestCommandRTS
             selectedCancelQueueButton.Interactable = selected.CanCancelQueue;
             rallyHintButton.Interactable = selected.HasProduction;
             stopUnitsButton.Interactable = game.AcceptsPlayerInput && selected.UnitCount > 0;
+        }
+
+        private void RefreshQueueProgressMeter()
+        {
+            if (queueProgressFill == null || queueProgressText == null)
+            {
+                return;
+            }
+
+            ProductionStructure producer = game != null && game.PlayerCommands != null ? game.PlayerCommands.FindSelectedProductionStructure() : null;
+            float progress = 0f;
+            string label = "Idle";
+            if (producer == null)
+            {
+                label = "Select";
+            }
+            else if (producer.HasActiveProduction)
+            {
+                progress = Mathf.Clamp01(producer.ActiveProductionProgress);
+                label = Mathf.RoundToInt(progress * 100f) + "%";
+            }
+            else if (producer.PendingQueueCount > 0)
+            {
+                label = "Queued";
+            }
+
+            RectTransform fillRect = queueProgressFill.rectTransform;
+            fillRect.sizeDelta = new Vector2(250f * progress, 10f);
+            queueProgressFill.gameObject.SetActive(progress > 0.001f);
+            queueProgressText.text = label;
         }
 
         private void RefreshSystemTab()

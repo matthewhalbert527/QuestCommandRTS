@@ -22,6 +22,7 @@ namespace QuestCommandRTS
         protected MediumTankUnit boardingTarget;
         protected RtsEntity repairTarget;
         public RtsEntity CurrentAttackTargetForVisuals => attackTarget != null && attackTarget.IsAlive ? attackTarget : null;
+        public float BlockingRadius => GetBlockingRadius(UnitKind);
 
         private RtsUnitVisualAnimator visualAnimator;
         private float nextAttackTime;
@@ -461,8 +462,154 @@ namespace QuestCommandRTS
             transform.rotation = Quaternion.RotateTowards(transform.rotation, lookRotation, TurnSpeed * deltaTime);
 
             float step = Mathf.Min(distance - stoppingDistance, MoveSpeed * deltaTime);
-            transform.position = current + direction * Mathf.Max(0f, step);
+            Vector3 desiredPosition = current + direction * Mathf.Max(0f, step);
+            transform.position = ResolveUnitBlockedPosition(current, desiredPosition, direction);
             return false;
+        }
+
+        private Vector3 ResolveUnitBlockedPosition(Vector3 current, Vector3 desired, Vector3 moveDirection)
+        {
+            desired = ClampToMap(desired);
+            if (!RtsGame.HasInstance)
+            {
+                return desired;
+            }
+
+            float selfRadius = BlockingRadius;
+            Vector3 sidestep = Vector3.zero;
+            bool forwardBlocked = false;
+
+            IReadOnlyList<RtsEntity> entities = RtsGame.Instance.Entities;
+            for (int i = 0; i < entities.Count; i++)
+            {
+                RtsUnit other = entities[i] as RtsUnit;
+                if (!IsBlockingUnit(other))
+                {
+                    continue;
+                }
+
+                float minimumDistance = selfRadius + other.BlockingRadius;
+                if (WouldCrossBlockingRadius(current, desired, other.GroundPosition, minimumDistance))
+                {
+                    forwardBlocked = true;
+                    sidestep += GetSidestepDirection(other, moveDirection);
+                }
+            }
+
+            if (forwardBlocked)
+            {
+                if (sidestep.sqrMagnitude > 0.001f)
+                {
+                    float sideStepDistance = Mathf.Min(Vector3.Distance(current, desired) * 0.85f, selfRadius * 0.75f);
+                    Vector3 sideCandidate = ClampToMap(current + sidestep.normalized * sideStepDistance);
+                    if (IsUnitPositionClear(sideCandidate, selfRadius))
+                    {
+                        return sideCandidate;
+                    }
+                }
+
+                return PushOutOfUnitOverlaps(current, selfRadius);
+            }
+
+            return PushOutOfUnitOverlaps(desired, selfRadius);
+        }
+
+        private Vector3 PushOutOfUnitOverlaps(Vector3 candidate, float selfRadius)
+        {
+            IReadOnlyList<RtsEntity> entities = RtsGame.Instance.Entities;
+            for (int iteration = 0; iteration < 2; iteration++)
+            {
+                for (int i = 0; i < entities.Count; i++)
+                {
+                    RtsUnit other = entities[i] as RtsUnit;
+                    if (!IsBlockingUnit(other))
+                    {
+                        continue;
+                    }
+
+                    float minimumDistance = selfRadius + other.BlockingRadius;
+                    Vector3 delta = candidate - other.GroundPosition;
+                    delta.y = 0f;
+                    float distance = delta.magnitude;
+                    if (distance >= minimumDistance || minimumDistance <= 0f)
+                    {
+                        continue;
+                    }
+
+                    Vector3 away = distance > 0.001f ? delta / distance : GetSidestepDirection(other, transform.forward);
+                    candidate += away * (minimumDistance - distance + 0.015f);
+                    candidate = ClampToMap(candidate);
+                }
+            }
+
+            return candidate;
+        }
+
+        private bool IsUnitPositionClear(Vector3 candidate, float selfRadius)
+        {
+            IReadOnlyList<RtsEntity> entities = RtsGame.Instance.Entities;
+            for (int i = 0; i < entities.Count; i++)
+            {
+                RtsUnit other = entities[i] as RtsUnit;
+                if (!IsBlockingUnit(other))
+                {
+                    continue;
+                }
+
+                float minimumDistance = selfRadius + other.BlockingRadius;
+                if (PlanarDistance(candidate, other.GroundPosition) < minimumDistance - 0.02f)
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        private bool IsBlockingUnit(RtsUnit other)
+        {
+            return other != null && other != this && other.IsAlive && other.gameObject.activeInHierarchy;
+        }
+
+        private static bool WouldCrossBlockingRadius(Vector3 from, Vector3 to, Vector3 blockerPosition, float minimumDistance)
+        {
+            Vector3 start = new Vector3(from.x, 0f, from.z);
+            Vector3 end = new Vector3(to.x, 0f, to.z);
+            Vector3 blocker = new Vector3(blockerPosition.x, 0f, blockerPosition.z);
+            Vector3 segment = end - start;
+            float lengthSqr = segment.sqrMagnitude;
+            if (lengthSqr < 0.0001f)
+            {
+                return false;
+            }
+
+            float startDistance = Vector3.Distance(start, blocker);
+            if (startDistance < minimumDistance * 0.92f)
+            {
+                return false;
+            }
+
+            float t = Mathf.Clamp01(Vector3.Dot(blocker - start, segment) / lengthSqr);
+            if (t <= 0.01f || t >= 0.99f)
+            {
+                return false;
+            }
+
+            Vector3 closest = start + segment * t;
+            return Vector3.Distance(closest, blocker) < minimumDistance;
+        }
+
+        private Vector3 GetSidestepDirection(RtsUnit other, Vector3 moveDirection)
+        {
+            Vector3 tangent = Vector3.Cross(Vector3.up, moveDirection);
+            if (tangent.sqrMagnitude < 0.001f)
+            {
+                tangent = transform.right;
+            }
+
+            int selfId = PersistentId != 0 ? PersistentId : GetInstanceID();
+            int otherId = other != null && other.PersistentId != 0 ? other.PersistentId : other != null ? other.GetInstanceID() : 0;
+            return tangent.normalized * (((selfId + otherId) & 1) == 0 ? 1f : -1f);
         }
 
         private void TickAttackOrder(float deltaTime, bool allowIndependentMovement)
@@ -676,6 +823,24 @@ namespace QuestCommandRTS
             }
         }
 
+        private static float GetBlockingRadius(UnitKind kind)
+        {
+            switch (RtsBalance.NormalizeUnitKind(kind))
+            {
+                case UnitKind.LightTank:
+                    return 0.88f;
+                case UnitKind.MediumTank:
+                case UnitKind.Tank:
+                    return 1.02f;
+                case UnitKind.HeavyTank:
+                    return 1.28f;
+                case UnitKind.Harvester:
+                    return 1.08f;
+                default:
+                    return 0.54f;
+            }
+        }
+
         private static float GetSightRange(UnitKind kind, float attackRange, float damage)
         {
             if (damage <= 0f || kind == UnitKind.Harvester || RtsBalance.IsEngineer(kind))
@@ -864,6 +1029,7 @@ namespace QuestCommandRTS
         public int Cargo { get; private set; }
         public int CargoCapacity = 700;
         public float HarvestRatePerSecond = 170f;
+        public bool IsHarvestingForVisuals => state == HarvestState.Harvesting && targetNode != null && !targetNode.IsDepleted && Cargo < CargoCapacity;
 
         private enum HarvestState
         {
@@ -976,6 +1142,18 @@ namespace QuestCommandRTS
                 attackTarget = null;
             }
         }
+
+#if UNITY_EDITOR
+        public void SetHarvestingForVisualsForTests(ResourceNode node, RefineryStructure refinery)
+        {
+            targetNode = node;
+            homeRefinery = refinery;
+            state = HarvestState.Harvesting;
+            harvestAccumulator = 0f;
+            hasDestination = false;
+            attackTarget = null;
+        }
+#endif
 
         private void TickMovingToResource(float deltaTime)
         {

@@ -24,8 +24,9 @@ namespace QuestCommandRTS.Editor
                 ValidateTankTracks(game);
                 ValidateProjectileDamage(game);
                 ValidateTankTurretDelayAndMobileFire(game);
+                ValidateUnitBlocking(game);
                 ValidateEnemyOpeningGrace(game);
-                Debug.Log("[Command RTS Combat] PASS - Combat, production, tracks, and opening pacing validated.");
+                Debug.Log("[Command RTS Combat] PASS - Combat, production, tracks, unit blocking, and opening pacing validated.");
             }
             finally
             {
@@ -126,6 +127,20 @@ namespace QuestCommandRTS.Editor
             Require(tank.CurrentAttackTargetForVisuals == enemy, "Tank keeps turret target", "Move orders should not immediately clear a tank's active target.");
         }
 
+        private static void ValidateUnitBlocking(RtsGame game)
+        {
+            RtsUnit blocker = game.CreateUnit(RtsTeam.Player, UnitKind.Rifleman, new Vector3(-30.8f, 0f, -34f));
+            RtsUnit mover = game.CreateUnit(RtsTeam.Player, UnitKind.Rifleman, new Vector3(-32f, 0f, -34f));
+            float minimumDistance = mover.BlockingRadius + blocker.BlockingRadius - 0.04f;
+
+            mover.IssueMove(new Vector3(-26f, 0f, -34f));
+            for (int i = 0; i < 12; i++)
+            {
+                mover.TickOrdersForTests(0.1f);
+                Require(PlanarDistance(mover.transform.position, blocker.transform.position) >= minimumDistance, "Unit blocking spacing", "Moving units should maintain body spacing instead of overlapping another unit.");
+            }
+        }
+
         private static void ValidateEnemyOpeningGrace(RtsGame game)
         {
             EnemyDirector director = game.EnemyDirector;
@@ -211,6 +226,13 @@ namespace QuestCommandRTS.Editor
             }
 
             return count;
+        }
+
+        private static float PlanarDistance(Vector3 a, Vector3 b)
+        {
+            float dx = a.x - b.x;
+            float dz = a.z - b.z;
+            return Mathf.Sqrt(dx * dx + dz * dz);
         }
 
         private static void Require(bool condition, string label, string detail)

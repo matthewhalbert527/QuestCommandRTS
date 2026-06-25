@@ -63,6 +63,7 @@ namespace QuestCommandRTS
             string tacticalMapDetail;
             Add(results, "Quest tactical map non-interactive", HasNonInteractiveTacticalMap(out tacticalMapDetail), tacticalMapDetail);
             Add(results, "Quest command console present", console != null && console.PanelRect != null, "Quest command console should exist under the tabletop rig.");
+            Add(results, "Quest production progress meter", HasTransformNamed("Quest Queue Progress Fill") && HasTransformNamed("Quest Queue Progress Text"), "Wrist production tab should include an active unit build progress meter.");
             string uiAnchorDetail;
             Add(results, "Quest world UI anchored to rig", HasQuestWorldUiAnchoredToRig(rig, console, out uiAnchorDetail), uiAnchorDetail);
             string consoleDetail;
@@ -125,6 +126,20 @@ namespace QuestCommandRTS
 
             detail = target.name + " node=" + trackedPose.Node + ", expected=" + expectedNode;
             return trackedPose.Node == expectedNode;
+        }
+
+        private static bool HasTransformNamed(string objectName)
+        {
+            Transform[] transforms = Object.FindObjectsOfType<Transform>(true);
+            for (int i = 0; i < transforms.Length; i++)
+            {
+                if (transforms[i] != null && transforms[i].name == objectName)
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         private static bool HasNoScreenSpaceOverlayCanvases(out string detail)

@@ -33,9 +33,13 @@ namespace QuestCommandRTS
         }
 
         private readonly List<HudButton> buttons = new List<HudButton>();
+        private const float MinimapReservedPanelWidth = 220f;
+
         private RtsGame game;
         private Text resourcesText;
         private Text selectionText;
+        private Text productionProgressText;
+        private RectTransform productionProgressFill;
         private Font font;
         private GUIStyle bannerStyle;
         private GUIStyle bannerSubStyle;
@@ -67,6 +71,7 @@ namespace QuestCommandRTS
             string status = game.IsUserPaused ? "PAUSED" : game.StatusMessage;
             resourcesText.text = "Credits " + game.Resources.Credits + "    Power " + game.Resources.PowerUsed + "/" + game.Resources.PowerProvided + " " + powerColor + "    Time " + FormatTime(game.MatchTime) + "    " + status;
             selectionText.text = BuildSelectionText();
+            RefreshProductionProgress();
 
             for (int i = 0; i < buttons.Count; i++)
             {
@@ -124,6 +129,10 @@ namespace QuestCommandRTS
             RectTransform commandPanel = CreatePanel(canvasObject.transform, "Commands", new Vector2(1f, 0.04f), new Vector2(1f, 0.96f), new Vector2(1f, 0.5f), new Vector2(-12f, 0f), new Vector2(230f, 0f), new Color(0.025f, 0.03f, 0.032f, 0.82f));
             CreateText(commandPanel, "Production Label", "Production", 17, TextAnchor.MiddleLeft, new Vector2(14f, -26f), new Vector2(198f, 26f));
 
+            RectTransform progressBackplate = CreatePanel(commandPanel, "Production Progress Backplate", new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -50f), new Vector2(-28f, 18f), new Color(0.018f, 0.05f, 0.056f, 0.88f));
+            productionProgressFill = CreatePanel(progressBackplate, "Production Progress Fill", new Vector2(0f, 0f), new Vector2(0f, 1f), new Vector2(0f, 0.5f), Vector2.zero, Vector2.zero, new Color(0.22f, 0.78f, 1f, 0.86f));
+            productionProgressText = CreateText(progressBackplate, "Production Progress Text", "", 11, TextAnchor.MiddleCenter);
+
             float y = -68f;
             AddCommandButton(commandPanel, "Gunner", y, () => game.PlayerCommands.QueueProduction(UnitKind.Rifleman), () => CanQueue(UnitKind.Rifleman), () => "Gunner  " + RtsBalance.GetUnit(UnitKind.Rifleman).Cost);
             y -= 48f;
@@ -171,6 +180,8 @@ namespace QuestCommandRTS
             AddCommandButton(commandPanel, "New Match", y, () => game.TryRestartMatch(), () => game.AcceptsSystemInput, () => "New Match");
 
             RectTransform selectionPanel = CreatePanel(canvasObject.transform, "Selection", new Vector2(0f, 0f), new Vector2(0.58f, 0f), new Vector2(0f, 0f), new Vector2(12f, 12f), new Vector2(0f, 118f), new Color(0.02f, 0.024f, 0.026f, 0.8f));
+            selectionPanel.offsetMin = new Vector2(MinimapReservedPanelWidth, 12f);
+            selectionPanel.offsetMax = new Vector2(0f, 130f);
             selectionText = CreateText(selectionPanel, "Selection Text", "", 17, TextAnchor.UpperLeft);
             selectionText.rectTransform.offsetMin = new Vector2(16f, 10f);
             selectionText.rectTransform.offsetMax = new Vector2(-16f, -10f);
@@ -472,6 +483,72 @@ namespace QuestCommandRTS
             }
 
             return detail;
+        }
+
+        private void RefreshProductionProgress()
+        {
+            if (productionProgressFill == null || productionProgressText == null)
+            {
+                return;
+            }
+
+            ProductionStructure producer = FindProductionForHud();
+            float progress = 0f;
+            string label = "Production idle";
+            if (producer == null)
+            {
+                label = "Select producer";
+            }
+            else if (producer.HasActiveProduction)
+            {
+                progress = Mathf.Clamp01(producer.ActiveProductionProgress);
+                UnitStats stats = RtsBalance.GetUnit(producer.ActiveProductionKind);
+                label = "Building " + stats.Name + " " + Mathf.RoundToInt(progress * 100f) + "%";
+            }
+            else if (producer.PendingQueueCount > 0)
+            {
+                label = "Queued " + producer.PendingQueueCount;
+            }
+
+            productionProgressFill.anchorMax = new Vector2(progress, 1f);
+            productionProgressFill.gameObject.SetActive(progress > 0.001f);
+            productionProgressText.text = label;
+        }
+
+        private ProductionStructure FindProductionForHud()
+        {
+            if (game == null)
+            {
+                return null;
+            }
+
+            ProductionStructure selected = game.PlayerCommands != null ? game.PlayerCommands.FindSelectedProductionStructure() : null;
+            if (selected != null)
+            {
+                return selected;
+            }
+
+            ProductionStructure fallback = null;
+            for (int i = 0; i < game.Entities.Count; i++)
+            {
+                ProductionStructure producer = game.Entities[i] as ProductionStructure;
+                if (producer == null || producer.Team != RtsTeam.Player || !producer.IsAlive)
+                {
+                    continue;
+                }
+
+                if (producer.QueueCount > 0)
+                {
+                    return producer;
+                }
+
+                if (fallback == null)
+                {
+                    fallback = producer;
+                }
+            }
+
+            return fallback;
         }
 
         private void DrawMinimap()

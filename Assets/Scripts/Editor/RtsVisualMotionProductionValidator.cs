@@ -24,7 +24,7 @@ namespace QuestCommandRTS.Editor
                 ValidatePaletteTinting(game);
                 ValidateContrastDetailing(game);
                 ValidateProductionExit(game);
-                Debug.Log("[Command RTS Visuals] PASS - Visual motion rigs, palette tinting, contrast detailing, and production exits validated.");
+                Debug.Log("[Command RTS Visuals] PASS - Visual motion rigs, harvester harvesting motion, palette tinting, contrast detailing, and production exits validated.");
             }
             finally
             {
@@ -50,7 +50,7 @@ namespace QuestCommandRTS.Editor
 
             Require(infantryAnimator.HasLegRigForTests, "Infantry leg rig", "Infantry should have procedural walk legs.");
             Require(tankAnimator.HasTrackRigForTests && tankAnimator.HasTurretRigForTests, "Tank rig", "Tanks should have procedural tracks and turret.");
-            Require(harvesterAnimator.HasWheelRigForTests && !harvesterAnimator.HasTurretRigForTests, "Harvester wheel rig", "Harvesters should roll without a turret rig.");
+            Require(harvesterAnimator.HasWheelRigForTests && harvesterAnimator.HasHarvestRigForTests && !harvesterAnimator.HasTurretRigForTests, "Harvester motion rig", "Harvesters should roll and have a harvesting rig without a turret rig.");
         }
 
         private static void ValidateVisualAnimation(RtsGame game)
@@ -75,6 +75,21 @@ namespace QuestCommandRTS.Editor
             tankAnimator.TickVisualsForTests(0.2f);
             Require((track.localPosition - trackStart).sqrMagnitude > 0.0001f, "Track animation", "Tank treads should move when the unit moves.");
             Require(Quaternion.Angle(turretStart, turret.localRotation) > 1f, "Turret animation", "Tank turret should yaw toward an attack target.");
+
+            HarvesterUnit harvester = game.CreateUnit(RtsTeam.Player, UnitKind.Harvester, new Vector3(-46f, 0f, -56f)) as HarvesterUnit;
+            RtsUnitVisualAnimator harvesterAnimator = RequireAnimator(harvester, "Harvester harvest animation");
+            Transform harvestPart = harvesterAnimator.FirstHarvestPartForTests;
+            Require(harvestPart != null, "Harvester harvest part", "Harvester should expose a visible harvest motion part.");
+            Quaternion harvestStartRotation = harvestPart.localRotation;
+            Vector3 harvestStartPosition = harvestPart.localPosition;
+            RefineryStructure refinery = game.CreateStructure(RtsTeam.Player, StructureKind.Refinery, new Vector3(-42f, 0f, -56f)) as RefineryStructure;
+            Require(game.ResourceNodes.Count > 0 && refinery != null, "Harvest animation setup", "A resource and refinery should be available for harvest animation validation.");
+            harvester.SetHarvestingForVisualsForTests(game.ResourceNodes[0], refinery);
+            harvesterAnimator.TickVisualsForTests(0.25f);
+            Require(
+                Quaternion.Angle(harvestStartRotation, harvestPart.localRotation) > 1f || (harvestPart.localPosition - harvestStartPosition).sqrMagnitude > 0.0001f,
+                "Harvester active harvesting motion",
+                "Harvester collector/intake parts should animate while actively harvesting.");
         }
 
         private static void ValidatePaletteTinting(RtsGame game)
