@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.UI;
 using UnityEngine.XR;
 
@@ -44,6 +45,10 @@ namespace QuestCommandRTS
             Add(results, "Desktop command camera absent", game.CommandCamera == null && GameObject.Find("Command Camera") == null, "Quest mode must not create the desktop Command Camera.");
             Add(results, "Desktop input absent", game.GetComponent<RtsInputController>() == null, "Quest mode must not install RtsInputController.");
             Add(results, "Desktop HUD absent", game.GetComponent<RtsHud>() == null, "Quest mode must not install the Screen Space Overlay desktop HUD.");
+            string overlayDetail;
+            Add(results, "Screen-space overlay canvases absent", HasNoScreenSpaceOverlayCanvases(out overlayDetail), overlayDetail);
+            string eventSystemDetail;
+            Add(results, "Desktop event system absent", HasNoDesktopEventSystem(out eventSystemDetail), eventSystemDetail);
             Add(results, "Quest rig present", rig != null && rig.RigRoot != null && rig.HeadCamera != null, "QuestTabletopRig should own the tabletop root and XR head camera.");
             Add(results, "Quest settings present", settings != null, "QuestTabletopSettings should own tabletop scale, height, ray, reticle, clip-plane, and world-space UI values.");
             Add(results, "Quest input present", input != null, "QuestRtsInputController should translate controller state into shared dispatcher calls.");
@@ -115,6 +120,40 @@ namespace QuestCommandRTS
 
             detail = target.name + " node=" + trackedPose.Node + ", expected=" + expectedNode;
             return trackedPose.Node == expectedNode;
+        }
+
+        private static bool HasNoScreenSpaceOverlayCanvases(out string detail)
+        {
+            Canvas[] canvases = Object.FindObjectsOfType<Canvas>(true);
+            int overlayCount = 0;
+            for (int i = 0; i < canvases.Length; i++)
+            {
+                Canvas canvas = canvases[i];
+                if (canvas != null && canvas.renderMode == RenderMode.ScreenSpaceOverlay)
+                {
+                    overlayCount++;
+                }
+            }
+
+            detail = "overlayCanvases=" + overlayCount + ", totalCanvases=" + canvases.Length;
+            return overlayCount == 0;
+        }
+
+        private static bool HasNoDesktopEventSystem(out string detail)
+        {
+            EventSystem[] eventSystems = Object.FindObjectsOfType<EventSystem>(true);
+            int standaloneModules = 0;
+            for (int i = 0; i < eventSystems.Length; i++)
+            {
+                EventSystem eventSystem = eventSystems[i];
+                if (eventSystem != null && eventSystem.GetComponent<StandaloneInputModule>() != null)
+                {
+                    standaloneModules++;
+                }
+            }
+
+            detail = "eventSystems=" + eventSystems.Length + ", standaloneInputModules=" + standaloneModules;
+            return eventSystems.Length == 0 && standaloneModules == 0;
         }
 
         private static bool HasWorldSpaceCanvas(string objectName)

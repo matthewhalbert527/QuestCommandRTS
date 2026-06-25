@@ -571,6 +571,8 @@ namespace QuestCommandRTS.Editor
             AssertSmokePassed(report, "Desktop command camera absent");
             AssertSmokePassed(report, "Desktop input absent");
             AssertSmokePassed(report, "Desktop HUD absent");
+            AssertSmokePassed(report, "Screen-space overlay canvases absent");
+            AssertSmokePassed(report, "Desktop event system absent");
             AssertSmokePassed(report, "Quest rig present");
             AssertSmokePassed(report, "Quest settings present");
             AssertSmokePassed(report, "Quest input present");
