@@ -273,6 +273,36 @@ namespace QuestCommandRTS.Editor
         }
 
         [Test]
+        public void QuestPointerFeedbackUpdatesLineReticleAndMissState()
+        {
+            RtsGame game = CreateInitializedGame(RtsRuntimeMode.QuestVr);
+            QuestRtsInputController controller = game.GetComponent<QuestRtsInputController>();
+            QuestTabletopSettings settings = game.GetComponent<QuestTabletopSettings>();
+            Assert.IsNotNull(controller);
+            Assert.IsNotNull(settings);
+            Assert.IsNotNull(controller.PointerLineForTests);
+            Assert.IsNotNull(controller.ReticleForTests);
+
+            Vector3 hitPoint = new Vector3(-24f, 0f, -34f);
+            Ray hitRay = RayAtPoint(hitPoint);
+            controller.ProcessInputFrameForTests(QuestFrame(hitRay, false, false, false, false, false), true);
+
+            Assert.IsTrue(controller.PointerLineForTests.enabled);
+            AssertVectorNear(hitRay.origin, controller.PointerLineForTests.GetPosition(0));
+            AssertVectorNear(hitPoint, controller.PointerLineForTests.GetPosition(1));
+            Assert.IsTrue(controller.ReticleForTests.gameObject.activeSelf);
+            AssertVectorNear(hitPoint, controller.ReticleForTests.position);
+
+            Ray missRay = new Ray(new Vector3(180f, 12f, 180f), Vector3.up);
+            controller.ProcessInputFrameForTests(QuestFrame(missRay, false, false, false, false, false), true);
+
+            Assert.IsTrue(controller.PointerLineForTests.enabled);
+            AssertVectorNear(missRay.origin, controller.PointerLineForTests.GetPosition(0));
+            AssertVectorNear(missRay.GetPoint(settings.RayLengthSimulationUnits), controller.PointerLineForTests.GetPosition(1));
+            Assert.IsFalse(controller.ReticleForTests.gameObject.activeSelf);
+        }
+
+        [Test]
         public void ConsoleModelBuildAvailabilityReflectsCreditsTechnologyAndPower()
         {
             RtsGame lowCreditGame = CreateInitializedGame(RtsRuntimeMode.Desktop);
@@ -472,6 +502,13 @@ namespace QuestCommandRTS.Editor
         private static QuestRtsInputFrame QuestFrame(Ray ray, bool leftTriggerHeld, bool rightTriggerHeld, bool primaryButtonHeld, bool secondaryButtonHeld, bool leftPrimaryButtonHeld)
         {
             return new QuestRtsInputFrame(ray, leftTriggerHeld, rightTriggerHeld, primaryButtonHeld, secondaryButtonHeld, leftPrimaryButtonHeld);
+        }
+
+        private static void AssertVectorNear(Vector3 expected, Vector3 actual)
+        {
+            Assert.AreEqual(expected.x, actual.x, 0.001f);
+            Assert.AreEqual(expected.y, actual.y, 0.001f);
+            Assert.AreEqual(expected.z, actual.z, 0.001f);
         }
 
         private static RtsEntity FindPlayerEntity(RtsGame game, System.Type type)

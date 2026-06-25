@@ -41,6 +41,8 @@ namespace QuestCommandRTS
         private bool previousPrimaryButton;
         private bool previousSecondaryButton;
         private bool previousLeftPrimaryButton;
+        private bool hasPointerColor;
+        private Color currentPointerColor;
         private readonly Color moveColor = new Color(0.3f, 0.88f, 1f, 0.95f);
         private readonly Color attackColor = new Color(1f, 0.32f, 0.22f, 0.95f);
         private readonly Color harvestColor = new Color(0.25f, 1f, 0.48f, 0.95f);
@@ -108,6 +110,9 @@ namespace QuestCommandRTS
         }
 
 #if UNITY_EDITOR
+        public LineRenderer PointerLineForTests => pointerLine;
+        public Transform ReticleForTests => reticle;
+
         public RtsCommandResult ProcessInputFrameForTests(QuestRtsInputFrame frame, bool updatePointerFeedback)
         {
             return ProcessInputFrame(frame, updatePointerFeedback);
@@ -248,10 +253,15 @@ namespace QuestCommandRTS
 
             if (reticle == null)
             {
+                if (!hasHit)
+                {
+                    SetPointerColor(invalidColor);
+                }
+
                 return;
             }
 
-            reticle.gameObject.SetActive(hasHit);
+            SetReticleVisible(hasHit);
             if (!hasHit)
             {
                 SetPointerColor(invalidColor);
@@ -279,7 +289,7 @@ namespace QuestCommandRTS
                 return;
             }
 
-            reticle.gameObject.SetActive(hasHit);
+            SetReticleVisible(hasHit);
             if (hasHit)
             {
                 reticle.position = hitPoint;
@@ -291,14 +301,14 @@ namespace QuestCommandRTS
 
         private void SetPointerVisible(bool visible)
         {
-            if (pointerLine != null)
+            if (pointerLine != null && pointerLine.enabled != visible)
             {
                 pointerLine.enabled = visible;
             }
 
-            if (reticle != null)
+            if (!visible)
             {
-                reticle.gameObject.SetActive(visible && reticle.gameObject.activeSelf);
+                SetReticleVisible(false);
             }
         }
 
@@ -321,6 +331,14 @@ namespace QuestCommandRTS
 
         private void SetPointerColor(Color color)
         {
+            if (hasPointerColor && currentPointerColor == color)
+            {
+                return;
+            }
+
+            hasPointerColor = true;
+            currentPointerColor = color;
+
             if (pointerLine != null)
             {
                 pointerLine.startColor = color;
@@ -332,6 +350,14 @@ namespace QuestCommandRTS
                 reticleMaterial.color = color;
                 reticleMaterial.SetColor("_Color", color);
                 reticleMaterial.SetColor("_BaseColor", color);
+            }
+        }
+
+        private void SetReticleVisible(bool visible)
+        {
+            if (reticle != null && reticle.gameObject.activeSelf != visible)
+            {
+                reticle.gameObject.SetActive(visible);
             }
         }
 
