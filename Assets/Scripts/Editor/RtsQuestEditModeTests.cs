@@ -882,11 +882,13 @@ namespace QuestCommandRTS.Editor
             Assert.AreEqual(RtsContextCommandKind.Attack, game.CommandDispatcher.ResolveContextCommand(visibleEnemy, null, visibleEnemy.transform.position));
 
             ResourceNode resource = game.ResourceNodes[0];
+            Assert.AreEqual(RtsContextCommandKind.Attack, game.CommandDispatcher.ResolveContextCommand(visibleEnemy, resource, resource.transform.position));
             Assert.AreEqual(RtsContextCommandKind.Harvest, game.CommandDispatcher.ResolveContextCommand(null, resource, resource.transform.position));
 
             ProductionStructure producer = (ProductionStructure)FindPlayerProduction(game);
             game.ClearSelection();
             game.SelectEntity(producer, false);
+            Assert.AreEqual(RtsContextCommandKind.Harvest, game.CommandDispatcher.ResolveContextCommand(null, resource, producer.transform.position + new Vector3(8f, 0f, 0f)));
             Assert.AreEqual(RtsContextCommandKind.Rally, game.CommandDispatcher.ResolveContextCommand(null, null, producer.transform.position + new Vector3(8f, 0f, 0f)));
 
             game.ClearSelection();
