@@ -24,8 +24,8 @@ Restore is a rebuild pass. The current generated battlefield entities/resources 
 
 The manual slot is exposed in-game:
 - Desktop: `F5` saves and `F9` loads.
-- Desktop HUD: `System` buttons save, load, and pause/resume.
-- Quest: command console `System` tab saves, loads, and pauses/resumes.
+- Desktop HUD: `System` buttons save, load, pause/resume, and start a new match.
+- Quest: command console `System` tab saves, loads, pauses/resumes, and starts a new match.
 
 Profile settings are stored separately in `profile-settings.json` under `Application.persistentDataPath`. The profile uses schema version `1`, clamps unsafe values on load/save, rejects unsupported future schemas with a clear error, and applies Quest tabletop scale, tabletop height, pointer length, world-space UI scale, and the periodic autosave interval during runtime.
 

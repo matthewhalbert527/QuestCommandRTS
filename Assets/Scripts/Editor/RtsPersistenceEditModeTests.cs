@@ -535,6 +535,47 @@ namespace QuestCommandRTS.Editor
             Assert.AreEqual(StructureKind.PowerPlant, game.BuildManager.PendingKind);
         }
 
+        [Test]
+        public void RestartMatchClearsRestoredStateAndResetsLifecycle()
+        {
+            RtsGame game = CreateInitializedGame();
+            int startingEntities = game.Entities.Count;
+            int startingResources = game.ResourceNodes.Count;
+
+            ResourceNode node = game.ResourceNodes[0];
+            node.Harvest(500);
+            game.Resources.TrySpend(700);
+            game.CreateUnit(RtsTeam.Player, UnitKind.Tank, new Vector3(-40f, 0f, -40f));
+            game.EnemyDirector.SetEconomyForTests(3210, 99f, 98f, 97f, 96f, 95f, 4);
+            Assert.IsTrue(game.PlayerCommands.RequestConstruction(StructureKind.PowerPlant));
+            game.BuildManager.UpdatePlacementAtPoint(FindValidBuildPoint(game, StructureKind.PowerPlant));
+            game.SetUserPaused(true);
+
+            RtsMatchSaveData dirtySave = game.CaptureSaveData();
+            Assert.IsTrue(game.RestoreSaveData(dirtySave, out string error), error);
+            game.ForceEndMatchForTests(RtsMatchState.Defeat);
+
+            Assert.IsTrue(game.IsMatchOver);
+            Assert.IsTrue(game.Clock.IsPaused);
+            Assert.IsTrue(game.TryRestartMatch());
+
+            Assert.AreEqual(RtsMatchState.Running, game.MatchState);
+            Assert.AreEqual(0f, game.MatchTime, 0.001f);
+            Assert.IsFalse(game.Clock.IsPaused);
+            Assert.IsFalse(game.IsUserPaused);
+            Assert.AreEqual(3400, game.Resources.Credits);
+            Assert.AreEqual(startingEntities, game.Entities.Count);
+            Assert.AreEqual(startingResources, game.ResourceNodes.Count);
+            Assert.AreEqual(2, game.Selection.Count);
+            Assert.IsFalse(game.BuildManager.IsPlacing);
+            Assert.AreEqual(1800, game.EnemyDirector.EnemyCreditsForTests);
+
+            for (int i = 0; i < game.ResourceNodes.Count; i++)
+            {
+                Assert.AreEqual(game.ResourceNodes[i].MaxAmount, game.ResourceNodes[i].Amount);
+            }
+        }
+
         private static RtsGame CreateInitializedGame()
         {
             RtsRuntimeModeResolver.ForceModeForTests(RtsRuntimeMode.Desktop);

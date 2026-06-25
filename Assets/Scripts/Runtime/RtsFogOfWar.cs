@@ -147,6 +147,27 @@ namespace QuestCommandRTS
             RefreshFog(true);
         }
 
+        public void ResetExploration()
+        {
+            if (cells == null)
+            {
+                return;
+            }
+
+            for (int x = 0; x < GridSize; x++)
+            {
+                for (int z = 0; z < GridSize; z++)
+                {
+                    FogCell cell = cells[x, z];
+                    cell.Explored = false;
+                    cell.Visible = false;
+                    ApplyCellVisual(cell);
+                }
+            }
+
+            RefreshFog(true);
+        }
+
         private void BuildGrid()
         {
             cells = new FogCell[GridSize, GridSize];

@@ -105,6 +105,7 @@ namespace QuestCommandRTS
         private ConsoleButton pauseButton;
         private ConsoleButton saveButton;
         private ConsoleButton loadButton;
+        private ConsoleButton restartButton;
         private ConsoleButton hoveredButton;
         private Font font;
         private QuestCommandConsoleTab activeTab = QuestCommandConsoleTab.Build;
@@ -300,6 +301,7 @@ namespace QuestCommandRTS
             pauseButton = CreateButton(systemRoot, "Pause Button", "Pause", new Vector2(486f, -20f), new Vector2(218f, 44f), () => game.ToggleUserPause());
             saveButton = CreateButton(systemRoot, "Save Button", "Save", new Vector2(486f, -74f), new Vector2(218f, 44f), () => game.TryManualSave());
             loadButton = CreateButton(systemRoot, "Load Button", "Load", new Vector2(486f, -128f), new Vector2(218f, 44f), () => game.TryManualLoad());
+            restartButton = CreateButton(systemRoot, "New Match Button", "New Match", new Vector2(486f, -182f), new Vector2(218f, 44f), () => game.TryRestartMatch());
         }
 
         private ConsoleRow CreateRow(RectTransform parent, string name, Vector2 position, Vector2 size, Action clicked)
@@ -477,6 +479,7 @@ namespace QuestCommandRTS
             pauseButton.Interactable = game.AcceptsSystemInput && !game.IsMatchOver;
             saveButton.Interactable = game.AcceptsSystemInput && !game.IsMatchOver;
             loadButton.Interactable = game.AcceptsSystemInput && game.CanLoadManualSave();
+            restartButton.Interactable = game.AcceptsSystemInput;
         }
 
         private void SetTab(QuestCommandConsoleTab tab)

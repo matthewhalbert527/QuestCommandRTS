@@ -101,6 +101,11 @@ namespace QuestCommandRTS
             nextProductionTime = data.hasEconomyState ? Mathf.Max(now + 0.5f, data.nextProductionTime) : now + 4f;
         }
 
+        public void ResetForNewMatch()
+        {
+            ResetEconomy(game != null && game.Clock != null ? game.Clock.SimulationTime : 0f);
+        }
+
 #if UNITY_EDITOR
         public int EnemyCreditsForTests => enemyCredits;
 

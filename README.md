@@ -55,6 +55,7 @@ The scene is intentionally empty. `RtsBootstrap` creates the map, units, buildin
 - P: pause or resume the match.
 - F5: save the manual slot.
 - F9: load the manual slot.
+- New Match HUD button: reset the current skirmish without reloading the scene.
 - Ctrl + 5-9: assign control group; 5-9: recall control group.
 
 ## Quest Controls
@@ -69,7 +70,7 @@ The scene is intentionally empty. `RtsBootstrap` creates the map, units, buildin
 - B/right secondary while placing: cancel placement.
 - B/right secondary while not placing: clear selection.
 - Left trigger + B/right secondary: stop selected units.
-- Command console `System` tab: pause/resume, save, and load.
+- Command console `System` tab: pause/resume, save, load, and start a new match.
 
 ## Quest Command Console
 
@@ -78,7 +79,7 @@ The Quest command console has three tabs:
 - `Build`: browse player structures, credit costs, power effects, prerequisites, affordability, and disabled reasons. Pick a structure to start controller-ray placement.
 - `Produce`: select a production building, browse trainable units, queue units, see the active item/progress, inspect queued items, and cancel the last queued item for a full queued-cost refund.
 - `Selected`: inspect selected health/counts, production/rally status, repair eligible player structures, sell selected player structures, stop selected units, and view the rally-point hint.
-- `System`: pause/resume the simulation, save the manual slot, and load the manual slot when one exists.
+- `System`: pause/resume the simulation, save the manual slot, load the manual slot when one exists, and start a new match.
 
 Building placement follows the existing desktop build rules. The preview snaps to the map, turns green when valid, turns red when invalid, and reports concise invalid reasons such as outside map, outside build radius, blocked footprint, missing prerequisite, or insufficient credits.
 
@@ -92,6 +93,7 @@ The full battlefield remains approximately 224 simulation units wide. The Quest 
 - Save metadata is validated before display and includes slot, app version, skirmish config, map, match time, match state, entity counts, resource-node counts, and backup/primary source.
 - Saved state includes resources, health, orders, production queues, harvest state, fog exploration, active placement, and enemy commander economy/timers.
 - `RtsLifecycleCoordinator` pauses simulation on app pause/focus loss, blocks commands while suspended or saving/loading, hides Quest pointer visuals when input focus is gone, and attempts autosave on pause/focus loss plus configurable periodic autosaves during active play.
+- `RtsGame.TryRestartMatch` resets dirty or restored skirmish state, clears match-ended/user pause reasons, rebuilds the generated match, resets fog and enemy AI, and keeps the runtime mode active.
 - `RtsProfileSettings` stores versioned player preferences separately from match saves and safely clamps Quest tabletop scale, tabletop height, pointer length, UI scale, volume, quality preset, and periodic autosave interval values before use.
 - Desktop HUD and Quest command console controls expose manual save/load and user pause.
 

@@ -137,6 +137,8 @@ namespace QuestCommandRTS
             AddCommandButton(commandPanel, "Save", y, () => game.TryManualSave(), () => game.AcceptsSystemInput && !game.IsMatchOver, () => "Save  F5");
             y -= 48f;
             AddCommandButton(commandPanel, "Load", y, () => game.TryManualLoad(), () => game.AcceptsSystemInput && game.CanLoadManualSave(), () => "Load  F9");
+            y -= 48f;
+            AddCommandButton(commandPanel, "New Match", y, () => game.TryRestartMatch(), () => game.AcceptsSystemInput, () => "New Match");
 
             RectTransform selectionPanel = CreatePanel(canvasObject.transform, "Selection", new Vector2(0f, 0f), new Vector2(0.58f, 0f), new Vector2(0f, 0f), new Vector2(12f, 12f), new Vector2(0f, 118f), new Color(0.02f, 0.024f, 0.026f, 0.8f));
             selectionText = CreateText(selectionPanel, "Selection Text", "", 17, TextAnchor.UpperLeft);

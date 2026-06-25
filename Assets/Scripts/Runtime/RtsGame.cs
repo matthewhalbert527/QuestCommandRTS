@@ -294,6 +294,36 @@ namespace QuestCommandRTS
             return TryLoadSlot("manual");
         }
 
+        public bool TryRestartMatch()
+        {
+            if (!initialized || Lifecycle == null || (SaveService != null && SaveService.IsBusy) || Lifecycle.IsSavingOrLoading)
+            {
+                return false;
+            }
+
+            Lifecycle.ResetForNewMatch();
+            ClearDynamicWorld();
+            nextEntityId = 1;
+            nextResourceNodeId = 1;
+            nextObjectiveCheckTime = 0.5f;
+            MatchState = RtsMatchState.Running;
+            StatusMessage = "Destroy the enemy base.";
+            Clock.SetSimulationTime(0f);
+            MatchTime = 0f;
+            Resources = new ResourceBank(3400);
+
+            CreateResourceFields();
+            SpawnStartingForces();
+            RecalculatePower();
+            FogOfWar?.ResetExploration();
+            EnemyDirector?.ResetForNewMatch();
+            Lifecycle.SetMatchEnded(false);
+            Physics.SyncTransforms();
+            EvaluateMatchState();
+            SpawnFloatingText("New match", GetPlayerBaseCenter() + Vector3.up * 3f, new Color(0.55f, 0.9f, 1f));
+            return true;
+        }
+
         public bool CanLoadManualSave()
         {
             return SaveService != null && SaveService.HasSlot("manual");

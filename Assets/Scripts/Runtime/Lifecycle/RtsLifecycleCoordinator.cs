@@ -69,6 +69,16 @@ namespace QuestCommandRTS
             SetPauseReason(RtsPauseReason.MatchEnded, ended);
         }
 
+        public void ResetForNewMatch()
+        {
+            SetUserPaused(false);
+            SetMatchEnded(false);
+            IsSavingOrLoading = false;
+            SetPauseReason(RtsPauseReason.Saving, false);
+            SetPauseReason(RtsPauseReason.Loading, false);
+            ScheduleNextPeriodicAutosave(Time.unscaledTime);
+        }
+
         public void SetApplicationPaused(bool paused)
         {
             if (IsApplicationPaused == paused)

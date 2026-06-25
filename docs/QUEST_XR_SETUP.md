@@ -104,7 +104,7 @@ Open the console with X/left primary.
 - Build tab: choose a structure. The row shows cost, power effect, availability, and any disabled reason. After choosing, aim at the battlefield with the right ray. A confirms a valid preview; B cancels.
 - Produce tab: select a Command Center, Barracks, Refinery, or War Factory first. The tab shows trainable units, cost, build time, queue state, active progress, and a Cancel Last control for the last queued unit.
 - Selected tab: inspect health, selected counts, queue/rally status, and use Repair or Sell when a player structure is eligible. Rally points are set by selecting a production structure and pressing A on terrain.
-- System tab: pause/resume, save the manual slot, and load the manual slot when one exists.
+- System tab: pause/resume, save the manual slot, load the manual slot when one exists, and start a new match.
 
 ## Manual Smoke Test Checklist
 
@@ -131,7 +131,7 @@ Open the console with X/left primary.
 - A sets a rally point when only a production building is selected.
 - B clears selection or cancels placement.
 - Left trigger + B stops selected units.
-- System tab can pause/resume, save, and load without enabling desktop HUD.
+- System tab can pause/resume, save, load, and start a new match without enabling desktop HUD.
 - Desktop overlay HUD and OnGUI minimap are absent in Quest mode.
 - World-space status panel is readable and does not cover the board.
 - No GameObject named `Command Camera` is created in Quest mode.
