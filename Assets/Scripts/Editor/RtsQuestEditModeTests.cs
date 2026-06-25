@@ -1022,6 +1022,67 @@ namespace QuestCommandRTS.Editor
         }
 
         [Test]
+        public void QuestConsoleSystemTabTogglesPauseThroughPointer()
+        {
+            RtsGame game = CreateInitializedGame(RtsRuntimeMode.QuestVr);
+            QuestCommandConsole console = game.GetComponent<QuestCommandConsole>();
+            Assert.IsNotNull(console);
+
+            console.SetOpen(true);
+            ClickConsoleButton(console, "System Tab");
+            ClickConsoleButton(console, "Pause Button");
+
+            Assert.IsTrue(game.IsUserPaused);
+            Assert.IsTrue(game.Clock.IsPaused);
+
+            ClickConsoleButton(console, "Pause Button");
+
+            Assert.IsFalse(game.IsUserPaused);
+            Assert.IsFalse(game.Clock.IsPaused);
+        }
+
+        [Test]
+        public void QuestConsoleSystemTabSavesAndLoadsManualSlotThroughPointer()
+        {
+            string tempPath = Path.Combine(Path.GetTempPath(), "QuestCommandRTS-Console-" + Guid.NewGuid().ToString("N"));
+            try
+            {
+                RtsGame game = CreateInitializedGame(RtsRuntimeMode.QuestVr);
+                game.SetSaveServiceForTests(new RtsSaveService(game, new RtsSaveFileStore(tempPath)));
+                QuestCommandConsole console = game.GetComponent<QuestCommandConsole>();
+                Assert.IsNotNull(console);
+
+                RtsEntity entity = FindPlayerEntity(game, typeof(RtsUnit));
+                int entityId = entity.PersistentId;
+                int startingCredits = game.Resources.Credits;
+                entity.TakeDamage(42f, null);
+                float savedHealth = entity.Health;
+
+                console.SetOpen(true);
+                ClickConsoleButton(console, "System Tab");
+                ClickConsoleButton(console, "Save Button");
+
+                Assert.IsTrue(game.CanLoadManualSave());
+                Assert.IsTrue(game.GetManualSaveSummary().Contains(RtsMatchState.Running.ToString()));
+
+                Assert.IsTrue(game.Resources.TrySpend(777));
+                entity.Repair(999f);
+
+                ClickConsoleButton(console, "Load Button");
+
+                Assert.AreEqual(startingCredits, game.Resources.Credits);
+                Assert.AreEqual(savedHealth, FindEntityById(game, entityId).Health, 0.001f);
+            }
+            finally
+            {
+                if (Directory.Exists(tempPath))
+                {
+                    Directory.Delete(tempPath, true);
+                }
+            }
+        }
+
+        [Test]
         public void QuestConsoleNewMatchButtonResetsMatchThroughPointer()
         {
             RtsGame game = CreateInitializedGame(RtsRuntimeMode.QuestVr);
@@ -1207,6 +1268,20 @@ namespace QuestCommandRTS.Editor
             }
 
             Assert.Fail("Missing player entity of type " + type.Name);
+            return null;
+        }
+
+        private static RtsEntity FindEntityById(RtsGame game, int id)
+        {
+            for (int i = 0; i < game.Entities.Count; i++)
+            {
+                if (game.Entities[i] != null && game.Entities[i].PersistentId == id)
+                {
+                    return game.Entities[i];
+                }
+            }
+
+            Assert.Fail("Missing entity id " + id);
             return null;
         }
 
