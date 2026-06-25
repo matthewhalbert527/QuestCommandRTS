@@ -168,6 +168,13 @@ namespace QuestCommandRTS
             RefreshFog(true);
         }
 
+#if UNITY_EDITOR
+        public void RefreshNowForTests()
+        {
+            RefreshFog(true);
+        }
+#endif
+
         private void BuildGrid()
         {
             cells = new FogCell[GridSize, GridSize];
@@ -312,6 +319,8 @@ namespace QuestCommandRTS
 
                     rendererBuffer[r].enabled = visible;
                 }
+
+                entity.RefreshVisibilityDependentVisuals();
             }
         }
 

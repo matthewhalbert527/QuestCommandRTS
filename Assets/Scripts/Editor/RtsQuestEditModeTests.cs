@@ -144,6 +144,16 @@ namespace QuestCommandRTS.Editor
             Assert.IsFalse(game.IsEntityVisible(enemy));
             enemy.TakeDamage(1f, null);
             Assert.IsFalse(enemyHealthBar.gameObject.activeSelf, "Fogged enemy health bars should stay hidden.");
+
+            RtsUnit scout = game.CreateUnit(RtsTeam.Player, UnitKind.Rifleman, enemy.transform.position + new Vector3(4f, 0f, 0f));
+            game.FogOfWar.RefreshNowForTests();
+            Assert.IsTrue(game.IsEntityVisible(enemy));
+            Assert.IsTrue(enemyHealthBar.gameObject.activeSelf, "Damaged enemy health bars should appear after fog reveals them.");
+
+            scout.transform.position = new Vector3(-100f, 0f, -100f);
+            game.FogOfWar.RefreshNowForTests();
+            Assert.IsFalse(game.IsEntityVisible(enemy));
+            Assert.IsFalse(enemyHealthBar.gameObject.activeSelf, "Damaged enemy health bars should hide again when fog covers them.");
         }
 
         [Test]

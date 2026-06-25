@@ -23,6 +23,8 @@ namespace QuestCommandRTS
         private LineRenderer selectionRing;
         private Transform healthBarRoot;
         private Transform healthBarFill;
+        private Renderer healthBarBackgroundRenderer;
+        private Renderer healthBarFillRenderer;
         private Material healthBarFillMaterial;
         private MaterialPropertyBlock propertyBlock;
 
@@ -142,6 +144,11 @@ namespace QuestCommandRTS
             UpdateHealthBarVisual();
         }
 
+        public void RefreshVisibilityDependentVisuals()
+        {
+            UpdateHealthBarVisual();
+        }
+
         protected virtual void Die(RtsEntity attacker)
         {
             Destroyed?.Invoke(this);
@@ -198,7 +205,8 @@ namespace QuestCommandRTS
             background.transform.SetParent(healthBarRoot, false);
             background.transform.localPosition = Vector3.zero;
             background.transform.localScale = new Vector3(1.08f, 0.1f, 0.035f);
-            background.GetComponent<Renderer>().sharedMaterial = backgroundMaterial;
+            healthBarBackgroundRenderer = background.GetComponent<Renderer>();
+            healthBarBackgroundRenderer.sharedMaterial = backgroundMaterial;
             RemovePrimitiveCollider(background);
 
             GameObject fill = GameObject.CreatePrimitive(PrimitiveType.Cube);
@@ -207,7 +215,8 @@ namespace QuestCommandRTS
             healthBarFill.SetParent(healthBarRoot, false);
             healthBarFill.localPosition = new Vector3(-0.02f, 0.011f, -0.022f);
             healthBarFill.localScale = new Vector3(1f, 0.075f, 0.04f);
-            fill.GetComponent<Renderer>().sharedMaterial = healthBarFillMaterial;
+            healthBarFillRenderer = fill.GetComponent<Renderer>();
+            healthBarFillRenderer.sharedMaterial = healthBarFillMaterial;
             RemovePrimitiveCollider(fill);
 
             LayoutHealthBar();
@@ -283,6 +292,16 @@ namespace QuestCommandRTS
             if (!visible)
             {
                 return;
+            }
+
+            if (healthBarBackgroundRenderer != null)
+            {
+                healthBarBackgroundRenderer.enabled = true;
+            }
+
+            if (healthBarFillRenderer != null)
+            {
+                healthBarFillRenderer.enabled = true;
             }
 
             float fillWidth = Mathf.Max(0.02f, percent);
