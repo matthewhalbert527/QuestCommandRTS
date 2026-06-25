@@ -118,6 +118,41 @@ namespace QuestCommandRTS.Editor
         }
 
         [Test]
+        public void QuestWorldStatusPanelRefreshesOnlyWhenDisplayedStateChanges()
+        {
+            RtsGame game = CreateInitializedGame(RtsRuntimeMode.QuestVr);
+            QuestWorldHud hud = game.GetComponent<QuestWorldHud>();
+            Assert.IsNotNull(hud);
+            Assert.IsNotNull(hud.StatusTextForTests);
+
+            hud.RefreshForTests(false);
+            string initial = hud.StatusTextForTests.text;
+            hud.RefreshForTests(false);
+            Assert.AreSame(initial, hud.StatusTextForTests.text);
+
+            Assert.IsTrue(game.Resources.TrySpend(100));
+            hud.RefreshForTests(false);
+            string afterCredits = hud.StatusTextForTests.text;
+            Assert.AreNotSame(initial, afterCredits);
+            StringAssert.Contains("Credits 3300", afterCredits);
+
+            game.ClearSelection();
+            hud.RefreshForTests(false);
+            string afterSelection = hud.StatusTextForTests.text;
+            Assert.AreNotSame(afterCredits, afterSelection);
+            StringAssert.Contains("Selected 0", afterSelection);
+
+            game.SetUserPaused(true);
+            hud.RefreshForTests(false);
+            string afterPause = hud.StatusTextForTests.text;
+            Assert.AreNotSame(afterSelection, afterPause);
+            StringAssert.Contains("Paused", afterPause);
+
+            hud.RefreshForTests(false);
+            Assert.AreSame(afterPause, hud.StatusTextForTests.text);
+        }
+
+        [Test]
         public void EntityHealthBarsTrackSelectionDamageRepairAndFog()
         {
             RtsGame game = CreateInitializedGame(RtsRuntimeMode.Desktop);

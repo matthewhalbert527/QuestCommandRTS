@@ -9,7 +9,7 @@ This document records what has been implemented and what has actually been verif
 - Desktop mode keeps the generated battlefield, command camera, mouse and keyboard RTS controls, desktop HUD, build hotkeys, production, control groups, save/load, fog of war, and enemy waves.
 - Quest VR mode creates a scaled tabletop rig, uses an XR head camera, tracks left and right controller nodes through Unity XR input, and does not install the desktop camera/input/HUD path.
 - Right controller ray feedback, reticle, single-target trigger selection, additive selection modifier, context command button, cancel/clear button, attack-move/stop modifiers, building placement, and the Quest command console all route into shared game command services. Pointer feedback colors distinguish attack, harvest, rally, move, UI, and invalid targets. Quest console build, produce, cancel-queue, repair, sell, pause, save/load, and new-match buttons are covered through panel-ray activation tests. Selected and damaged entities now show lightweight health bars for tabletop readability.
-- Quest mode uses a compact world-space status panel for credits, power, selected count, status text, and core control hints.
+- Quest mode uses a compact world-space status panel for credits, power, selected count, status text, and core control hints, with cached refreshes that update only when displayed state changes.
 - Quest tabletop scale now includes editor profile presets and screenshot export paths for the default approximately 1.78m board and a room-sized approximately 4.0m board with longer pointer reach.
 
 ## Architecture
@@ -34,7 +34,7 @@ This document records what has been implemented and what has actually been verif
 
 Automated verification last run locally:
 
-- EditMode tests: `73` total, `73` passed, `0` failed.
+- EditMode tests: `74` total, `74` passed, `0` failed.
 - XR setup validator: automated package/project-setting checks pass except for local Android Build Support, which is missing from this Unity install; manual headset and Android OpenXR UI verification remain manual.
 - Generated Quest runtime smoke report: automated object-graph checks pass in EditMode; physical headset behavior remains manual.
 - Generated desktop runtime smoke report: automated object-graph checks pass in EditMode; hands-on desktop control regression remains manual.

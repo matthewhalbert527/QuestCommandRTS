@@ -70,6 +70,15 @@ namespace QuestCommandRTS
             }
         }
 
+#if UNITY_EDITOR
+        public Text StatusTextForTests => statusText;
+
+        public void RefreshForTests(bool force)
+        {
+            Refresh(force);
+        }
+#endif
+
         private void Refresh(bool force)
         {
             if (game == null || game.Resources == null || statusText == null)
