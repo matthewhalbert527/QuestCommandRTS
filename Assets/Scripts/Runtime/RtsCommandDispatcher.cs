@@ -143,7 +143,12 @@ namespace QuestCommandRTS
 
             RtsEntity entity = hit.collider.GetComponentInParent<RtsEntity>();
             game.SelectEntity(entity, additive);
-            return entity != null && entity.Team == RtsTeam.Player ? RtsCommandResult.SelectionChanged : RtsCommandResult.SelectionCleared;
+            if (entity != null && entity.Team == RtsTeam.Player)
+            {
+                return RtsCommandResult.SelectionChanged;
+            }
+
+            return additive ? RtsCommandResult.None : RtsCommandResult.SelectionCleared;
         }
 
         public RtsContextCommandKind ResolveContextCommand(RaycastHit hit)

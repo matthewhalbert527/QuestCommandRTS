@@ -153,7 +153,10 @@ namespace QuestCommandRTS.Editor
             game.CommandDispatcher.SelectFromRay(RayAt(second), true, 500f);
             Assert.AreEqual(2, game.Selection.Count);
 
-            game.CommandDispatcher.SelectFromRay(new Ray(new Vector3(220f, 20f, 220f), Vector3.down), false, 500f);
+            Assert.AreEqual(RtsCommandResult.None, game.CommandDispatcher.SelectFromRay(RayAtPoint(new Vector3(0f, 0f, 0f)), true, 500f));
+            Assert.AreEqual(2, game.Selection.Count);
+
+            Assert.AreEqual(RtsCommandResult.SelectionCleared, game.CommandDispatcher.SelectFromRay(new Ray(new Vector3(220f, 20f, 220f), Vector3.down), false, 500f));
             Assert.AreEqual(0, game.Selection.Count);
         }
 
