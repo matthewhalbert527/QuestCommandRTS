@@ -51,23 +51,28 @@ namespace QuestCommandRTS
         {
             XRGeneralSettings settings = XRGeneralSettings.Instance;
             bool hasActiveLoader = settings != null && settings.Manager != null && settings.Manager.activeLoader != null;
-            return IsXrRuntimeActiveForState(XRSettings.enabled, XRSettings.isDeviceActive, hasActiveLoader);
+            return IsXrRuntimeActiveForState(XRSettings.enabled, XRSettings.isDeviceActive, hasActiveLoader, Application.platform);
         }
 
-        internal static bool IsXrRuntimeActiveForState(bool xrSettingsEnabled, bool xrDeviceActive, bool hasActiveLoader)
+        internal static bool IsXrRuntimeActiveForState(bool xrSettingsEnabled, bool xrDeviceActive, bool hasActiveLoader, RuntimePlatform platform)
         {
             if (xrDeviceActive)
             {
                 return true;
             }
 
-            return xrSettingsEnabled && hasActiveLoader;
+            if (!xrSettingsEnabled || !hasActiveLoader)
+            {
+                return false;
+            }
+
+            return platform == RuntimePlatform.Android;
         }
 
 #if UNITY_EDITOR
-        public static bool EvaluateXrRuntimeStateForTests(bool xrSettingsEnabled, bool xrDeviceActive, bool hasActiveLoader)
+        public static bool EvaluateXrRuntimeStateForTests(bool xrSettingsEnabled, bool xrDeviceActive, bool hasActiveLoader, RuntimePlatform platform)
         {
-            return IsXrRuntimeActiveForState(xrSettingsEnabled, xrDeviceActive, hasActiveLoader);
+            return IsXrRuntimeActiveForState(xrSettingsEnabled, xrDeviceActive, hasActiveLoader, platform);
         }
 #endif
 

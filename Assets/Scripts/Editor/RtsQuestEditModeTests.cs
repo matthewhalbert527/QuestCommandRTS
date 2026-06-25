@@ -35,11 +35,13 @@ namespace QuestCommandRTS.Editor
         [Test]
         public void RuntimeModeResolverRequiresEnabledOrActiveXrState()
         {
-            Assert.IsFalse(RtsRuntimeModeResolver.EvaluateXrRuntimeStateForTests(false, false, false));
-            Assert.IsFalse(RtsRuntimeModeResolver.EvaluateXrRuntimeStateForTests(false, false, true));
-            Assert.IsFalse(RtsRuntimeModeResolver.EvaluateXrRuntimeStateForTests(true, false, false));
-            Assert.IsTrue(RtsRuntimeModeResolver.EvaluateXrRuntimeStateForTests(true, false, true));
-            Assert.IsTrue(RtsRuntimeModeResolver.EvaluateXrRuntimeStateForTests(false, true, false));
+            Assert.IsFalse(RtsRuntimeModeResolver.EvaluateXrRuntimeStateForTests(false, false, false, RuntimePlatform.WindowsEditor));
+            Assert.IsFalse(RtsRuntimeModeResolver.EvaluateXrRuntimeStateForTests(false, false, true, RuntimePlatform.WindowsEditor));
+            Assert.IsFalse(RtsRuntimeModeResolver.EvaluateXrRuntimeStateForTests(true, false, false, RuntimePlatform.WindowsEditor));
+            Assert.IsFalse(RtsRuntimeModeResolver.EvaluateXrRuntimeStateForTests(true, false, true, RuntimePlatform.WindowsEditor));
+            Assert.IsFalse(RtsRuntimeModeResolver.EvaluateXrRuntimeStateForTests(true, false, true, RuntimePlatform.WindowsPlayer));
+            Assert.IsTrue(RtsRuntimeModeResolver.EvaluateXrRuntimeStateForTests(false, true, false, RuntimePlatform.WindowsEditor));
+            Assert.IsTrue(RtsRuntimeModeResolver.EvaluateXrRuntimeStateForTests(true, false, true, RuntimePlatform.Android));
         }
 
         [Test]

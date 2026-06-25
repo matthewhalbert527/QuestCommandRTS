@@ -27,7 +27,7 @@ Android modules are not needed for desktop/editor play, but they are required fo
 - `Desktop`: creates the existing command camera, mouse/keyboard input, Screen Space Overlay HUD, OnGUI minimap, and desktop build/production controls.
 - `QuestVr`: activates a scaled tabletop XR rig, uses the tracked HMD camera, installs controller input, and shows Quest world-space status and command panels instead of the desktop HUD.
 
-Quest mode is selected from an active XR loader/runtime. For testing, use the force-mode override in code, the `-questRtsMode QuestVr` command-line argument, or the `QUEST_RTS_FORCE_MODE=QuestVr` environment variable.
+Quest mode is selected from active XR device state, or from an initialized Android OpenXR loader for Quest builds. Desktop/editor runs without an active XR device remain in `Desktop` by default. For testing, use the force-mode override in code, the `-questRtsMode QuestVr` command-line argument, or the `QUEST_RTS_FORCE_MODE=QuestVr` environment variable.
 
 ## Open And Run
 

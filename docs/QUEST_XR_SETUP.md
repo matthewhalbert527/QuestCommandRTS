@@ -71,7 +71,7 @@ If the validator reports a failure, rerun `Tools > Quest RTS > Apply Recommended
 2. Confirm OpenXR runtime is active for Meta Quest Link.
 3. Open `Assets/Scenes/Battlefield.unity`.
 4. Press Play.
-5. Force Quest mode for editor testing if needed with `QUEST_RTS_FORCE_MODE=QuestVr` or `-questRtsMode QuestVr`.
+5. Force Quest mode for editor testing without a live XR device if needed with `QUEST_RTS_FORCE_MODE=QuestVr` or `-questRtsMode QuestVr`.
 6. Confirm the headset pose moves the view without snapping to the desktop command camera.
 
 ## Android Development Build
@@ -89,9 +89,11 @@ If the validator reports a failure, rerun `Tools > Quest RTS > Apply Recommended
 - Right trigger: select, or activate a Quest command-console control when the ray is over the console.
 - Left trigger held + right trigger: additive select.
 - A/right primary button: context command.
+- Left trigger held + A/right primary button: attack-move selected units.
 - A/right primary button while placing: confirm the current valid placement.
 - B/right secondary button while placing: cancel placement.
 - B/right secondary button while not placing: clear selection.
+- Left trigger held + B/right secondary button: stop selected units.
 
 ## Quest Command Console Flow
 
@@ -100,6 +102,7 @@ Open the console with X/left primary.
 - Build tab: choose a structure. The row shows cost, power effect, availability, and any disabled reason. After choosing, aim at the battlefield with the right ray. A confirms a valid preview; B cancels.
 - Produce tab: select a Command Center, Barracks, Refinery, or War Factory first. The tab shows trainable units, cost, build time, queue state, active progress, and a Cancel Last control for the last queued unit.
 - Selected tab: inspect health, selected counts, queue/rally status, and use Repair or Sell when a player structure is eligible. Rally points are set by selecting a production structure and pressing A on terrain.
+- System tab: pause/resume, save the manual slot, and load the manual slot when one exists.
 
 ## Manual Smoke Test Checklist
 
@@ -120,10 +123,13 @@ Open the console with X/left primary.
 - Cancel Last refunds the last queued unit.
 - Selected tab can repair or sell eligible player structures.
 - A moves selected units to terrain.
+- Left trigger + A issues attack-move to terrain.
 - A attacks a visible enemy.
 - A sends a selected harvester to a resource.
 - A sets a rally point when only a production building is selected.
 - B clears selection or cancels placement.
+- Left trigger + B stops selected units.
+- System tab can pause/resume, save, and load without enabling desktop HUD.
 - Desktop overlay HUD and OnGUI minimap are absent in Quest mode.
 - World-space status panel is readable and does not cover the board.
 - No GameObject named `Command Camera` is created in Quest mode.
