@@ -13,8 +13,14 @@ namespace QuestCommandRTS
         private bool mouseDragging;
         private Vector2 mouseSelectionStart;
         private Rect mouseSelectionRect;
+        private bool rightMouseTracking;
+        private bool rightMouseDraggingCamera;
+        private bool suppressRightClickCommand;
+        private Vector2 rightMouseStart;
+        private Vector2 rightMouseLast;
         private const float DragThreshold = 8f;
         private const float PointerRayDistance = 250f;
+        private const float RightDragPanSpeed = 0.16f;
 
         public RtsCommandDispatcher SharedDispatcher => dispatcher;
 
@@ -39,6 +45,8 @@ namespace QuestCommandRTS
             {
                 mouseSelectionActive = false;
                 mouseDragging = false;
+                rightMouseTracking = false;
+                rightMouseDraggingCamera = false;
                 return;
             }
 
@@ -51,6 +59,8 @@ namespace QuestCommandRTS
             {
                 mouseSelectionActive = false;
                 mouseDragging = false;
+                rightMouseTracking = false;
+                rightMouseDraggingCamera = false;
                 return;
             }
 
@@ -377,6 +387,49 @@ namespace QuestCommandRTS
         {
             Transform cameraTransform = game.CommandCamera.transform;
             Vector3 move = Vector3.zero;
+            Vector3 position = cameraTransform.position;
+
+            if (Input.GetMouseButtonDown(1) && !IsPointerOverUi())
+            {
+                rightMouseTracking = true;
+                rightMouseDraggingCamera = false;
+                suppressRightClickCommand = false;
+                rightMouseStart = Input.mousePosition;
+                rightMouseLast = rightMouseStart;
+            }
+
+            if (rightMouseTracking && Input.GetMouseButton(1))
+            {
+                Vector2 current = Input.mousePosition;
+                Vector2 totalDelta = current - rightMouseStart;
+                Vector2 frameDelta = current - rightMouseLast;
+                rightMouseLast = current;
+
+                if (!rightMouseDraggingCamera && totalDelta.magnitude > DragThreshold)
+                {
+                    rightMouseDraggingCamera = true;
+                }
+
+                if (rightMouseDraggingCamera)
+                {
+                    Vector3 right = cameraTransform.right;
+                    right.y = 0f;
+                    right.Normalize();
+
+                    Vector3 forward = cameraTransform.forward;
+                    forward.y = 0f;
+                    forward.Normalize();
+
+                    position -= (right * frameDelta.x + forward * frameDelta.y) * RightDragPanSpeed;
+                }
+            }
+
+            if (rightMouseTracking && Input.GetMouseButtonUp(1))
+            {
+                suppressRightClickCommand = rightMouseDraggingCamera;
+                rightMouseTracking = false;
+                rightMouseDraggingCamera = false;
+            }
 
             if (Input.GetKey(KeyCode.UpArrow))
             {
@@ -424,7 +477,6 @@ namespace QuestCommandRTS
                 }
             }
 
-            Vector3 position = cameraTransform.position;
             if (move.sqrMagnitude > 0.01f)
             {
                 float speed = Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift) ? 54f : 32f;
@@ -452,7 +504,12 @@ namespace QuestCommandRTS
         private void ReadButtons(out bool selectDown, out bool commandDown, out bool cancelDown)
         {
             selectDown = Input.GetMouseButtonDown(0);
-            commandDown = Input.GetMouseButtonDown(1);
+            commandDown = Input.GetMouseButtonUp(1) && !suppressRightClickCommand;
+            if (Input.GetMouseButtonUp(1))
+            {
+                suppressRightClickCommand = false;
+            }
+
             cancelDown = Input.GetMouseButtonDown(2);
         }
 

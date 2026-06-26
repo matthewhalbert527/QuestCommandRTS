@@ -16,6 +16,13 @@ namespace QuestCommandRTS
             public Func<string> GetText;
         }
 
+        private enum SidebarTab
+        {
+            Buildings,
+            Units,
+            Commands
+        }
+
         private sealed class MenuButtonSpec
         {
             public readonly string Name;
@@ -33,20 +40,33 @@ namespace QuestCommandRTS
         }
 
         private readonly List<HudButton> buttons = new List<HudButton>();
-        private const float MinimapReservedPanelWidth = 220f;
+        private readonly List<Image> minimapPips = new List<Image>();
+        private const float SidebarWidth = 326f;
+        private const float SidebarCollapsedWidth = 46f;
+        private const float SidebarMargin = 12f;
+        private const float SidebarMinimapSize = 252f;
 
         private RtsGame game;
         private Text resourcesText;
         private Text selectionText;
         private Text productionProgressText;
         private RectTransform productionProgressFill;
+        private RectTransform commandPanel;
+        private RectTransform sidebarContent;
+        private RectTransform buildingsTabContent;
+        private RectTransform unitsTabContent;
+        private RectTransform commandsTabContent;
+        private RectTransform minimapPlot;
+        private RectTransform selectionPanel;
         private Font font;
         private GUIStyle bannerStyle;
         private GUIStyle bannerSubStyle;
         private RectTransform mainMenuPanel;
         private RectTransform pauseMenuPanel;
         private RtsSkirmishOptions menuOptions;
+        private SidebarTab activeSidebarTab = SidebarTab.Buildings;
         private bool mainMenuVisible;
+        private bool sidebarCollapsed;
 
         public void Initialize(RtsGame owner)
         {
@@ -71,9 +91,13 @@ namespace QuestCommandRTS
 
             string powerColor = game.Resources.HasLowPower ? "LOW" : "OK";
             string status = game.IsUserPaused ? "PAUSED" : game.StatusMessage;
-            resourcesText.text = "Credits " + game.Resources.Credits + "    Power " + game.Resources.PowerUsed + "/" + game.Resources.PowerProvided + " " + powerColor + "    Time " + FormatTime(game.MatchTime) + "    " + status;
+            resourcesText.text = "CREDITS $" + game.Resources.Credits.ToString("N0") +
+                "\nPOWER " + game.Resources.PowerUsed + "/" + game.Resources.PowerProvided + " " + powerColor +
+                "\nTIME " + FormatTime(game.MatchTime) + "    " + status;
             selectionText.text = BuildSelectionText();
             RefreshProductionProgress();
+            RefreshSidebarLayout();
+            RefreshMinimap();
 
             for (int i = 0; i < buttons.Count; i++)
             {
@@ -99,8 +123,6 @@ namespace QuestCommandRTS
                 return;
             }
 
-            DrawMinimap();
-
             if (game.MatchState != RtsMatchState.Running)
             {
                 DrawMatchBanner();
@@ -123,71 +145,71 @@ namespace QuestCommandRTS
 
             canvasObject.AddComponent<GraphicRaycaster>();
 
-            RectTransform topBar = CreatePanel(canvasObject.transform, "Resources", new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(0f, 1f), new Vector2(0f, -10f), new Vector2(-280f, 42f), new Color(0.02f, 0.025f, 0.025f, 0.78f));
-            resourcesText = CreateText(topBar, "Resources Text", "", 19, TextAnchor.MiddleLeft);
-            resourcesText.rectTransform.offsetMin = new Vector2(18f, 0f);
-            resourcesText.rectTransform.offsetMax = new Vector2(-18f, 0f);
+            commandPanel = CreatePanel(canvasObject.transform, "Commands", new Vector2(1f, 0f), new Vector2(1f, 1f), new Vector2(1f, 0.5f), new Vector2(-SidebarMargin, 0f), new Vector2(SidebarWidth, -24f), new Color(0.018f, 0.023f, 0.025f, 0.92f));
+            sidebarContent = CreatePanel(commandPanel, "Command Sidebar Content", Vector2.zero, Vector2.one, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(-18f, -18f), new Color(0.03f, 0.04f, 0.042f, 0.36f));
 
-            RectTransform commandPanel = CreatePanel(canvasObject.transform, "Commands", new Vector2(1f, 0.04f), new Vector2(1f, 0.96f), new Vector2(1f, 0.5f), new Vector2(-12f, 0f), new Vector2(230f, 0f), new Color(0.025f, 0.03f, 0.032f, 0.82f));
-            CreateText(commandPanel, "Production Label", "Production", 17, TextAnchor.MiddleLeft, new Vector2(14f, -26f), new Vector2(198f, 26f));
+            AddSidebarToggle(commandPanel);
 
-            RectTransform progressBackplate = CreatePanel(commandPanel, "Production Progress Backplate", new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -50f), new Vector2(-28f, 18f), new Color(0.018f, 0.05f, 0.056f, 0.88f));
+            CreateText(sidebarContent, "Command Sidebar Header", "COMMAND", 20, TextAnchor.MiddleLeft, new Vector2(0f, -10f), new Vector2(-16f, 30f));
+
+            RectTransform minimapFrame = CreatePanel(sidebarContent, "Sidebar Minimap", new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -48f), new Vector2(-28f, SidebarMinimapSize + 30f), new Color(0.008f, 0.016f, 0.018f, 0.94f));
+            CreateText(minimapFrame, "Sidebar Minimap Label", "TACTICAL MAP", 13, TextAnchor.MiddleCenter, new Vector2(0f, -6f), new Vector2(-18f, 20f));
+            minimapPlot = CreatePanel(minimapFrame, "Sidebar Minimap Plot", new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -28f), new Vector2(SidebarMinimapSize, SidebarMinimapSize), new Color(0.018f, 0.045f, 0.046f, 0.96f));
+            BuildSidebarMinimapGrid();
+
+            RectTransform economyPanel = CreatePanel(sidebarContent, "Sidebar Economy", new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -342f), new Vector2(-28f, 72f), new Color(0.025f, 0.07f, 0.06f, 0.88f));
+            resourcesText = CreateText(economyPanel, "Resources Text", "", 16, TextAnchor.MiddleLeft);
+            resourcesText.rectTransform.offsetMin = new Vector2(14f, 0f);
+            resourcesText.rectTransform.offsetMax = new Vector2(-10f, 0f);
+
+            RectTransform tabRail = CreatePanel(sidebarContent, "Command Sidebar Tabs", new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -424f), new Vector2(-28f, 34f), new Color(0.01f, 0.018f, 0.019f, 0.82f));
+            AddTabButton(tabRail, "Buildings Tab", "BUILD", SidebarTab.Buildings, 0);
+            AddTabButton(tabRail, "Units Tab", "UNITS", SidebarTab.Units, 1);
+            AddTabButton(tabRail, "Commands Tab", "CMDS", SidebarTab.Commands, 2);
+
+            RectTransform progressBackplate = CreatePanel(sidebarContent, "Production Progress Backplate", new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -466f), new Vector2(-28f, 34f), new Color(0.018f, 0.05f, 0.056f, 0.88f));
             productionProgressFill = CreatePanel(progressBackplate, "Production Progress Fill", new Vector2(0f, 0f), new Vector2(0f, 1f), new Vector2(0f, 0.5f), Vector2.zero, Vector2.zero, new Color(0.22f, 0.78f, 1f, 0.86f));
             productionProgressText = CreateText(progressBackplate, "Production Progress Text", "", 11, TextAnchor.MiddleCenter);
 
-            float y = -68f;
-            AddCommandButton(commandPanel, "Gunner", y, () => game.PlayerCommands.QueueProduction(UnitKind.Rifleman), () => CanQueue(UnitKind.Rifleman), () => "Gunner  " + RtsBalance.GetUnit(UnitKind.Rifleman).Cost);
-            y -= 48f;
-            AddCommandButton(commandPanel, "Harvester", y, () => game.PlayerCommands.QueueProduction(UnitKind.Harvester), () => CanQueue(UnitKind.Harvester), () => "Harvester  " + RtsBalance.GetUnit(UnitKind.Harvester).Cost);
-            y -= 48f;
-            AddCommandButton(commandPanel, "Humvee", y, () => game.PlayerCommands.QueueProduction(UnitKind.Humvee), () => CanQueue(UnitKind.Humvee), () => "Humvee  " + RtsBalance.GetUnit(UnitKind.Humvee).Cost);
-            y -= 48f;
-            AddCommandButton(commandPanel, "APC", y, () => game.PlayerCommands.QueueProduction(UnitKind.Apc), () => CanQueue(UnitKind.Apc), () => "APC  " + RtsBalance.GetUnit(UnitKind.Apc).Cost);
-            y -= 48f;
-            AddCommandButton(commandPanel, "Light Tank", y, () => game.PlayerCommands.QueueProduction(UnitKind.LightTank), () => CanQueue(UnitKind.LightTank), () => "Light Tank  " + RtsBalance.GetUnit(UnitKind.LightTank).Cost);
-            y -= 48f;
-            AddCommandButton(commandPanel, "Medium Tank", y, () => game.PlayerCommands.QueueProduction(UnitKind.MediumTank), () => CanQueue(UnitKind.MediumTank), () => "Medium Tank  " + RtsBalance.GetUnit(UnitKind.MediumTank).Cost);
-            y -= 48f;
-            AddCommandButton(commandPanel, "Heavy Tank", y, () => game.PlayerCommands.QueueProduction(UnitKind.HeavyTank), () => CanQueue(UnitKind.HeavyTank), () => "Heavy Tank  " + RtsBalance.GetUnit(UnitKind.HeavyTank).Cost);
-            y -= 62f;
+            RectTransform tileArea = CreatePanel(sidebarContent, "Command Sidebar Tile Area", new Vector2(0f, 0f), new Vector2(1f, 1f), new Vector2(0.5f, 0.5f), new Vector2(0f, -162f), new Vector2(-28f, -518f), new Color(0f, 0f, 0f, 0f));
+            tileArea.offsetMin = new Vector2(14f, 14f);
+            tileArea.offsetMax = new Vector2(-14f, -516f);
+            buildingsTabContent = CreateTabContent(tileArea, "Buildings Tile Content");
+            unitsTabContent = CreateTabContent(tileArea, "Units Tile Content");
+            commandsTabContent = CreateTabContent(tileArea, "Commands Tile Content");
 
-            CreateText(commandPanel, "Build Label", "Build", 17, TextAnchor.MiddleLeft, new Vector2(14f, y), new Vector2(198f, 26f));
-            y -= 42f;
+            AddBuildTile(buildingsTabContent, StructureKind.PowerPlant, 0);
+            AddBuildTile(buildingsTabContent, StructureKind.Barracks, 1);
+            AddBuildTile(buildingsTabContent, StructureKind.Refinery, 2);
+            AddBuildTile(buildingsTabContent, StructureKind.WarFactory, 3);
+            AddBuildTile(buildingsTabContent, StructureKind.Turret, 4);
+            AddBuildTile(buildingsTabContent, StructureKind.GunTower, 5);
+            AddBuildTile(buildingsTabContent, StructureKind.AdvancedGunTower, 6);
 
-            AddBuildButton(commandPanel, StructureKind.PowerPlant, y);
-            y -= 48f;
-            AddBuildButton(commandPanel, StructureKind.Barracks, y);
-            y -= 48f;
-            AddBuildButton(commandPanel, StructureKind.Refinery, y);
-            y -= 48f;
-            AddBuildButton(commandPanel, StructureKind.WarFactory, y);
-            y -= 48f;
-            AddBuildButton(commandPanel, StructureKind.Turret, y);
-            y -= 62f;
+            AddUnitTile(unitsTabContent, UnitKind.Rifleman, 0);
+            AddUnitTile(unitsTabContent, UnitKind.Grenadier, 1);
+            AddUnitTile(unitsTabContent, UnitKind.RocketSoldier, 2);
+            AddUnitTile(unitsTabContent, UnitKind.FlameTrooper, 3);
+            AddUnitTile(unitsTabContent, UnitKind.Engineer, 4);
+            AddUnitTile(unitsTabContent, UnitKind.Harvester, 5);
+            AddUnitTile(unitsTabContent, UnitKind.Humvee, 6);
+            AddUnitTile(unitsTabContent, UnitKind.Apc, 7);
+            AddUnitTile(unitsTabContent, UnitKind.LightTank, 8);
+            AddUnitTile(unitsTabContent, UnitKind.MediumTank, 9);
+            AddUnitTile(unitsTabContent, UnitKind.HeavyTank, 10);
 
-            AddCommandButton(commandPanel, "Army", y, () => game.SelectCombatUnits(), () => game.AcceptsPlayerInput, () => "Select Army");
-            y -= 48f;
-            AddCommandButton(commandPanel, "Stop", y, () => game.CommandDispatcher.StopSelectedUnits(), () => game.AcceptsPlayerInput && game.HasSelectedControllableUnits(), () => "Stop  S");
-            y -= 48f;
-            AddCommandButton(commandPanel, "Repair", y, () => game.PlayerCommands.RepairSelectedStructures(), () => game.AcceptsPlayerInput && game.CanRepairSelectedStructures(), () => "Repair  Z");
-            y -= 48f;
-            AddCommandButton(commandPanel, "Sell", y, () => game.PlayerCommands.SellSelectedStructures(), () => game.AcceptsPlayerInput && game.CanSellSelectedStructures(), () => "Sell  X");
-            y -= 62f;
+            AddActionTile(commandsTabContent, "Army", "ARMY", "Select", 0, () => game.SelectCombatUnits(), () => game.AcceptsPlayerInput, () => "All combat");
+            AddActionTile(commandsTabContent, "Stop", "STOP", "S", 1, () => game.CommandDispatcher.StopSelectedUnits(), () => game.AcceptsPlayerInput && game.HasSelectedControllableUnits(), () => "Stop selected");
+            AddActionTile(commandsTabContent, "Repair", "RPR", "Z", 2, () => game.PlayerCommands.RepairSelectedStructures(), () => game.AcceptsPlayerInput && game.CanRepairSelectedStructures(), () => "Repair");
+            AddActionTile(commandsTabContent, "Sell", "SELL", "X", 3, () => game.PlayerCommands.SellSelectedStructures(), () => game.AcceptsPlayerInput && game.CanSellSelectedStructures(), () => "Sell");
+            AddActionTile(commandsTabContent, "Pause", "PAUSE", "P", 4, () => game.ToggleUserPause(), () => game.AcceptsSystemInput && !game.IsMatchOver, () => game.IsUserPaused ? "Resume" : "Pause");
+            AddActionTile(commandsTabContent, "Save", "SAVE", "F5", 5, () => game.TryManualSave(), () => game.AcceptsSystemInput && !game.IsMatchOver, () => "Manual save");
+            AddActionTile(commandsTabContent, "Load", "LOAD", "F9", 6, () => game.TryManualLoad(), () => game.AcceptsSystemInput && game.CanLoadManualSave(), () => game.GetManualSaveSummary());
+            AddActionTile(commandsTabContent, "New Match", "NEW", "Match", 7, () => game.TryRestartMatch(), () => game.AcceptsSystemInput, () => "Restart");
 
-            CreateText(commandPanel, "System Label", "System", 17, TextAnchor.MiddleLeft, new Vector2(14f, y), new Vector2(198f, 26f));
-            y -= 42f;
-
-            AddCommandButton(commandPanel, "Pause", y, () => game.ToggleUserPause(), () => game.AcceptsSystemInput && !game.IsMatchOver, () => game.IsUserPaused ? "Resume  P" : "Pause  P");
-            y -= 48f;
-            AddCommandButton(commandPanel, "Save", y, () => game.TryManualSave(), () => game.AcceptsSystemInput && !game.IsMatchOver, () => "Save  F5");
-            y -= 48f;
-            AddCommandButton(commandPanel, "Load", y, () => game.TryManualLoad(), () => game.AcceptsSystemInput && game.CanLoadManualSave(), () => "Load  F9");
-            y -= 48f;
-            AddCommandButton(commandPanel, "New Match", y, () => game.TryRestartMatch(), () => game.AcceptsSystemInput, () => "New Match");
-
-            RectTransform selectionPanel = CreatePanel(canvasObject.transform, "Selection", new Vector2(0f, 0f), new Vector2(0.58f, 0f), new Vector2(0f, 0f), new Vector2(12f, 12f), new Vector2(0f, 118f), new Color(0.02f, 0.024f, 0.026f, 0.8f));
-            selectionPanel.offsetMin = new Vector2(MinimapReservedPanelWidth, 12f);
-            selectionPanel.offsetMax = new Vector2(0f, 130f);
+            selectionPanel = CreatePanel(canvasObject.transform, "Selection", new Vector2(0f, 0f), new Vector2(1f, 0f), new Vector2(0f, 0f), new Vector2(12f, 12f), new Vector2(-SidebarWidth - 36f, 118f), new Color(0.02f, 0.024f, 0.026f, 0.8f));
+            selectionPanel.offsetMin = new Vector2(12f, 12f);
+            selectionPanel.offsetMax = new Vector2(-SidebarWidth - 36f, 130f);
             selectionText = CreateText(selectionPanel, "Selection Text", "", 17, TextAnchor.UpperLeft);
             selectionText.rectTransform.offsetMin = new Vector2(16f, 10f);
             selectionText.rectTransform.offsetMax = new Vector2(-16f, -10f);
@@ -443,6 +465,397 @@ namespace QuestCommandRTS
             {
                 pauseMenuPanel.gameObject.SetActive(!mainMenuVisible && game.IsUserPaused);
             }
+        }
+
+        private void RefreshSidebarLayout()
+        {
+            float width = sidebarCollapsed ? SidebarCollapsedWidth : SidebarWidth;
+            if (commandPanel != null)
+            {
+                commandPanel.sizeDelta = new Vector2(width, -24f);
+            }
+
+            if (sidebarContent != null)
+            {
+                sidebarContent.gameObject.SetActive(!sidebarCollapsed);
+            }
+
+            if (selectionPanel != null)
+            {
+                selectionPanel.offsetMax = new Vector2(-width - 36f, 130f);
+            }
+
+            if (buildingsTabContent != null)
+            {
+                buildingsTabContent.gameObject.SetActive(!sidebarCollapsed && activeSidebarTab == SidebarTab.Buildings);
+            }
+
+            if (unitsTabContent != null)
+            {
+                unitsTabContent.gameObject.SetActive(!sidebarCollapsed && activeSidebarTab == SidebarTab.Units);
+            }
+
+            if (commandsTabContent != null)
+            {
+                commandsTabContent.gameObject.SetActive(!sidebarCollapsed && activeSidebarTab == SidebarTab.Commands);
+            }
+        }
+
+        private void AddSidebarToggle(RectTransform parent)
+        {
+            GameObject buttonObject = new GameObject("Sidebar Collapse Button");
+            buttonObject.transform.SetParent(parent, false);
+
+            RectTransform rect = buttonObject.AddComponent<RectTransform>();
+            rect.anchorMin = new Vector2(0f, 1f);
+            rect.anchorMax = new Vector2(0f, 1f);
+            rect.pivot = new Vector2(0f, 1f);
+            rect.anchoredPosition = new Vector2(7f, -7f);
+            rect.sizeDelta = new Vector2(32f, 32f);
+
+            Image image = buttonObject.AddComponent<Image>();
+            image.color = new Color(0.1f, 0.16f, 0.17f, 0.96f);
+
+            Button button = buttonObject.AddComponent<Button>();
+            button.targetGraphic = image;
+            button.onClick.AddListener(() => sidebarCollapsed = !sidebarCollapsed);
+
+            Text label = CreateText(rect, "Sidebar Collapse Text", sidebarCollapsed ? ">" : "<", 18, TextAnchor.MiddleCenter);
+            buttons.Add(new HudButton
+            {
+                Button = button,
+                Label = label,
+                IsEnabled = () => game != null && game.AcceptsSystemInput,
+                GetText = () => sidebarCollapsed ? ">" : "<"
+            });
+        }
+
+        private void AddTabButton(RectTransform parent, string objectName, string labelText, SidebarTab tab, int index)
+        {
+            GameObject buttonObject = new GameObject(objectName);
+            buttonObject.transform.SetParent(parent, false);
+
+            RectTransform rect = buttonObject.AddComponent<RectTransform>();
+            rect.anchorMin = new Vector2(index / 3f, 0f);
+            rect.anchorMax = new Vector2((index + 1f) / 3f, 1f);
+            rect.offsetMin = new Vector2(index == 0 ? 0f : 3f, 0f);
+            rect.offsetMax = new Vector2(index == 2 ? 0f : -3f, 0f);
+
+            Image image = buttonObject.AddComponent<Image>();
+            image.color = new Color(0.09f, 0.13f, 0.14f, 0.96f);
+
+            Button button = buttonObject.AddComponent<Button>();
+            button.targetGraphic = image;
+            button.onClick.AddListener(() => activeSidebarTab = tab);
+
+            Text label = CreateText(rect, objectName + " Text", labelText, 12, TextAnchor.MiddleCenter);
+            buttons.Add(new HudButton
+            {
+                Button = button,
+                Label = label,
+                IsEnabled = () => game != null && game.AcceptsSystemInput,
+                GetText = () => activeSidebarTab == tab ? "[" + labelText + "]" : labelText
+            });
+        }
+
+        private RectTransform CreateTabContent(RectTransform parent, string objectName)
+        {
+            GameObject contentObject = new GameObject(objectName);
+            contentObject.transform.SetParent(parent, false);
+            RectTransform rect = contentObject.AddComponent<RectTransform>();
+            rect.anchorMin = Vector2.zero;
+            rect.anchorMax = Vector2.one;
+            rect.offsetMin = Vector2.zero;
+            rect.offsetMax = Vector2.zero;
+            return rect;
+        }
+
+        private void AddBuildTile(RectTransform parent, StructureKind kind, int index)
+        {
+            StructureStats stats = RtsBalance.GetStructure(kind);
+            RectTransform artRoot = AddSidebarTile(
+                parent,
+                stats.Name,
+                "$" + stats.Cost.ToString("N0"),
+                index,
+                () => game.PlayerCommands.RequestConstruction(kind),
+                () => CanBuild(kind),
+                () => GetBuildTileStatus(kind, stats),
+                GetStructureAccent(kind));
+            CreateStructureTileArt(artRoot, kind, GetStructureAccent(kind));
+        }
+
+        private void AddUnitTile(RectTransform parent, UnitKind kind, int index)
+        {
+            UnitStats stats = RtsBalance.GetUnit(kind);
+            RectTransform artRoot = AddSidebarTile(
+                parent,
+                stats.Name,
+                "$" + stats.Cost.ToString("N0"),
+                index,
+                () => game.PlayerCommands.QueueProduction(kind),
+                () => CanQueue(kind),
+                () => GetUnitTileStatus(kind),
+                GetUnitAccent(kind));
+            CreateUnitTileArt(artRoot, kind, GetUnitAccent(kind));
+        }
+
+        private void AddActionTile(RectTransform parent, string name, string title, string costText, int index, UnityEngine.Events.UnityAction action, Func<bool> enabled, Func<string> status)
+        {
+            RectTransform artRoot = AddSidebarTile(parent, title, costText, index, action, enabled, status, new Color(0.42f, 0.72f, 0.78f, 1f));
+            CreateActionTileArt(artRoot, title);
+        }
+
+        private RectTransform AddSidebarTile(RectTransform parent, string title, string costText, int index, UnityEngine.Events.UnityAction action, Func<bool> enabled, Func<string> status, Color accent)
+        {
+            const int columns = 3;
+            const float tileWidth = 86f;
+            const float tileHeight = 100f;
+            const float gap = 9f;
+
+            int column = index % columns;
+            int row = index / columns;
+
+            GameObject buttonObject = new GameObject(title + " Tile");
+            buttonObject.transform.SetParent(parent, false);
+
+            RectTransform rect = buttonObject.AddComponent<RectTransform>();
+            rect.anchorMin = new Vector2(0f, 1f);
+            rect.anchorMax = new Vector2(0f, 1f);
+            rect.pivot = new Vector2(0f, 1f);
+            rect.anchoredPosition = new Vector2(column * (tileWidth + gap), -row * (tileHeight + gap));
+            rect.sizeDelta = new Vector2(tileWidth, tileHeight);
+
+            Image image = buttonObject.AddComponent<Image>();
+            image.color = new Color(0.075f, 0.092f, 0.095f, 0.98f);
+
+            Button button = buttonObject.AddComponent<Button>();
+            button.targetGraphic = image;
+            button.onClick.AddListener(action);
+
+            RectTransform glow = CreatePanel(rect, title + " Tile Accent", new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(0.5f, 1f), Vector2.zero, new Vector2(0f, 4f), new Color(accent.r, accent.g, accent.b, 0.86f));
+            glow.offsetMin = new Vector2(0f, -4f);
+            glow.offsetMax = Vector2.zero;
+
+            Text cost = CreateText(rect, title + " Tile Cost", costText, 10, TextAnchor.MiddleRight, new Vector2(0f, -9f), new Vector2(-8f, 16f));
+            cost.color = new Color(0.66f, 1f, 0.72f, 0.96f);
+
+            RectTransform artRoot = CreatePanel(rect, title + " Tile Art", new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -25f), new Vector2(-18f, 42f), new Color(0.01f, 0.018f, 0.019f, 0.62f));
+
+            Text titleLabel = CreateText(rect, title + " Tile Title", title, 10, TextAnchor.MiddleCenter, new Vector2(0f, -72f), new Vector2(-8f, 18f));
+            titleLabel.color = new Color(0.9f, 0.96f, 0.96f, 1f);
+
+            Text statusLabel = CreateText(rect, title + " Tile Status", status(), 9, TextAnchor.MiddleCenter, new Vector2(0f, -89f), new Vector2(-8f, 14f));
+            statusLabel.color = new Color(0.66f, 0.84f, 0.86f, 0.96f);
+
+            buttons.Add(new HudButton
+            {
+                Button = button,
+                Label = statusLabel,
+                IsEnabled = enabled,
+                GetText = status
+            });
+
+            return artRoot;
+        }
+
+        private string GetBuildTileStatus(StructureKind kind, StructureStats stats)
+        {
+            if (!CanAfford(stats.Cost))
+            {
+                return "Need credits";
+            }
+
+            string requirement = game.GetStructureRequirement(kind);
+            return string.IsNullOrEmpty(requirement) ? "Ready" : requirement;
+        }
+
+        private string GetUnitTileStatus(UnitKind kind)
+        {
+            string reason = "Unavailable";
+            return game != null && game.PlayerCommands != null && game.PlayerCommands.CanQueueProduction(kind, out reason) ? "Queue" : reason;
+        }
+
+        private void BuildSidebarMinimapGrid()
+        {
+            if (minimapPlot == null)
+            {
+                return;
+            }
+
+            for (int i = 1; i < 4; i++)
+            {
+                float offset = SidebarMinimapSize * i / 4f;
+                RectTransform vertical = CreatePanel(minimapPlot, "Sidebar Minimap Grid V" + i, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(0.5f, 1f), new Vector2(offset, 0f), new Vector2(1f, SidebarMinimapSize), new Color(0.18f, 0.52f, 0.58f, 0.22f));
+                RectTransform horizontal = CreatePanel(minimapPlot, "Sidebar Minimap Grid H" + i, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(0f, 0.5f), new Vector2(0f, -offset), new Vector2(SidebarMinimapSize, 1f), new Color(0.18f, 0.52f, 0.58f, 0.22f));
+                vertical.SetAsFirstSibling();
+                horizontal.SetAsFirstSibling();
+            }
+        }
+
+        private void RefreshMinimap()
+        {
+            if (minimapPlot == null || sidebarCollapsed || game == null)
+            {
+                SetMinimapPipCount(0);
+                return;
+            }
+
+            int index = 0;
+            for (int i = 0; i < game.ResourceNodes.Count; i++)
+            {
+                ResourceNode node = game.ResourceNodes[i];
+                if (node == null || node.IsDepleted)
+                {
+                    continue;
+                }
+
+                SetMinimapPip(index, node.transform.position, new Color(0.25f, 1f, 0.55f, 0.95f), 4f);
+                index++;
+            }
+
+            for (int i = 0; i < game.Entities.Count; i++)
+            {
+                RtsEntity entity = game.Entities[i];
+                if (entity == null || !entity.IsAlive || entity.Team == RtsTeam.Neutral)
+                {
+                    continue;
+                }
+
+                if (entity.Team == RtsTeam.Enemy && game.FogOfWar != null && !game.FogOfWar.IsVisible(entity.GroundPosition))
+                {
+                    continue;
+                }
+
+                SetMinimapPip(index, entity.GroundPosition, RtsBalance.TeamColor(entity.Team), entity is RtsStructure ? 6f : 4f);
+                index++;
+            }
+
+            SetMinimapPipCount(index);
+        }
+
+        private void SetMinimapPip(int index, Vector3 worldPosition, Color color, float size)
+        {
+            while (minimapPips.Count <= index)
+            {
+                GameObject pipObject = new GameObject("Sidebar Minimap Pip");
+                pipObject.transform.SetParent(minimapPlot, false);
+                RectTransform rect = pipObject.AddComponent<RectTransform>();
+                rect.anchorMin = new Vector2(0f, 1f);
+                rect.anchorMax = new Vector2(0f, 1f);
+                rect.pivot = new Vector2(0.5f, 0.5f);
+                Image image = pipObject.AddComponent<Image>();
+                minimapPips.Add(image);
+            }
+
+            Image pip = minimapPips[index];
+            pip.gameObject.SetActive(true);
+            pip.color = color;
+            RectTransform pipRect = pip.rectTransform;
+            float mapSize = minimapPlot.rect.width > 1f ? minimapPlot.rect.width : SidebarMinimapSize;
+            float normalizedX = Mathf.InverseLerp(-RtsBalance.MapHalfSize, RtsBalance.MapHalfSize, worldPosition.x);
+            float normalizedY = Mathf.InverseLerp(-RtsBalance.MapHalfSize, RtsBalance.MapHalfSize, worldPosition.z);
+            pipRect.anchoredPosition = new Vector2(normalizedX * mapSize, -((1f - normalizedY) * mapSize));
+            pipRect.sizeDelta = new Vector2(size, size);
+        }
+
+        private void SetMinimapPipCount(int activeCount)
+        {
+            for (int i = activeCount; i < minimapPips.Count; i++)
+            {
+                if (minimapPips[i] != null)
+                {
+                    minimapPips[i].gameObject.SetActive(false);
+                }
+            }
+        }
+
+        private static Color GetStructureAccent(StructureKind kind)
+        {
+            switch (kind)
+            {
+                case StructureKind.PowerPlant:
+                    return new Color(0.95f, 0.74f, 0.24f, 1f);
+                case StructureKind.Refinery:
+                    return new Color(0.35f, 0.94f, 0.48f, 1f);
+                case StructureKind.WarFactory:
+                    return new Color(0.54f, 0.78f, 0.94f, 1f);
+                case StructureKind.Turret:
+                case StructureKind.GunTower:
+                case StructureKind.AdvancedGunTower:
+                    return new Color(0.95f, 0.28f, 0.2f, 1f);
+                default:
+                    return new Color(0.44f, 0.82f, 0.92f, 1f);
+            }
+        }
+
+        private static Color GetUnitAccent(UnitKind kind)
+        {
+            if (RtsBalance.IsInfantry(kind))
+            {
+                return new Color(0.34f, 0.75f, 0.82f, 1f);
+            }
+
+            if (kind == UnitKind.Harvester)
+            {
+                return new Color(0.42f, 0.9f, 0.45f, 1f);
+            }
+
+            if (RtsBalance.IsWheeledCombatVehicle(kind))
+            {
+                return new Color(0.86f, 0.62f, 0.32f, 1f);
+            }
+
+            return new Color(0.78f, 0.88f, 0.92f, 1f);
+        }
+
+        private void CreateStructureTileArt(RectTransform root, StructureKind kind, Color accent)
+        {
+            CreatePanel(root, "Structure Icon Base", new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(0f, 4f), new Vector2(48f, 8f), new Color(0.08f, 0.1f, 0.085f, 1f));
+            CreatePanel(root, "Structure Icon Body", new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(0f, 10f), new Vector2(38f, 22f), new Color(0.22f, 0.28f, 0.21f, 1f));
+            CreatePanel(root, "Structure Icon Highlight", new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(0f, 31f), new Vector2(42f, 4f), accent);
+
+            if (kind == StructureKind.PowerPlant || kind == StructureKind.Refinery)
+            {
+                CreatePanel(root, "Structure Icon Stack A", new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(-12f, 21f), new Vector2(7f, 24f), new Color(0.16f, 0.2f, 0.18f, 1f));
+                CreatePanel(root, "Structure Icon Stack B", new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(12f, 21f), new Vector2(7f, 24f), new Color(0.16f, 0.2f, 0.18f, 1f));
+            }
+            else if (kind == StructureKind.Turret || kind == StructureKind.GunTower || kind == StructureKind.AdvancedGunTower)
+            {
+                CreatePanel(root, "Structure Icon Tower", new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(0f, 20f), new Vector2(18f, 26f), new Color(0.18f, 0.23f, 0.19f, 1f));
+                CreatePanel(root, "Structure Icon Barrel", new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(0f, 0.5f), new Vector2(9f, 31f), new Vector2(28f, 5f), accent);
+            }
+            else
+            {
+                CreatePanel(root, "Structure Icon Door", new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(0f, 10f), new Vector2(13f, 16f), new Color(0.03f, 0.045f, 0.043f, 1f));
+            }
+        }
+
+        private void CreateUnitTileArt(RectTransform root, UnitKind kind, Color accent)
+        {
+            if (RtsBalance.IsInfantry(kind))
+            {
+                CreatePanel(root, "Infantry Icon Body", new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(0f, 12f), new Vector2(18f, 24f), new Color(0.2f, 0.26f, 0.2f, 1f));
+                CreatePanel(root, "Infantry Icon Head", new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(0f, 34f), new Vector2(15f, 10f), new Color(0.24f, 0.2f, 0.16f, 1f));
+                CreatePanel(root, "Infantry Icon Weapon", new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(0f, 0.5f), new Vector2(9f, 25f), new Vector2(28f, 5f), accent);
+                return;
+            }
+
+            CreatePanel(root, "Vehicle Icon Hull", new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(0f, 12f), new Vector2(48f, 18f), new Color(0.2f, 0.25f, 0.21f, 1f));
+            CreatePanel(root, "Vehicle Icon Cabin", new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(-4f, 29f), new Vector2(25f, 13f), new Color(0.16f, 0.2f, 0.18f, 1f));
+            CreatePanel(root, "Vehicle Icon Accent", new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(0f, 31f), new Vector2(44f, 4f), accent);
+
+            if (kind != UnitKind.Harvester)
+            {
+                CreatePanel(root, "Vehicle Icon Gun", new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(0f, 0.5f), new Vector2(7f, 39f), new Vector2(29f, 4f), new Color(0.08f, 0.1f, 0.1f, 1f));
+            }
+        }
+
+        private void CreateActionTileArt(RectTransform root, string title)
+        {
+            CreatePanel(root, "Action Icon Back", new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(40f, 24f), new Color(0.1f, 0.16f, 0.17f, 1f));
+            Text text = CreateText(root, "Action Icon Text", title.Length > 4 ? title.Substring(0, 4) : title, 12, TextAnchor.MiddleCenter);
+            text.color = new Color(0.78f, 0.96f, 1f, 1f);
         }
 
         private void AddBuildButton(RectTransform parent, StructureKind kind, float y)

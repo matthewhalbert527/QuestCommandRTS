@@ -43,7 +43,9 @@ namespace QuestCommandRTS
             Add(results, "Desktop input uses shared dispatcher", input != null && input.SharedDispatcher == game.CommandDispatcher, "Desktop input should reference RtsGame.CommandDispatcher.");
             Add(results, "Desktop HUD present", hud != null && HasScreenSpaceHud(), "Desktop mode should install the Screen Space Overlay RTS HUD.");
             Add(results, "Desktop production progress meter", HasHudChild("Production Progress Fill") && HasHudChild("Production Progress Text"), "Desktop HUD should show active unit build progress.");
-            Add(results, "Desktop minimap info clearance", SelectionPanelReservesMinimap(), "Selection/info panel should leave room for the bottom-left minimap.");
+            Add(results, "Desktop sidebar minimap", HasHudChild("Sidebar Minimap") && HasHudChild("Sidebar Minimap Plot"), "Desktop HUD should place a large minimap at the top of the command sidebar.");
+            Add(results, "Desktop command sidebar tabs", HasHudChild("Buildings Tab") && HasHudChild("Units Tab") && HasHudChild("Commands Tab"), "Desktop HUD should group build, unit, and command tiles into C&C-style tabs.");
+            Add(results, "Desktop sidebar collapse", HasHudChild("Sidebar Collapse Button"), "Desktop HUD should allow the command sidebar to shrink.");
             Add(results, "Desktop event system present", HasDesktopEventSystem(), "Desktop HUD should create an EventSystem for UI interaction.");
             Add(results, "Quest rig absent", game.QuestRig == null && game.GetComponent<QuestRtsInputController>() == null, "Desktop mode should not install the Quest rig or Quest input controller.");
             Add(results, "Quest world HUD absent", game.GetComponent<QuestWorldHud>() == null, "Desktop mode should not install QuestWorldHud.");
@@ -92,13 +94,6 @@ namespace QuestCommandRTS
             }
 
             return false;
-        }
-
-        private static bool SelectionPanelReservesMinimap()
-        {
-            GameObject selectionObject = GameObject.Find("Selection");
-            RectTransform rect = selectionObject != null ? selectionObject.GetComponent<RectTransform>() : null;
-            return rect != null && rect.offsetMin.x >= 200f;
         }
 
         private static bool HasDesktopEventSystem()
