@@ -505,6 +505,34 @@ namespace QuestCommandRTS.Editor
         }
 
         [Test]
+        public void CombatVisualsUseQuestFriendlyPbrMaterials()
+        {
+            RtsGame game = CreateInitializedGame(RtsRuntimeMode.Desktop);
+
+            RtsUnit tank = game.CreateUnit(RtsTeam.Player, UnitKind.MediumTank, new Vector3(-52f, 0f, -56f));
+            RtsUnit rifleman = game.CreateUnit(RtsTeam.Player, UnitKind.Rifleman, new Vector3(-48f, 0f, -56f));
+            RtsUnit harvester = game.CreateUnit(RtsTeam.Player, UnitKind.Harvester, new Vector3(-44f, 0f, -56f));
+            RtsStructure command = game.CreateStructure(RtsTeam.Player, StructureKind.CommandCenter, new Vector3(-60f, 0f, -56f));
+
+            AssertPbrPart(tank.transform, "Tank Armor Detail Plate", "Vehicle Armor Panel", 0.18f, 0.5f, true);
+            AssertPbrPart(tank.transform, "Track Belt L", "Rubber Tread", 0.01f, 0.3f, true);
+            AssertPbrPart(tank.transform, "Animated Turret Barrel", "Gunmetal Barrel", 0.4f, 0.55f, true);
+            AssertPbrPart(tank.transform, "Tank Turret Hatch Detail", "Vehicle Armor Panel", 0.16f, 0.55f, true);
+            AssertPbrPart(command.transform, "Structure Armor Detail Plate", "Structure Panel", 0.14f, 0.45f, true);
+            AssertPbrPart(command.transform, "Structure Face Bolt 1", "Vehicle Armor Panel", 0.16f, 0.55f, true);
+            AssertPbrPart(rifleman.transform, "Infantry Kit Detail Plate", "Vehicle Armor Panel", 0.18f, 0.5f, true);
+            AssertPbrPart(harvester.transform, "Harvester Cargo Rail Bolt 1", "Vehicle Armor Panel", 0.16f, 0.55f, true);
+
+            AssertEmissivePart(tank.transform, "Tank Sensor Optic");
+            AssertEmissivePart(tank.transform, "Tank Amber Hull Light");
+            AssertEmissivePart(rifleman.transform, "Infantry Visor Lens");
+            AssertEmissivePart(harvester.transform, "Harvester Cab Glass");
+            AssertEmissivePart(harvester.transform, "Harvester Amber Status Light");
+            AssertEmissivePart(command.transform, "Structure Sensor Glass");
+            AssertEmissivePart(command.transform, "Structure Warning Beacon");
+        }
+
+        [Test]
         public void ProducedUnitsStartInsideProductionBuildingAndExit()
         {
             RtsGame game = CreateInitializedGame(RtsRuntimeMode.Desktop);
@@ -2265,6 +2293,64 @@ namespace QuestCommandRTS.Editor
             Texture texture = renderer.sharedMaterial.mainTexture;
             Assert.IsNotNull(texture, objectName + " should use a procedural terrain texture.");
             StringAssert.Contains(expectedTextureName, texture.name);
+        }
+
+        private static void AssertPbrPart(Transform root, string partName, string expectedTextureName, float minimumMetallic, float minimumSmoothness, bool requiresNormalMap)
+        {
+            Transform part = FindDescendant(root, partName);
+            Assert.IsNotNull(part, "Missing generated visual part " + partName);
+            Renderer renderer = part.GetComponent<Renderer>();
+            Assert.IsNotNull(renderer, partName + " should have a renderer.");
+            Material material = renderer.sharedMaterial;
+            Assert.IsNotNull(material, partName + " should use a shared material.");
+            Assert.IsNotNull(material.mainTexture, partName + " should use a generated albedo texture.");
+            StringAssert.Contains(expectedTextureName, material.mainTexture.name);
+
+            Assert.IsTrue(material.HasProperty("_Metallic"), partName + " should use a URP/Standard PBR shader with metallic support.");
+            Assert.GreaterOrEqual(material.GetFloat("_Metallic"), minimumMetallic, partName + " should have tuned metallic response.");
+            bool hasSmoothness = material.HasProperty("_Smoothness");
+            bool hasGlossiness = material.HasProperty("_Glossiness");
+            Assert.IsTrue(hasSmoothness || hasGlossiness, partName + " should use a Unity PBR shader with smoothness/glossiness support.");
+            float smoothness = hasSmoothness ? material.GetFloat("_Smoothness") : material.GetFloat("_Glossiness");
+            Assert.GreaterOrEqual(smoothness, minimumSmoothness, partName + " should have tuned smoothness response.");
+
+            if (requiresNormalMap)
+            {
+                Texture normalMap = material.HasProperty("_BumpMap") ? material.GetTexture("_BumpMap") : null;
+                Assert.IsNotNull(normalMap, partName + " should use a generated normal map for close-up surface detail.");
+            }
+        }
+
+        private static void AssertEmissivePart(Transform root, string partName)
+        {
+            Transform part = FindDescendant(root, partName);
+            Assert.IsNotNull(part, "Missing generated visual part " + partName);
+            Renderer renderer = part.GetComponent<Renderer>();
+            Assert.IsNotNull(renderer, partName + " should have a renderer.");
+            Material material = renderer.sharedMaterial;
+            Assert.IsNotNull(material, partName + " should use a shared material.");
+            Assert.IsTrue(material.HasProperty("_EmissionColor"), partName + " should use an emissive material.");
+            Color emission = material.GetColor("_EmissionColor");
+            Assert.Greater(emission.maxColorComponent, 0.1f, partName + " should have visible sensor/glass emission.");
+        }
+
+        private static Transform FindDescendant(Transform root, string objectName)
+        {
+            if (root == null)
+            {
+                return null;
+            }
+
+            Transform[] descendants = root.GetComponentsInChildren<Transform>(true);
+            for (int i = 0; i < descendants.Length; i++)
+            {
+                if (descendants[i].name == objectName)
+                {
+                    return descendants[i];
+                }
+            }
+
+            return null;
         }
 
         private static Image AssertPanelImage(string objectName, float minimumAlpha)
