@@ -1,0 +1,268 @@
+using System;
+using System.Collections.Generic;
+using UnityEngine;
+using UnityEngine.EventSystems;
+using UnityEngine.UI;
+
+namespace QuestCommandRTS
+{
+    public sealed class RtsHud : MonoBehaviour
+    {
+        private sealed class HudButton
+        {
+            public Button Button;
+            public Text Label;
+            public Func<bool> IsEnabled;
+            public Func<string> GetText;
+        }
+
+        private readonly List<HudButton> buttons = new List<HudButton>();
+        private RtsGame game;
+        private Text resourcesText;
+        private Text selectionText;
+        private Font font;
+
+        public void Initialize(RtsGame owner)
+        {
+            game = owner;
+            font = Resources.GetBuiltinResource<Font>("Arial.ttf");
+            EnsureEventSystem();
+            BuildCanvas();
+        }
+
+        private void Update()
+        {
+            if (game == null || game.Resources == null)
+            {
+                return;
+            }
+
+            string powerColor = game.Resources.HasLowPower ? "LOW" : "OK";
+            resourcesText.text = "Credits " + game.Resources.Credits + "    Power " + game.Resources.PowerUsed + "/" + game.Resources.PowerProvided + " " + powerColor;
+            selectionText.text = BuildSelectionText();
+
+            for (int i = 0; i < buttons.Count; i++)
+            {
+                HudButton hudButton = buttons[i];
+                if (hudButton.Button != null && hudButton.IsEnabled != null)
+                {
+                    hudButton.Button.interactable = hudButton.IsEnabled();
+                }
+
+                if (hudButton.Label != null && hudButton.GetText != null)
+                {
+                    hudButton.Label.text = hudButton.GetText();
+                }
+            }
+        }
+
+        private void BuildCanvas()
+        {
+            GameObject canvasObject = new GameObject("RTS HUD");
+            canvasObject.transform.SetParent(transform, false);
+
+            Canvas canvas = canvasObject.AddComponent<Canvas>();
+            canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+            canvas.sortingOrder = 20;
+
+            CanvasScaler scaler = canvasObject.AddComponent<CanvasScaler>();
+            scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+            scaler.referenceResolution = new Vector2(1440f, 900f);
+            scaler.matchWidthOrHeight = 0.5f;
+
+            canvasObject.AddComponent<GraphicRaycaster>();
+
+            RectTransform topBar = CreatePanel(canvasObject.transform, "Resources", new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(0f, 1f), new Vector2(0f, -10f), new Vector2(-280f, 42f), new Color(0.02f, 0.025f, 0.025f, 0.78f));
+            resourcesText = CreateText(topBar, "Resources Text", "", 19, TextAnchor.MiddleLeft);
+            resourcesText.rectTransform.offsetMin = new Vector2(18f, 0f);
+            resourcesText.rectTransform.offsetMax = new Vector2(-18f, 0f);
+
+            RectTransform commandPanel = CreatePanel(canvasObject.transform, "Commands", new Vector2(1f, 0.04f), new Vector2(1f, 0.96f), new Vector2(1f, 0.5f), new Vector2(-12f, 0f), new Vector2(230f, 0f), new Color(0.025f, 0.03f, 0.032f, 0.82f));
+            CreateText(commandPanel, "Production Label", "Production", 17, TextAnchor.MiddleLeft, new Vector2(14f, -26f), new Vector2(198f, 26f));
+
+            float y = -68f;
+            AddCommandButton(commandPanel, "Rifleman", y, () => game.TryQueueUnit(UnitKind.Rifleman), () => CanAfford(RtsBalance.GetUnit(UnitKind.Rifleman).Cost), () => "Rifleman  " + RtsBalance.GetUnit(UnitKind.Rifleman).Cost);
+            y -= 48f;
+            AddCommandButton(commandPanel, "Harvester", y, () => game.TryQueueUnit(UnitKind.Harvester), () => CanAfford(RtsBalance.GetUnit(UnitKind.Harvester).Cost), () => "Harvester  " + RtsBalance.GetUnit(UnitKind.Harvester).Cost);
+            y -= 48f;
+            AddCommandButton(commandPanel, "Tank", y, () => game.TryQueueUnit(UnitKind.Tank), () => CanAfford(RtsBalance.GetUnit(UnitKind.Tank).Cost), () => "Tank  " + RtsBalance.GetUnit(UnitKind.Tank).Cost);
+            y -= 62f;
+
+            CreateText(commandPanel, "Build Label", "Build", 17, TextAnchor.MiddleLeft, new Vector2(14f, y), new Vector2(198f, 26f));
+            y -= 42f;
+
+            AddBuildButton(commandPanel, StructureKind.PowerPlant, y);
+            y -= 48f;
+            AddBuildButton(commandPanel, StructureKind.Barracks, y);
+            y -= 48f;
+            AddBuildButton(commandPanel, StructureKind.Refinery, y);
+            y -= 48f;
+            AddBuildButton(commandPanel, StructureKind.WarFactory, y);
+            y -= 48f;
+            AddBuildButton(commandPanel, StructureKind.Turret, y);
+            y -= 62f;
+
+            AddCommandButton(commandPanel, "Army", y, () => game.SelectCombatUnits(), () => true, () => "Select Army");
+
+            RectTransform selectionPanel = CreatePanel(canvasObject.transform, "Selection", new Vector2(0f, 0f), new Vector2(0.58f, 0f), new Vector2(0f, 0f), new Vector2(12f, 12f), new Vector2(0f, 118f), new Color(0.02f, 0.024f, 0.026f, 0.8f));
+            selectionText = CreateText(selectionPanel, "Selection Text", "", 17, TextAnchor.UpperLeft);
+            selectionText.rectTransform.offsetMin = new Vector2(16f, 10f);
+            selectionText.rectTransform.offsetMax = new Vector2(-16f, -10f);
+        }
+
+        private void AddBuildButton(RectTransform parent, StructureKind kind, float y)
+        {
+            StructureStats stats = RtsBalance.GetStructure(kind);
+            AddCommandButton(parent, stats.Name, y, () => game.BuildManager.BeginPlacement(kind), () => CanAfford(stats.Cost), () => stats.Name + "  " + stats.Cost);
+        }
+
+        private void AddCommandButton(RectTransform parent, string name, float y, UnityEngine.Events.UnityAction action, Func<bool> enabled, Func<string> text)
+        {
+            GameObject buttonObject = new GameObject(name + " Button");
+            buttonObject.transform.SetParent(parent, false);
+
+            RectTransform rect = buttonObject.AddComponent<RectTransform>();
+            rect.anchorMin = new Vector2(0f, 1f);
+            rect.anchorMax = new Vector2(1f, 1f);
+            rect.pivot = new Vector2(0.5f, 1f);
+            rect.anchoredPosition = new Vector2(0f, y);
+            rect.sizeDelta = new Vector2(-28f, 38f);
+
+            Image image = buttonObject.AddComponent<Image>();
+            image.color = new Color(0.12f, 0.145f, 0.145f, 0.95f);
+
+            Button button = buttonObject.AddComponent<Button>();
+            button.targetGraphic = image;
+            button.onClick.AddListener(action);
+
+            Text label = CreateText(rect, name + " Text", text(), 15, TextAnchor.MiddleCenter);
+            label.rectTransform.offsetMin = new Vector2(8f, 0f);
+            label.rectTransform.offsetMax = new Vector2(-8f, 0f);
+
+            buttons.Add(new HudButton
+            {
+                Button = button,
+                Label = label,
+                IsEnabled = enabled,
+                GetText = text
+            });
+        }
+
+        private bool CanAfford(int cost)
+        {
+            return game != null && game.Resources != null && game.Resources.CanAfford(cost);
+        }
+
+        private string BuildSelectionText()
+        {
+            if (game.Selection.Count == 0)
+            {
+                return "No selection";
+            }
+
+            if (game.Selection.Count > 1)
+            {
+                int units = 0;
+                int structures = 0;
+                for (int i = 0; i < game.Selection.Count; i++)
+                {
+                    if (game.Selection[i] is RtsUnit)
+                    {
+                        units++;
+                    }
+                    else if (game.Selection[i] is RtsStructure)
+                    {
+                        structures++;
+                    }
+                }
+
+                return game.Selection.Count + " selected    Units " + units + "    Structures " + structures;
+            }
+
+            RtsEntity entity = game.Selection[0];
+            if (entity == null)
+            {
+                return "No selection";
+            }
+
+            string detail = entity.DisplayName + "    HP " + Mathf.RoundToInt(entity.Health) + "/" + Mathf.RoundToInt(entity.MaxHealth);
+
+            HarvesterUnit harvester = entity as HarvesterUnit;
+            if (harvester != null)
+            {
+                detail += "    Cargo " + harvester.Cargo + "/" + harvester.CargoCapacity;
+            }
+
+            ProductionStructure producer = entity as ProductionStructure;
+            if (producer != null)
+            {
+                detail += "    " + producer.GetQueueSummary();
+            }
+
+            return detail;
+        }
+
+        private RectTransform CreatePanel(Transform parent, string name, Vector2 anchorMin, Vector2 anchorMax, Vector2 pivot, Vector2 anchoredPosition, Vector2 sizeDelta, Color color)
+        {
+            GameObject panelObject = new GameObject(name);
+            panelObject.transform.SetParent(parent, false);
+            RectTransform rect = panelObject.AddComponent<RectTransform>();
+            rect.anchorMin = anchorMin;
+            rect.anchorMax = anchorMax;
+            rect.pivot = pivot;
+            rect.anchoredPosition = anchoredPosition;
+            rect.sizeDelta = sizeDelta;
+
+            Image image = panelObject.AddComponent<Image>();
+            image.color = color;
+            return rect;
+        }
+
+        private Text CreateText(RectTransform parent, string name, string value, int size, TextAnchor anchor)
+        {
+            return CreateText(parent, name, value, size, anchor, Vector2.zero, Vector2.zero);
+        }
+
+        private Text CreateText(RectTransform parent, string name, string value, int size, TextAnchor anchor, Vector2 anchoredPosition, Vector2 sizeDelta)
+        {
+            GameObject textObject = new GameObject(name);
+            textObject.transform.SetParent(parent, false);
+            RectTransform rect = textObject.AddComponent<RectTransform>();
+            rect.anchorMin = Vector2.zero;
+            rect.anchorMax = Vector2.one;
+            rect.offsetMin = Vector2.zero;
+            rect.offsetMax = Vector2.zero;
+
+            if (sizeDelta != Vector2.zero)
+            {
+                rect.anchorMin = new Vector2(0f, 1f);
+                rect.anchorMax = new Vector2(1f, 1f);
+                rect.pivot = new Vector2(0.5f, 1f);
+                rect.anchoredPosition = anchoredPosition;
+                rect.sizeDelta = sizeDelta;
+            }
+
+            Text text = textObject.AddComponent<Text>();
+            text.font = font;
+            text.text = value;
+            text.fontSize = size;
+            text.color = new Color(0.9f, 0.94f, 0.94f);
+            text.alignment = anchor;
+            text.horizontalOverflow = HorizontalWrapMode.Wrap;
+            text.verticalOverflow = VerticalWrapMode.Truncate;
+            return text;
+        }
+
+        private static void EnsureEventSystem()
+        {
+            if (EventSystem.current != null)
+            {
+                return;
+            }
+
+            GameObject eventSystemObject = new GameObject("EventSystem");
+            eventSystemObject.AddComponent<EventSystem>();
+            eventSystemObject.AddComponent<StandaloneInputModule>();
+        }
+    }
+}
