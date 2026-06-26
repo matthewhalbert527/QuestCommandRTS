@@ -935,6 +935,37 @@ namespace QuestCommandRTS.Editor
         }
 
         [Test]
+        public void DesktopUnitSidebarUsesImportedCardArtwork()
+        {
+            RtsGame game = CreateInitializedGame(RtsRuntimeMode.Desktop);
+            RtsHud hud = game.GetComponent<RtsHud>();
+            Assert.IsNotNull(hud);
+
+            AssertUnitCardTextureExists("Rifleman");
+            AssertUnitCardTextureExists("Grenadier");
+            AssertUnitCardTextureExists("RocketSoldier");
+            AssertUnitCardTextureExists("FlameTrooper");
+            AssertUnitCardTextureExists("Engineer");
+            AssertUnitCardTextureExists("LightTank");
+            AssertUnitCardTextureExists("MediumTank");
+            AssertUnitCardTextureExists("HeavyTank");
+
+            hud.ShowUnitsTabForScreenshot();
+
+            Image[] images = Object.FindObjectsOfType<Image>(true);
+            int cardImageCount = 0;
+            for (int i = 0; i < images.Length; i++)
+            {
+                if (images[i] != null && images[i].name == "Unit Card Art" && images[i].sprite != null)
+                {
+                    cardImageCount++;
+                }
+            }
+
+            Assert.GreaterOrEqual(cardImageCount, 8, "The unit sidebar should use imported unit card art for the first artwork batch.");
+        }
+
+        [Test]
         public void FogOfWarUsesSingleTextureOverlayMappedToWorldCells()
         {
             RtsGame game = CreateInitializedGame(RtsRuntimeMode.QuestVr);
@@ -2506,6 +2537,14 @@ namespace QuestCommandRTS.Editor
             Assert.IsNotNull(filter, objectName + " should use a generated MeshFilter.");
             Assert.IsNotNull(filter.sharedMesh, objectName + " should have a generated mesh.");
             Assert.GreaterOrEqual(filter.sharedMesh.vertexCount, minimumVertexCount, objectName + " should have enough geometry to avoid primitive silhouettes.");
+        }
+
+        private static void AssertUnitCardTextureExists(string resourceName)
+        {
+            Texture2D texture = Resources.Load<Texture2D>("HudArt/Units/" + resourceName);
+            Assert.IsNotNull(texture, "Missing imported unit card artwork " + resourceName);
+            Assert.AreEqual(512, texture.width, "Unit card artwork should be resized for HUD use.");
+            Assert.AreEqual(512, texture.height, "Unit card artwork should be resized for HUD use.");
         }
 
         private static void AssertPbrPart(Transform root, string partName, string expectedTextureName, float minimumMetallic, float minimumSmoothness, bool requiresNormalMap)

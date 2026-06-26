@@ -13,6 +13,7 @@ namespace QuestCommandRTS.Editor
         private const string DefaultQuestOutputPath = "C:/Users/matth/Documents/Codex/2026-06-24/i-s/outputs/quest-command-rts-quest-sample.png";
         private const string DefaultQuestRoomOutputPath = "C:/Users/matth/Documents/Codex/2026-06-24/i-s/outputs/quest-command-rts-quest-room-sample.png";
         private const string DefaultGroundTextureOutputPath = "C:/Users/matth/Documents/Codex/2026-06-24/i-s/outputs/quest-command-rts-ground-texture-sample.png";
+        private const string DefaultUnitMenuOutputPath = "C:/Users/matth/Documents/Codex/2026-06-24/i-s/outputs/quest-command-rts-unit-menu-sample.png";
 
         [MenuItem("Command RTS/Export Sample Screenshot")]
         public static void ExportMenuScreenshot()
@@ -38,6 +39,12 @@ namespace QuestCommandRTS.Editor
             ExportGroundTextureForCodex();
         }
 
+        [MenuItem("Command RTS/Export Unit Menu Sample Screenshot")]
+        public static void ExportMenuUnitMenuScreenshot()
+        {
+            ExportUnitMenuForCodex();
+        }
+
         public static void ExportForCodex()
         {
             Export(DefaultOutputPath, RtsRuntimeMode.Desktop, null, true, false);
@@ -58,6 +65,11 @@ namespace QuestCommandRTS.Editor
             Export(DefaultGroundTextureOutputPath, RtsRuntimeMode.Desktop, null, true, true);
         }
 
+        public static void ExportUnitMenuForCodex()
+        {
+            Export(DefaultUnitMenuOutputPath, RtsRuntimeMode.Desktop, null, true, false, true);
+        }
+
         private static void Export(string outputPath, RtsRuntimeMode mode)
         {
             Export(outputPath, mode, null);
@@ -69,6 +81,11 @@ namespace QuestCommandRTS.Editor
         }
 
         private static void Export(string outputPath, RtsRuntimeMode mode, RtsProfileSettings profileSettings, bool revealTerrain, bool useGroundTextureCamera)
+        {
+            Export(outputPath, mode, profileSettings, revealTerrain, useGroundTextureCamera, false);
+        }
+
+        private static void Export(string outputPath, RtsRuntimeMode mode, RtsProfileSettings profileSettings, bool revealTerrain, bool useGroundTextureCamera, bool showUnitsTab)
         {
             EditorSceneManager.OpenScene(ScenePath);
 
@@ -115,7 +132,14 @@ namespace QuestCommandRTS.Editor
                 RtsHud hud = game.GetComponent<RtsHud>();
                 if (hud != null)
                 {
-                    hud.RefreshForScreenshot();
+                    if (showUnitsTab)
+                    {
+                        hud.ShowUnitsTabForScreenshot();
+                    }
+                    else
+                    {
+                        hud.RefreshForScreenshot();
+                    }
                 }
             }
 

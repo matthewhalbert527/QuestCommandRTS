@@ -41,10 +41,12 @@ namespace QuestCommandRTS
 
         private readonly List<HudButton> buttons = new List<HudButton>();
         private readonly List<Image> minimapPips = new List<Image>();
+        private readonly Dictionary<UnitKind, Sprite> unitTileArtSprites = new Dictionary<UnitKind, Sprite>();
         private const float SidebarWidth = 326f;
         private const float SidebarCollapsedWidth = 46f;
         private const float SidebarMargin = 12f;
         private const float SidebarMinimapSize = 252f;
+        private const string UnitTileArtResourceRoot = "HudArt/Units/";
 
         private RtsGame game;
         private Text resourcesText;
@@ -259,6 +261,12 @@ namespace QuestCommandRTS
             Canvas.ForceUpdateCanvases();
             RefreshMinimap();
             Canvas.ForceUpdateCanvases();
+        }
+
+        public void ShowUnitsTabForScreenshot()
+        {
+            activeSidebarTab = SidebarTab.Units;
+            RefreshForScreenshot();
         }
 
         public void CycleSkirmishDifficultyForTests()
@@ -655,12 +663,12 @@ namespace QuestCommandRTS
             Text cost = CreateText(rect, title + " Tile Cost", costText, 10, TextAnchor.MiddleRight, new Vector2(0f, -9f), new Vector2(-8f, 16f));
             cost.color = new Color(0.66f, 1f, 0.72f, 0.96f);
 
-            RectTransform artRoot = CreatePanel(rect, title + " Tile Art", new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -25f), new Vector2(-18f, 42f), new Color(0.01f, 0.018f, 0.019f, 0.62f));
+            RectTransform artRoot = CreatePanel(rect, title + " Tile Art", new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -21f), new Vector2(-12f, 58f), new Color(0.01f, 0.018f, 0.019f, 0.62f));
 
-            Text titleLabel = CreateText(rect, title + " Tile Title", title, 10, TextAnchor.MiddleCenter, new Vector2(0f, -72f), new Vector2(-8f, 18f));
+            Text titleLabel = CreateText(rect, title + " Tile Title", title, 9, TextAnchor.MiddleCenter, new Vector2(0f, -79f), new Vector2(-8f, 15f));
             titleLabel.color = new Color(0.9f, 0.96f, 0.96f, 1f);
 
-            Text statusLabel = CreateText(rect, title + " Tile Status", status(), 9, TextAnchor.MiddleCenter, new Vector2(0f, -89f), new Vector2(-8f, 14f));
+            Text statusLabel = CreateText(rect, title + " Tile Status", status(), 8, TextAnchor.MiddleCenter, new Vector2(0f, -92f), new Vector2(-8f, 12f));
             statusLabel.color = new Color(0.66f, 0.84f, 0.86f, 0.96f);
 
             buttons.Add(new HudButton
@@ -848,6 +856,11 @@ namespace QuestCommandRTS
 
         private void CreateUnitTileArt(RectTransform root, UnitKind kind, Color accent)
         {
+            if (TryCreateUnitTileCardArt(root, kind, accent))
+            {
+                return;
+            }
+
             if (RtsBalance.IsInfantry(kind))
             {
                 CreatePanel(root, "Infantry Icon Body", new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(0f, 12f), new Vector2(18f, 24f), new Color(0.2f, 0.26f, 0.2f, 1f));
@@ -863,6 +876,95 @@ namespace QuestCommandRTS
             if (kind != UnitKind.Harvester)
             {
                 CreatePanel(root, "Vehicle Icon Gun", new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(0f, 0.5f), new Vector2(7f, 39f), new Vector2(29f, 4f), new Color(0.08f, 0.1f, 0.1f, 1f));
+            }
+        }
+
+        private bool TryCreateUnitTileCardArt(RectTransform root, UnitKind kind, Color accent)
+        {
+            Sprite sprite = GetUnitTileArtSprite(kind);
+            if (sprite == null)
+            {
+                return false;
+            }
+
+            Image rootImage = root.GetComponent<Image>();
+            if (rootImage != null)
+            {
+                rootImage.color = new Color(0.01f, 0.014f, 0.01f, 0.94f);
+            }
+
+            RectTransform glow = CreatePanel(root, "Unit Card Glow", Vector2.zero, Vector2.one, new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero, new Color(accent.r, accent.g, accent.b, 0.18f));
+            glow.offsetMin = new Vector2(1f, 1f);
+            glow.offsetMax = new Vector2(-1f, -1f);
+
+            GameObject imageObject = new GameObject("Unit Card Art");
+            imageObject.transform.SetParent(root, false);
+            RectTransform imageRect = imageObject.AddComponent<RectTransform>();
+            imageRect.anchorMin = Vector2.zero;
+            imageRect.anchorMax = Vector2.one;
+            imageRect.offsetMin = new Vector2(2f, 2f);
+            imageRect.offsetMax = new Vector2(-2f, -2f);
+            Image image = imageObject.AddComponent<Image>();
+            image.sprite = sprite;
+            image.preserveAspect = true;
+            image.color = Color.white;
+
+            RectTransform trim = CreatePanel(root, "Unit Card Trim", new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(0.5f, 1f), Vector2.zero, new Vector2(0f, 3f), new Color(accent.r, accent.g, accent.b, 0.78f));
+            trim.offsetMin = new Vector2(2f, -3f);
+            trim.offsetMax = new Vector2(-2f, 0f);
+            return true;
+        }
+
+        private Sprite GetUnitTileArtSprite(UnitKind kind)
+        {
+            kind = RtsBalance.NormalizeUnitKind(kind);
+            if (unitTileArtSprites.TryGetValue(kind, out Sprite existing))
+            {
+                return existing;
+            }
+
+            string resourceName = GetUnitTileArtResourceName(kind);
+            if (string.IsNullOrEmpty(resourceName))
+            {
+                unitTileArtSprites[kind] = null;
+                return null;
+            }
+
+            Texture2D texture = Resources.Load<Texture2D>(UnitTileArtResourceRoot + resourceName);
+            if (texture == null)
+            {
+                unitTileArtSprites[kind] = null;
+                return null;
+            }
+
+            Sprite sprite = Sprite.Create(texture, new Rect(0f, 0f, texture.width, texture.height), new Vector2(0.5f, 0.5f), 100f);
+            sprite.name = resourceName + " HUD Sprite";
+            unitTileArtSprites[kind] = sprite;
+            return sprite;
+        }
+
+        private static string GetUnitTileArtResourceName(UnitKind kind)
+        {
+            switch (RtsBalance.NormalizeUnitKind(kind))
+            {
+                case UnitKind.Rifleman:
+                    return "Rifleman";
+                case UnitKind.Grenadier:
+                    return "Grenadier";
+                case UnitKind.RocketSoldier:
+                    return "RocketSoldier";
+                case UnitKind.FlameTrooper:
+                    return "FlameTrooper";
+                case UnitKind.Engineer:
+                    return "Engineer";
+                case UnitKind.LightTank:
+                    return "LightTank";
+                case UnitKind.MediumTank:
+                    return "MediumTank";
+                case UnitKind.HeavyTank:
+                    return "HeavyTank";
+                default:
+                    return string.Empty;
             }
         }
 
