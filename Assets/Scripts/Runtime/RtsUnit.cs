@@ -477,9 +477,10 @@ namespace QuestCommandRTS
             }
 
             float distance = PlanarDistance(transform.position, boardingTarget.transform.position);
-            if (distance > 1.35f)
+            float boardingRange = Mathf.Max(1.35f, BlockingRadius + boardingTarget.BlockingRadius + 0.18f);
+            if (distance > boardingRange)
             {
-                MoveToward(boardingTarget.transform.position, deltaTime, 1.1f);
+                MoveToward(boardingTarget.transform.position, deltaTime, Mathf.Max(1.1f, boardingRange - 0.12f));
                 return;
             }
 
@@ -1123,6 +1124,9 @@ namespace QuestCommandRTS
 
         private Transform passengerIndicator;
 
+        public Transform LoadedPassengerVisualForTests => passengerIndicator;
+        public RtsLoadedInfantryVisualAnimator LoadedPassengerAnimatorForTests => GetLoadedPassengerAnimator();
+
         public bool CanLoadPassenger(RtsUnit passenger)
         {
             return passenger != null &&
@@ -1187,7 +1191,18 @@ namespace QuestCommandRTS
             }
 
             Vector3 muzzle = GroundPosition + transform.TransformDirection(new Vector3(0.62f, 1.15f, 0.35f));
+            RtsLoadedInfantryVisualAnimator passengerAnimator = GetLoadedPassengerAnimator();
+            if (passengerAnimator != null)
+            {
+                passengerAnimator.PlayFirePulse();
+            }
+
             RtsGame.Instance.SpawnProjectile(RtsProjectileKind.RifleRound, Team, this, target, muzzle, passengerDamage, 0f, 0f);
+        }
+
+        private RtsLoadedInfantryVisualAnimator GetLoadedPassengerAnimator()
+        {
+            return passengerIndicator != null ? passengerIndicator.GetComponent<RtsLoadedInfantryVisualAnimator>() : null;
         }
 
         private void RefreshPassengerIndicator()
@@ -1216,14 +1231,68 @@ namespace QuestCommandRTS
                 return;
             }
 
-            GameObject indicator = GameObject.CreatePrimitive(PrimitiveType.Capsule);
-            indicator.name = "Loaded Infantry Indicator";
+            GameObject indicator = new GameObject("Loaded Infantry Passenger Rig");
             indicator.transform.SetParent(transform, false);
-            indicator.transform.localPosition = new Vector3(0.62f, 1.24f, -0.18f);
-            indicator.transform.localScale = new Vector3(0.18f, 0.34f, 0.18f);
-            indicator.GetComponent<Renderer>().sharedMaterial = RtsGame.CreateMaterial(new Color(0.62f, 0.95f, 1f));
+            indicator.transform.localPosition = new Vector3(0.62f, 1.03f, -0.24f);
+            indicator.transform.localRotation = Quaternion.Euler(0f, 0f, 0f);
+            indicator.transform.localScale = Vector3.one;
 
-            Collider collider = indicator.GetComponent<Collider>();
+            Material fatiguesMaterial = RtsGame.CreateMaterial(new Color(0.34f, 0.4f, 0.29f));
+            Material armorMaterial = RtsGame.CreateMaterial(new Color(0.1f, 0.13f, 0.12f));
+            Material weaponMaterial = RtsGame.CreateMaterial(new Color(0.06f, 0.07f, 0.075f));
+            Material visorMaterial = RtsGame.CreateMaterial(new Color(0.24f, 0.82f, 0.96f));
+            Material teamMaterial = RtsGame.CreateMaterial(RtsBalance.TeamColor(Team));
+            Material accentMaterial = RtsGame.CreateMaterial(GetPassengerAccentColor(LoadedPassengerKind));
+
+            CreatePassengerPart(PrimitiveType.Capsule, indicator.transform, "Loaded Passenger Body", new Vector3(0f, 0.19f, 0f), new Vector3(0.16f, 0.22f, 0.16f), fatiguesMaterial);
+            CreatePassengerPart(PrimitiveType.Sphere, indicator.transform, "Loaded Passenger Helmet", new Vector3(0f, 0.48f, 0.03f), new Vector3(0.18f, 0.14f, 0.18f), fatiguesMaterial);
+            CreatePassengerPart(PrimitiveType.Cube, indicator.transform, "Loaded Passenger Pack", new Vector3(0f, 0.25f, -0.12f), new Vector3(0.18f, 0.2f, 0.06f), armorMaterial);
+            CreatePassengerPart(PrimitiveType.Cube, indicator.transform, "Loaded Passenger Team Band", new Vector3(0f, 0.52f, 0.16f), new Vector3(0.22f, 0.035f, 0.04f), teamMaterial);
+            CreatePassengerPart(PrimitiveType.Cube, indicator.transform, "Loaded Passenger Visor", new Vector3(0f, 0.5f, 0.16f), new Vector3(0.16f, 0.035f, 0.035f), visorMaterial);
+            CreatePassengerPart(PrimitiveType.Cube, indicator.transform, "Loaded Passenger Arm L", new Vector3(-0.13f, 0.28f, 0.1f), new Vector3(0.06f, 0.08f, 0.26f), armorMaterial).transform.localRotation = Quaternion.Euler(18f, -12f, -8f);
+            CreatePassengerPart(PrimitiveType.Cube, indicator.transform, "Loaded Passenger Arm R", new Vector3(0.13f, 0.28f, 0.1f), new Vector3(0.06f, 0.08f, 0.26f), armorMaterial).transform.localRotation = Quaternion.Euler(18f, 12f, 8f);
+            CreatePassengerPart(PrimitiveType.Cube, indicator.transform, "Loaded Passenger Weapon", new Vector3(0f, 0.31f, 0.28f), new Vector3(0.07f, 0.055f, 0.44f), weaponMaterial);
+            CreatePassengerPart(PrimitiveType.Cube, indicator.transform, "Loaded Passenger Weapon Accent", new Vector3(0f, 0.33f, 0.46f), new Vector3(0.09f, 0.035f, 0.08f), accentMaterial);
+
+            RtsLoadedInfantryVisualAnimator animator = indicator.AddComponent<RtsLoadedInfantryVisualAnimator>();
+            animator.CaptureParts();
+
+            passengerIndicator = indicator.transform;
+        }
+
+        private static Color GetPassengerAccentColor(UnitKind kind)
+        {
+            switch (RtsBalance.NormalizeUnitKind(kind))
+            {
+                case UnitKind.Grenadier:
+                    return new Color(0.95f, 0.72f, 0.2f);
+                case UnitKind.RocketSoldier:
+                    return new Color(0.84f, 0.17f, 0.13f);
+                case UnitKind.FlameTrooper:
+                    return new Color(1f, 0.42f, 0.12f);
+                case UnitKind.Engineer:
+                    return new Color(0.25f, 0.88f, 1f);
+                default:
+                    return new Color(0.55f, 0.88f, 1f);
+            }
+        }
+
+        private static GameObject CreatePassengerPart(PrimitiveType primitive, Transform parent, string name, Vector3 localPosition, Vector3 localScale, Material material)
+        {
+            GameObject part = GameObject.CreatePrimitive(primitive);
+            part.name = name;
+            part.transform.SetParent(parent, false);
+            part.transform.localPosition = localPosition;
+            part.transform.localRotation = Quaternion.identity;
+            part.transform.localScale = localScale;
+
+            Renderer renderer = part.GetComponent<Renderer>();
+            if (renderer != null)
+            {
+                renderer.sharedMaterial = material;
+            }
+
+            Collider collider = part.GetComponent<Collider>();
             if (collider != null)
             {
                 if (Application.isPlaying)
@@ -1236,7 +1305,7 @@ namespace QuestCommandRTS
                 }
             }
 
-            passengerIndicator = indicator.transform;
+            return part;
         }
     }
 

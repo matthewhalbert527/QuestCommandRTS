@@ -10,17 +10,27 @@ namespace QuestCommandRTS
 
         private const float InfantryStrideFrequency = 4.8f;
         private const float InfantryLegSwingDegrees = 18f;
+        private const float InfantryIdleFrequency = 1.35f;
+        private const float InfantryIdleBobHeight = 0.022f;
+        private const float InfantryIdleLeanDegrees = 2.4f;
+        private const float InfantryIdleLegShift = 0.018f;
         private const float WheelRollDegreesPerUnit = 155f;
         private const float TrackScrollUnitsPerWorldUnit = 0.42f;
         private const float TurretYawDegreesPerSecond = 300f;
 
         private readonly List<Transform> legParts = new List<Transform>();
+        private readonly List<Transform> infantryIdleParts = new List<Transform>();
+        private readonly List<Transform> infantryIdleGearParts = new List<Transform>();
         private readonly List<Transform> wheelParts = new List<Transform>();
         private readonly List<Transform> trackPads = new List<Transform>();
         private readonly List<Transform> harvestParts = new List<Transform>();
         private readonly List<Transform> cargoFillParts = new List<Transform>();
         private readonly List<Quaternion> legBaseRotations = new List<Quaternion>();
         private readonly List<Vector3> legBasePositions = new List<Vector3>();
+        private readonly List<Quaternion> infantryIdleBaseRotations = new List<Quaternion>();
+        private readonly List<Vector3> infantryIdleBasePositions = new List<Vector3>();
+        private readonly List<Quaternion> infantryIdleGearBaseRotations = new List<Quaternion>();
+        private readonly List<Vector3> infantryIdleGearBasePositions = new List<Vector3>();
         private readonly List<Quaternion> wheelBaseRotations = new List<Quaternion>();
         private readonly List<Vector3> trackBasePositions = new List<Vector3>();
         private readonly List<Quaternion> harvestBaseRotations = new List<Quaternion>();
@@ -35,11 +45,13 @@ namespace QuestCommandRTS
         private Quaternion turretBaseRotation;
         private Vector3 lastPosition;
         private float stridePhase;
+        private float idlePhase;
         private float wheelRollDegrees;
         private float trackScroll;
         private float harvestMotionPhase;
 
         public bool HasLegRigForTests => legParts.Count > 0;
+        public bool HasInfantryIdleRigForTests => infantryIdleParts.Count > 0 || infantryIdleGearParts.Count > 0 || legParts.Count > 0;
         public bool HasWheelRigForTests => wheelParts.Count > 0 || trackPads.Count > 0;
         public bool HasRoundWheelRigForTests => wheelParts.Count > 0;
         public bool HasTrackRigForTests => trackPads.Count > 0;
@@ -47,6 +59,7 @@ namespace QuestCommandRTS
         public bool HasCargoFillRigForTests => cargoFillParts.Count > 0;
         public bool HasTurretRigForTests => turretPivot != null;
         public Transform FirstLegForTests => legParts.Count > 0 ? legParts[0] : null;
+        public Transform FirstInfantryIdlePartForTests => infantryIdleParts.Count > 0 ? infantryIdleParts[0] : FirstLegForTests;
         public Transform FirstWheelForTests => wheelParts.Count > 0 ? wheelParts[0] : FirstTrackPadForTests;
         public Transform FirstTrackPadForTests => trackPads.Count > 0 ? trackPads[0] : null;
         public Transform FirstHarvestPartForTests => harvestParts.Count > 0 ? harvestParts[0] : null;
@@ -127,12 +140,18 @@ namespace QuestCommandRTS
         private void CollectRigParts()
         {
             legParts.Clear();
+            infantryIdleParts.Clear();
+            infantryIdleGearParts.Clear();
             wheelParts.Clear();
             trackPads.Clear();
             harvestParts.Clear();
             cargoFillParts.Clear();
             legBaseRotations.Clear();
             legBasePositions.Clear();
+            infantryIdleBaseRotations.Clear();
+            infantryIdleBasePositions.Clear();
+            infantryIdleGearBaseRotations.Clear();
+            infantryIdleGearBasePositions.Clear();
             wheelBaseRotations.Clear();
             trackBasePositions.Clear();
             harvestBaseRotations.Clear();
@@ -188,7 +207,46 @@ namespace QuestCommandRTS
                 {
                     turretMuzzle = child;
                 }
+
+                if (RtsBalance.IsInfantry(unitKind))
+                {
+                    CollectInfantryIdlePart(child);
+                }
             }
+        }
+
+        private void CollectInfantryIdlePart(Transform child)
+        {
+            string childName = child.name;
+            if (IsInfantryIdleBodyPart(childName))
+            {
+                infantryIdleParts.Add(child);
+                infantryIdleBaseRotations.Add(child.localRotation);
+                infantryIdleBasePositions.Add(child.localPosition);
+                return;
+            }
+
+            if (IsInfantryIdleGearPart(childName))
+            {
+                infantryIdleGearParts.Add(child);
+                infantryIdleGearBaseRotations.Add(child.localRotation);
+                infantryIdleGearBasePositions.Add(child.localPosition);
+            }
+        }
+
+        private static bool IsInfantryIdleBodyPart(string childName)
+        {
+            return childName == "Body" ||
+                childName == "Helmet" ||
+                childName.EndsWith(" Model", System.StringComparison.Ordinal);
+        }
+
+        private static bool IsInfantryIdleGearPart(string childName)
+        {
+            return childName == "Rifle" ||
+                childName == "Rocket Launcher" ||
+                childName == "Repair Tool" ||
+                childName.StartsWith("Infantry ", System.StringComparison.Ordinal);
         }
 
         private void TickVisuals(float deltaTime)
@@ -202,6 +260,10 @@ namespace QuestCommandRTS
             float signedVehicleMove = Vector3.Dot(delta, transform.forward);
             float speed = moved / safeDelta;
             float movementBlend = Mathf.Clamp01(speed / 0.35f);
+            if (RtsBalance.IsInfantry(unitKind))
+            {
+                idlePhase += safeDelta * InfantryIdleFrequency;
+            }
 
             if (movementBlend > 0.01f)
             {
@@ -211,12 +273,58 @@ namespace QuestCommandRTS
                 trackScroll += treadMove * TrackScrollUnitsPerWorldUnit;
             }
 
+            AnimateInfantryIdle(movementBlend);
             AnimateLegs(movementBlend);
             AnimateWheels();
             AnimateTracks();
             AnimateHarvester(safeDelta);
             AnimateTurret(safeDelta);
             lastPosition = currentPosition;
+        }
+
+        private void AnimateInfantryIdle(float movementBlend)
+        {
+            if (!RtsBalance.IsInfantry(unitKind))
+            {
+                return;
+            }
+
+            float idleBlend = 1f - movementBlend;
+            float bob = Mathf.Sin(idlePhase) * InfantryIdleBobHeight * idleBlend;
+            float lean = Mathf.Sin(idlePhase * 0.73f) * InfantryIdleLeanDegrees * idleBlend;
+            float glance = Mathf.Sin(idlePhase * 0.47f) * 1.2f * idleBlend;
+
+            for (int i = 0; i < infantryIdleParts.Count; i++)
+            {
+                Transform part = infantryIdleParts[i];
+                if (part == null)
+                {
+                    continue;
+                }
+
+                float weight = part.name == "Helmet" ? 1.25f : 1f;
+                part.localPosition = infantryIdleBasePositions[i] + new Vector3(0f, bob * weight, 0f);
+                part.localRotation = infantryIdleBaseRotations[i] * Quaternion.Euler(lean * 0.45f * weight, glance * weight, 0f);
+            }
+
+            for (int i = 0; i < infantryIdleGearParts.Count; i++)
+            {
+                Transform part = infantryIdleGearParts[i];
+                if (part == null)
+                {
+                    continue;
+                }
+
+                float gearBob = bob * 0.75f;
+                float weaponSettle = IsInfantryWeaponPart(part.name) ? Mathf.Sin(idlePhase * 1.6f) * 1.8f * idleBlend : 0f;
+                part.localPosition = infantryIdleGearBasePositions[i] + new Vector3(0f, gearBob, 0f);
+                part.localRotation = infantryIdleGearBaseRotations[i] * Quaternion.Euler(weaponSettle, 0f, 0f);
+            }
+        }
+
+        private static bool IsInfantryWeaponPart(string childName)
+        {
+            return childName == "Rifle" || childName == "Rocket Launcher" || childName == "Repair Tool";
         }
 
         private void AnimateLegs(float movementBlend)
@@ -227,6 +335,7 @@ namespace QuestCommandRTS
             }
 
             float bodyBob = Mathf.Sin(stridePhase * 2f) * 0.025f * movementBlend;
+            float idleBlend = RtsBalance.IsInfantry(unitKind) ? 1f - movementBlend : 0f;
             for (int i = 0; i < legParts.Count; i++)
             {
                 Transform leg = legParts[i];
@@ -237,8 +346,10 @@ namespace QuestCommandRTS
 
                 float sidePhase = i % 2 == 0 ? 0f : Mathf.PI;
                 float swing = Mathf.Sin(stridePhase + sidePhase) * InfantryLegSwingDegrees * movementBlend;
-                leg.localRotation = legBaseRotations[i] * Quaternion.Euler(swing, 0f, 0f);
-                leg.localPosition = legBasePositions[i] + new Vector3(0f, bodyBob, 0f);
+                float idleRock = Mathf.Sin(idlePhase * 0.82f + sidePhase) * 2.2f * idleBlend;
+                float idleShift = Mathf.Sin(idlePhase + sidePhase) * InfantryIdleLegShift * idleBlend;
+                leg.localRotation = legBaseRotations[i] * Quaternion.Euler(swing + idleRock, 0f, idleRock * 0.35f);
+                leg.localPosition = legBasePositions[i] + new Vector3(0f, bodyBob + Mathf.Abs(idleShift) * 0.28f, idleShift);
             }
         }
 

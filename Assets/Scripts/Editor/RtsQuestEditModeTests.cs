@@ -462,6 +462,16 @@ namespace QuestCommandRTS.Editor
 
             RtsUnit rifleman = game.CreateUnit(RtsTeam.Player, UnitKind.Rifleman, new Vector3(-52f, 0f, -52f));
             RtsUnitVisualAnimator infantryAnimator = rifleman.GetComponent<RtsUnitVisualAnimator>();
+            Assert.IsTrue(infantryAnimator.HasInfantryIdleRigForTests);
+            Transform idlePart = infantryAnimator.FirstInfantryIdlePartForTests;
+            Vector3 idleStartPosition = idlePart.localPosition;
+            Quaternion idleStartRotation = idlePart.localRotation;
+            infantryAnimator.TickVisualsForTests(0.5f);
+            Assert.IsTrue(
+                (idlePart.localPosition - idleStartPosition).sqrMagnitude > 0.000001f ||
+                Quaternion.Angle(idleStartRotation, idlePart.localRotation) > 0.1f,
+                "Stationary infantry should keep a subtle idle animation active.");
+
             Transform leg = infantryAnimator.FirstLegForTests;
             Quaternion legStart = leg.localRotation;
 
@@ -700,13 +710,36 @@ namespace QuestCommandRTS.Editor
 
             Assert.AreEqual(1, medium.LoadedRiflemen);
             Assert.IsFalse(HasEntity(game, rifleman), "Boarded rifleman should leave the active entity list.");
+            Assert.IsNotNull(medium.LoadedPassengerVisualForTests);
+            RtsLoadedInfantryVisualAnimator passengerAnimator = medium.LoadedPassengerAnimatorForTests;
+            Assert.IsNotNull(passengerAnimator);
+            Transform passengerBody = passengerAnimator.BodyForTests;
+            Transform passengerWeapon = passengerAnimator.WeaponForTests;
+            Assert.IsNotNull(passengerBody);
+            Assert.IsNotNull(passengerWeapon);
+            Vector3 passengerBodyStart = passengerBody.localPosition;
+            Quaternion passengerWeaponStart = passengerWeapon.localRotation;
+            passengerAnimator.TickForTests(0.5f);
+            Assert.Greater((passengerBody.localPosition - passengerBodyStart).sqrMagnitude, 0.000001f);
+            Assert.Greater(Quaternion.Angle(passengerWeaponStart, passengerWeapon.localRotation), 0.1f);
 
             RtsUnit enemy = game.CreateUnit(RtsTeam.Enemy, UnitKind.Rifleman, medium.transform.position + new Vector3(5.5f, 0f, 0f));
             float expectedDamage = medium.Damage + RtsBalance.GetUnit(UnitKind.Rifleman).Damage;
             float healthBefore = enemy.Health;
 
             medium.IssueAttack(enemy);
-            medium.TickOrdersForTests(0.1f);
+            for (int i = 0; i < 60 && enemy.Health > healthBefore - expectedDamage + 0.001f; i++)
+            {
+                medium.TickOrdersForTests(0.1f);
+                RtsProjectile[] projectiles = Object.FindObjectsOfType<RtsProjectile>();
+                for (int projectileIndex = 0; projectileIndex < projectiles.Length; projectileIndex++)
+                {
+                    if (projectiles[projectileIndex] != null)
+                    {
+                        projectiles[projectileIndex].TickProjectileForTests(0.1f);
+                    }
+                }
+            }
 
             Assert.AreEqual(healthBefore - expectedDamage, enemy.Health, 0.001f);
         }
