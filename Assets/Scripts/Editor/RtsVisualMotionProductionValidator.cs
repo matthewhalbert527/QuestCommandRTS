@@ -50,7 +50,7 @@ namespace QuestCommandRTS.Editor
 
             Require(infantryAnimator.HasLegRigForTests, "Infantry leg rig", "Infantry should have procedural walk legs.");
             Require(tankAnimator.HasTrackRigForTests && tankAnimator.HasTurretRigForTests, "Tank rig", "Tanks should have procedural tracks and turret.");
-            Require(harvesterAnimator.HasTrackRigForTests && harvesterAnimator.HasHarvestRigForTests && !harvesterAnimator.HasTurretRigForTests, "Harvester motion rig", "Harvesters should use treads and have a harvesting rig without a turret rig.");
+            Require(harvesterAnimator.HasTrackRigForTests && harvesterAnimator.HasHarvestRigForTests && harvesterAnimator.HasCargoFillRigForTests && !harvesterAnimator.HasTurretRigForTests, "Harvester motion rig", "Harvesters should use treads, a harvesting rig, and a visible cargo-fill rig without a turret rig.");
             Require(!harvesterAnimator.HasRoundWheelRigForTests && harvester.transform.Find("Roll Wheel LF") == null, "Harvester tread rig", "Harvesters should not use the old rotating round wheel primitives.");
         }
 
@@ -98,6 +98,16 @@ namespace QuestCommandRTS.Editor
                 Quaternion.Angle(harvestStartRotation, harvestPart.localRotation) > 1f || (harvestPart.localPosition - harvestStartPosition).sqrMagnitude > 0.0001f,
                 "Harvester active harvesting motion",
                 "Harvester collector/intake parts should animate while actively harvesting.");
+
+            Transform cargoFill = harvesterAnimator.FirstCargoFillPartForTests;
+            Require(cargoFill != null, "Harvester cargo fill part", "Harvester should expose an ore load that can grow as cargo is gathered.");
+            float emptyFillScale = cargoFill.localScale.y;
+            harvester.SetCargoForTests(harvester.CargoCapacity / 2);
+            harvesterAnimator.TickVisualsForTests(0.25f);
+            Require(harvester.CargoFillForTests > 0.45f && cargoFill.gameObject.activeSelf && cargoFill.localScale.y > emptyFillScale + 0.05f, "Harvester cargo fills", "The harvester ore load should visibly rise as cargo is gathered.");
+            harvester.SetCargoForTests(0);
+            harvesterAnimator.TickVisualsForTests(0.25f);
+            Require(!cargoFill.gameObject.activeSelf || cargoFill.localScale.y < emptyFillScale + 0.02f, "Harvester cargo empties", "The harvester ore load should hide again after dumping at a refinery.");
         }
 
         private static void ValidatePaletteTinting(RtsGame game)

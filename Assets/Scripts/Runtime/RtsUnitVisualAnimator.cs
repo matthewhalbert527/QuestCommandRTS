@@ -18,12 +18,15 @@ namespace QuestCommandRTS
         private readonly List<Transform> wheelParts = new List<Transform>();
         private readonly List<Transform> trackPads = new List<Transform>();
         private readonly List<Transform> harvestParts = new List<Transform>();
+        private readonly List<Transform> cargoFillParts = new List<Transform>();
         private readonly List<Quaternion> legBaseRotations = new List<Quaternion>();
         private readonly List<Vector3> legBasePositions = new List<Vector3>();
         private readonly List<Quaternion> wheelBaseRotations = new List<Quaternion>();
         private readonly List<Vector3> trackBasePositions = new List<Vector3>();
         private readonly List<Quaternion> harvestBaseRotations = new List<Quaternion>();
         private readonly List<Vector3> harvestBasePositions = new List<Vector3>();
+        private readonly List<Vector3> cargoFillBaseScales = new List<Vector3>();
+        private readonly List<Vector3> cargoFillBasePositions = new List<Vector3>();
 
         private RtsUnit owner;
         private UnitKind unitKind;
@@ -41,11 +44,13 @@ namespace QuestCommandRTS
         public bool HasRoundWheelRigForTests => wheelParts.Count > 0;
         public bool HasTrackRigForTests => trackPads.Count > 0;
         public bool HasHarvestRigForTests => harvestParts.Count > 0;
+        public bool HasCargoFillRigForTests => cargoFillParts.Count > 0;
         public bool HasTurretRigForTests => turretPivot != null;
         public Transform FirstLegForTests => legParts.Count > 0 ? legParts[0] : null;
         public Transform FirstWheelForTests => wheelParts.Count > 0 ? wheelParts[0] : FirstTrackPadForTests;
         public Transform FirstTrackPadForTests => trackPads.Count > 0 ? trackPads[0] : null;
         public Transform FirstHarvestPartForTests => harvestParts.Count > 0 ? harvestParts[0] : null;
+        public Transform FirstCargoFillPartForTests => cargoFillParts.Count > 0 ? cargoFillParts[0] : null;
         public Transform TurretPivotForTests => turretPivot;
 
         public void Initialize(RtsUnit unit, UnitKind kind)
@@ -54,6 +59,7 @@ namespace QuestCommandRTS
             unitKind = RtsBalance.NormalizeUnitKind(kind);
             lastPosition = transform.position;
             CollectRigParts();
+            UpdateHarvesterCargoFill(0f);
         }
 
         public bool AimTurretAt(Vector3 worldPosition, float deltaTime)
@@ -124,12 +130,15 @@ namespace QuestCommandRTS
             wheelParts.Clear();
             trackPads.Clear();
             harvestParts.Clear();
+            cargoFillParts.Clear();
             legBaseRotations.Clear();
             legBasePositions.Clear();
             wheelBaseRotations.Clear();
             trackBasePositions.Clear();
             harvestBaseRotations.Clear();
             harvestBasePositions.Clear();
+            cargoFillBaseScales.Clear();
+            cargoFillBasePositions.Clear();
             turretPivot = null;
             turretMuzzle = null;
 
@@ -163,6 +172,12 @@ namespace QuestCommandRTS
                     harvestParts.Add(child);
                     harvestBaseRotations.Add(child.localRotation);
                     harvestBasePositions.Add(child.localPosition);
+                }
+                else if (child.name.StartsWith("Cargo Fill Ore", System.StringComparison.Ordinal))
+                {
+                    cargoFillParts.Add(child);
+                    cargoFillBaseScales.Add(child.localScale);
+                    cargoFillBasePositions.Add(child.localPosition);
                 }
                 else if (child.name == "Animated Turret Pivot")
                 {
@@ -281,7 +296,13 @@ namespace QuestCommandRTS
 
         private void AnimateHarvester(float deltaTime)
         {
-            if (harvestParts.Count == 0 || owner == null || unitKind != UnitKind.Harvester)
+            if (owner == null || unitKind != UnitKind.Harvester)
+            {
+                return;
+            }
+
+            UpdateHarvesterCargoFill(deltaTime);
+            if (harvestParts.Count == 0)
             {
                 return;
             }
@@ -322,6 +343,33 @@ namespace QuestCommandRTS
                     part.localRotation = baseRotation * Quaternion.Euler(Mathf.Sin(phase) * 9f * blend, 0f, 0f);
                     part.localPosition = basePosition + new Vector3(0f, pump, 0f);
                 }
+            }
+        }
+
+        private void UpdateHarvesterCargoFill(float deltaTime)
+        {
+            if (cargoFillParts.Count == 0)
+            {
+                return;
+            }
+
+            HarvesterUnit harvester = owner as HarvesterUnit;
+            float fill = harvester != null ? harvester.CargoFill01 : 0f;
+            float interpolation = deltaTime <= 0f ? 1f : Mathf.Clamp01(deltaTime * 10f);
+            for (int i = 0; i < cargoFillParts.Count; i++)
+            {
+                Transform part = cargoFillParts[i];
+                if (part == null)
+                {
+                    continue;
+                }
+
+                Vector3 baseScale = cargoFillBaseScales[i];
+                Vector3 targetScale = new Vector3(baseScale.x, Mathf.Max(0.001f, baseScale.y * fill), baseScale.z);
+                Vector3 targetPosition = cargoFillBasePositions[i] + Vector3.up * (baseScale.y * (fill - 1f) * 0.5f);
+                part.localScale = Vector3.Lerp(part.localScale, targetScale, interpolation);
+                part.localPosition = Vector3.Lerp(part.localPosition, targetPosition, interpolation);
+                part.gameObject.SetActive(fill > 0.015f);
             }
         }
 

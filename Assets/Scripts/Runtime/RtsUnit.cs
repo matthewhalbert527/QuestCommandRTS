@@ -1029,6 +1029,7 @@ namespace QuestCommandRTS
         public int Cargo { get; private set; }
         public int CargoCapacity = 700;
         public float HarvestRatePerSecond = 170f;
+        public float CargoFill01 => CargoCapacity <= 0 ? 0f : Mathf.Clamp01((float)Cargo / CargoCapacity);
         public bool IsHarvestingForVisuals => state == HarvestState.Harvesting && targetNode != null && !targetNode.IsDepleted && Cargo < CargoCapacity;
 
         private enum HarvestState
@@ -1186,10 +1187,16 @@ namespace QuestCommandRTS
         public bool IsAutoHarvestExitingProductionForTests => state == HarvestState.ExitingProduction;
         public ResourceNode TargetResourceNodeForTests => targetNode;
         public RefineryStructure HomeRefineryForTests => homeRefinery;
+        public float CargoFillForTests => CargoFill01;
 
         public void TickHarvesterForTests(float deltaTime)
         {
             TickHarvestOrders(deltaTime);
+        }
+
+        public void SetCargoForTests(int cargo)
+        {
+            Cargo = Mathf.Clamp(cargo, 0, CargoCapacity);
         }
 
         public void SetHarvestingForVisualsForTests(ResourceNode node, RefineryStructure refinery)

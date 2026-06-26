@@ -2253,6 +2253,7 @@ namespace QuestCommandRTS
                 CreatePrimitive(PrimitiveType.Cube, root, "Cab", new Vector3(0f, 0.75f, -0.35f), new Vector3(1.2f, 0.8f, 0.9f), teamMaterial);
                 CreatePrimitive(PrimitiveType.Cube, root, "Cargo", new Vector3(0f, 0.58f, 0.55f), new Vector3(1.35f, 0.55f, 1.3f), neutralMaterial);
                 CreatePrimitive(PrimitiveType.Cylinder, root, "Collector", new Vector3(0f, 0.3f, 1.35f), new Vector3(0.65f, 0.2f, 0.65f), resourceMaterial).transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
+                CreateHarvesterReadabilityPanels(root, teamMaterial);
                 return;
             }
 
@@ -2731,6 +2732,11 @@ namespace QuestCommandRTS
             CreatePrimitive(PrimitiveType.Cube, root, "Harvester Left Lower Shadow", new Vector3(-0.76f, 0.32f, 0.06f), new Vector3(0.06f, 0.16f, 1.28f), shadowPanelMaterial);
             CreatePrimitive(PrimitiveType.Cube, root, "Harvester Right Lower Shadow", new Vector3(0.76f, 0.32f, 0.06f), new Vector3(0.06f, 0.16f, 1.28f), shadowPanelMaterial);
             CreatePrimitive(PrimitiveType.Cube, root, "Harvester Caution Intake Strip", new Vector3(0f, 0.36f, 1.16f), new Vector3(0.82f, 0.045f, 0.07f), cautionStripeMaterial);
+            CreatePrimitive(PrimitiveType.Cube, root, "Harvester Cargo Dark Trough", new Vector3(0f, 0.9f, 0.44f), new Vector3(0.96f, 0.12f, 0.74f), shadowPanelMaterial);
+            CreatePrimitive(PrimitiveType.Cube, root, "Cargo Fill Ore Mass", new Vector3(0f, 1.02f, 0.44f), new Vector3(0.82f, 0.26f, 0.62f), resourceMaterial);
+            CreatePrimitive(PrimitiveType.Cube, root, "Cargo Fill Ore Crest", new Vector3(0f, 1.18f, 0.44f), new Vector3(0.58f, 0.1f, 0.38f), resourceGlowMaterial);
+            CreatePrimitive(PrimitiveType.Sphere, root, "Cargo Fill Ore Glint L", new Vector3(-0.28f, 1.2f, 0.27f), new Vector3(0.12f, 0.06f, 0.12f), resourceGlowMaterial);
+            CreatePrimitive(PrimitiveType.Sphere, root, "Cargo Fill Ore Glint R", new Vector3(0.28f, 1.2f, 0.58f), new Vector3(0.1f, 0.05f, 0.1f), resourceGlowMaterial);
         }
 
         private void CreateTankReadabilityPanels(Transform root, UnitKind kind, Material teamMaterial)
