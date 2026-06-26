@@ -856,7 +856,7 @@ namespace QuestCommandRTS
             GameObject root = new GameObject(team + " " + stats.Name);
             root.transform.SetParent(structuresRoot, true);
             root.transform.position = ClampToGround(position);
-            root.transform.rotation = Quaternion.Euler(0f, team == RtsTeam.Enemy ? 180f : 0f, 0f);
+            root.transform.rotation = GetStructureFacingRotation();
 
             BoxCollider collider = root.AddComponent<BoxCollider>();
             collider.size = new Vector3(stats.FootprintRadius * 2f, 2.1f, stats.FootprintRadius * 2f);
@@ -898,6 +898,7 @@ namespace QuestCommandRTS
             StructureStats stats = RtsBalance.GetStructure(kind);
             GameObject root = new GameObject("Preview " + stats.Name);
             root.transform.localScale = Vector3.one;
+            root.transform.rotation = GetStructureFacingRotation();
             BuildStructureVisual(root.transform, kind, RtsTeam.Player);
 
             foreach (Collider collider in root.GetComponentsInChildren<Collider>())
@@ -1676,6 +1677,11 @@ namespace QuestCommandRTS
             nextEntityId = Mathf.Max(nextEntityId, entity.PersistentId + 1);
             entity.transform.position = ClampToGround(data.position.ToVector3());
             entity.transform.rotation = Quaternion.Euler(0f, data.rotationY, 0f);
+            if (entity is RtsStructure)
+            {
+                entity.transform.rotation = GetStructureFacingRotation();
+            }
+
             entity.SetHealthForRestore(data.health);
         }
 
@@ -3349,6 +3355,11 @@ namespace QuestCommandRTS
             material.DisableKeyword("_ALPHAPREMULTIPLY_ON");
             material.renderQueue = 3000;
             return material;
+        }
+
+        private static Quaternion GetStructureFacingRotation()
+        {
+            return Quaternion.Euler(0f, 180f, 0f);
         }
 
         private static Vector3 ClampToGround(Vector3 position)

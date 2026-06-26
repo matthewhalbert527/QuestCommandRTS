@@ -8,7 +8,7 @@ namespace QuestCommandRTS
     {
         public const float TankTurretAimToleranceDegrees = 7.5f;
 
-        private const float InfantryStrideFrequency = 8.8f;
+        private const float InfantryStrideFrequency = 4.8f;
         private const float InfantryLegSwingDegrees = 18f;
         private const float WheelRollDegreesPerUnit = 155f;
         private const float TrackScrollUnitsPerWorldUnit = 0.42f;

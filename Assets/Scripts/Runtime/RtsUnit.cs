@@ -24,6 +24,7 @@ namespace QuestCommandRTS
         public RtsEntity CurrentAttackTargetForVisuals => attackTarget != null && attackTarget.IsAlive ? attackTarget : null;
         public float BlockingRadius => GetBlockingRadius(UnitKind);
 
+        private readonly List<Vector3> queuedMoveWaypoints = new List<Vector3>();
         private RtsUnitVisualAnimator visualAnimator;
         private float nextAttackTime;
         private float nextAwarenessScanTime;
@@ -62,6 +63,7 @@ namespace QuestCommandRTS
 
         public virtual void IssueMove(Vector3 worldPosition)
         {
+            ClearMovePath();
             repairTarget = null;
             boardingTarget = null;
             if (!CanMoveWhileAttacking())
@@ -74,6 +76,32 @@ namespace QuestCommandRTS
             destination = ClampToMap(worldPosition);
         }
 
+        public virtual void IssueMovePath(IList<Vector3> worldPositions)
+        {
+            ClearMovePath();
+            repairTarget = null;
+            boardingTarget = null;
+            if (!CanMoveWhileAttacking())
+            {
+                attackTarget = null;
+            }
+
+            hasDestination = false;
+            hasAttackMoveDestination = false;
+            if (worldPositions == null || worldPositions.Count == 0)
+            {
+                destination = transform.position;
+                return;
+            }
+
+            destination = ClampToMap(worldPositions[0]);
+            hasDestination = true;
+            for (int i = 1; i < worldPositions.Count; i++)
+            {
+                queuedMoveWaypoints.Add(ClampToMap(worldPositions[i]));
+            }
+        }
+
         public virtual void IssueAttack(RtsEntity target)
         {
             if (target == null || target.Team == Team || Damage <= 0f)
@@ -83,6 +111,7 @@ namespace QuestCommandRTS
 
             repairTarget = null;
             boardingTarget = null;
+            ClearMovePath();
             attackTarget = target;
             hasDestination = false;
             hasAttackMoveDestination = false;
@@ -92,6 +121,7 @@ namespace QuestCommandRTS
         {
             repairTarget = null;
             boardingTarget = null;
+            ClearMovePath();
             attackTarget = null;
             hasDestination = false;
             hasAttackMoveDestination = true;
@@ -112,6 +142,7 @@ namespace QuestCommandRTS
 
             boardingTarget = target;
             repairTarget = null;
+            ClearMovePath();
             attackTarget = null;
             hasDestination = false;
             hasAttackMoveDestination = false;
@@ -131,6 +162,7 @@ namespace QuestCommandRTS
 
             repairTarget = target;
             boardingTarget = null;
+            ClearMovePath();
             attackTarget = null;
             hasDestination = false;
             hasAttackMoveDestination = false;
@@ -140,6 +172,7 @@ namespace QuestCommandRTS
         {
             repairTarget = null;
             boardingTarget = null;
+            ClearMovePath();
             attackTarget = null;
             hasDestination = false;
             hasAttackMoveDestination = false;
@@ -157,6 +190,9 @@ namespace QuestCommandRTS
         {
             TickOrders(deltaTime);
         }
+
+        public int QueuedMoveWaypointCountForTests => queuedMoveWaypoints.Count;
+        public Vector3 DestinationForTests => destination;
 #endif
 
         public RtsUnitOrderSaveData CaptureOrderState()
@@ -211,6 +247,7 @@ namespace QuestCommandRTS
             repairTarget = null;
             hasDestination = false;
             hasAttackMoveDestination = false;
+            ClearMovePath();
 
             if (data == null)
             {
@@ -285,7 +322,7 @@ namespace QuestCommandRTS
                     TickAttackOrder(deltaTime, true);
                     if (hasDestination && MoveToward(destination, deltaTime, StopDistance))
                     {
-                        hasDestination = false;
+                        AdvanceMovePath();
                     }
                     else if (hasAttackMoveDestination && MoveToward(attackMoveDestination, deltaTime, StopDistance))
                     {
@@ -338,9 +375,27 @@ namespace QuestCommandRTS
             {
                 if (MoveToward(destination, deltaTime, StopDistance))
                 {
-                    hasDestination = false;
+                    AdvanceMovePath();
                 }
             }
+        }
+
+        private void AdvanceMovePath()
+        {
+            if (queuedMoveWaypoints.Count == 0)
+            {
+                hasDestination = false;
+                return;
+            }
+
+            destination = queuedMoveWaypoints[0];
+            queuedMoveWaypoints.RemoveAt(0);
+            hasDestination = true;
+        }
+
+        private void ClearMovePath()
+        {
+            queuedMoveWaypoints.Clear();
         }
 
         protected override void OnDamaged(float amount, RtsEntity attacker)

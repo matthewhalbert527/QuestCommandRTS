@@ -23,6 +23,7 @@ namespace QuestCommandRTS.Editor
                 ValidateVisualAnimation(game);
                 ValidatePaletteTinting(game);
                 ValidateContrastDetailing(game);
+                ValidateStructureFacing(game);
                 ValidateProductionExit(game);
                 Debug.Log("[Command RTS Visuals] PASS - Visual motion rigs, harvester harvesting motion, palette tinting, contrast detailing, and production exits validated.");
             }
@@ -158,6 +159,30 @@ namespace QuestCommandRTS.Editor
             Vector3 exitOffset = order.destination.ToVector3() - barracks.transform.position;
             exitOffset.y = 0f;
             Require(exitOffset.magnitude > barracks.FootprintRadius + 1.5f, "Production exit destination", "Exit destination should be outside the producer footprint.");
+            Require(exitOffset.z < -0.5f, "Infantry exits downward", "Barracks-produced infantry should leave through the south-facing front door.");
+
+            ProductionStructure factory = game.CreateStructure(RtsTeam.Player, StructureKind.WarFactory, new Vector3(-68f, 0f, -62f)) as ProductionStructure;
+            RtsUnit tank = factory.SpawnProducedUnit(UnitKind.MediumTank, null);
+            Require(tank != null, "Factory produced vehicle", "War factory should spawn vehicles.");
+            Vector3 tankSpawnOffset = tank.transform.position - factory.transform.position;
+            tankSpawnOffset.y = 0f;
+            Require(tankSpawnOffset.z > 0.35f && tankSpawnOffset.magnitude < factory.FootprintRadius, "Factory rear bay spawn", "Vehicles should start deeper inside the war factory bay before rolling out.");
+            Require(tank.QueuedMoveWaypointCountForTests >= 2 && tank.DestinationForTests.z < factory.transform.position.z, "Factory staged deployment", "War factory vehicles should follow staged southbound rollout waypoints.");
+        }
+
+        private static void ValidateStructureFacing(RtsGame game)
+        {
+            RtsStructure command = game.CreateStructure(RtsTeam.Player, StructureKind.CommandCenter, new Vector3(-84f, 0f, -58f));
+            RtsStructure barracks = game.CreateStructure(RtsTeam.Player, StructureKind.Barracks, new Vector3(-80f, 0f, -58f));
+            RtsStructure factory = game.CreateStructure(RtsTeam.Player, StructureKind.WarFactory, new Vector3(-72f, 0f, -58f));
+            RtsStructure enemyFactory = game.CreateStructure(RtsTeam.Enemy, StructureKind.WarFactory, new Vector3(-64f, 0f, -58f));
+
+            Require(IsFacingDown(command) && IsFacingDown(barracks) && IsFacingDown(factory) && IsFacingDown(enemyFactory), "Buildings face downward", "All structures should face toward the bottom/south edge of the board.");
+        }
+
+        private static bool IsFacingDown(RtsStructure structure)
+        {
+            return structure != null && Vector3.Dot(structure.transform.forward.normalized, Vector3.back) > 0.97f;
         }
 
         private static RtsUnitVisualAnimator RequireAnimator(RtsUnit unit, string label)

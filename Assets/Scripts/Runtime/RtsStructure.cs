@@ -315,15 +315,26 @@ namespace QuestCommandRTS
                 return null;
             }
 
+            unit.transform.rotation = GetProductionRotation();
             Vector3 exitPoint = GetProductionExitPoint(completed);
             Vector3 moveTarget = rallyPoint.HasValue ? RtsGame.Instance.ClampWorldPoint(rallyPoint.Value) : exitPoint;
             HarvesterUnit harvester = unit as HarvesterUnit;
             if (harvester != null && !rallyPoint.HasValue && TryAssignAutomaticHarvest(harvester, exitPoint))
             {
+                SpawnWarFactoryDeploymentEffect(completed);
                 return unit;
             }
 
-            unit.IssueMove(moveTarget);
+            if (ShouldUseWarFactoryDeployment(completed))
+            {
+                unit.IssueMovePath(CreateWarFactoryDeploymentPath(completed, moveTarget));
+                SpawnWarFactoryDeploymentEffect(completed);
+            }
+            else
+            {
+                unit.IssueMove(moveTarget);
+            }
+
             return unit;
         }
 
@@ -390,8 +401,9 @@ namespace QuestCommandRTS
         {
             Vector3 forward = transform.forward.sqrMagnitude > 0.01f ? transform.forward : Vector3.forward;
             Vector3 right = transform.right.sqrMagnitude > 0.01f ? transform.right : Vector3.right;
-            float interiorOffset = RtsBalance.IsInfantry(kind) ? FootprintRadius * 0.22f : FootprintRadius * 0.1f;
-            float lateralJitter = RtsBalance.IsInfantry(kind) ? 0.28f : 0.12f;
+            bool warFactoryVehicle = ShouldUseWarFactoryDeployment(kind);
+            float interiorOffset = warFactoryVehicle ? -FootprintRadius * 0.34f : RtsBalance.IsInfantry(kind) ? FootprintRadius * 0.22f : FootprintRadius * 0.1f;
+            float lateralJitter = warFactoryVehicle ? 0.08f : RtsBalance.IsInfantry(kind) ? 0.28f : 0.12f;
             Vector3 point = transform.position + forward * interiorOffset + right * Random.Range(-lateralJitter, lateralJitter);
             point.y = 0f;
             return RtsGame.HasInstance ? RtsGame.Instance.ClampWorldPoint(point) : point;
@@ -401,10 +413,100 @@ namespace QuestCommandRTS
         {
             Vector3 forward = transform.forward.sqrMagnitude > 0.01f ? transform.forward : Vector3.forward;
             Vector3 right = transform.right.sqrMagnitude > 0.01f ? transform.right : Vector3.right;
-            float clearance = RtsBalance.IsInfantry(kind) ? 2.4f : 3.4f;
-            Vector3 point = transform.position + forward * (FootprintRadius + clearance) + right * Random.Range(-0.45f, 0.45f);
+            bool warFactoryVehicle = ShouldUseWarFactoryDeployment(kind);
+            float clearance = warFactoryVehicle ? 5.1f : RtsBalance.IsInfantry(kind) ? 2.4f : 3.4f;
+            float lateralJitter = warFactoryVehicle ? 0.15f : 0.45f;
+            Vector3 point = transform.position + forward * (FootprintRadius + clearance) + right * Random.Range(-lateralJitter, lateralJitter);
             point.y = 0f;
             return RtsGame.HasInstance ? RtsGame.Instance.ClampWorldPoint(point) : point;
+        }
+
+        private List<Vector3> CreateWarFactoryDeploymentPath(UnitKind kind, Vector3 finalTarget)
+        {
+            Vector3 forward = transform.forward.sqrMagnitude > 0.01f ? transform.forward.normalized : Vector3.back;
+            Vector3 right = transform.right.sqrMagnitude > 0.01f ? transform.right.normalized : Vector3.right;
+            float lateral = kind == UnitKind.Harvester ? -0.38f : 0.38f;
+            List<Vector3> path = new List<Vector3>
+            {
+                ClampProductionPoint(transform.position + right * lateral + forward * (FootprintRadius * 0.12f)),
+                ClampProductionPoint(transform.position - right * lateral * 0.45f + forward * (FootprintRadius * 0.72f)),
+                ClampProductionPoint(transform.position + forward * (FootprintRadius + 2.2f))
+            };
+
+            Vector3 final = ClampProductionPoint(finalTarget);
+            if (PlanarDistance(path[path.Count - 1], final) > 1.1f)
+            {
+                path.Add(final);
+            }
+
+            return path;
+        }
+
+        private bool ShouldUseWarFactoryDeployment(UnitKind kind)
+        {
+            return StructureKind == StructureKind.WarFactory && (RtsBalance.IsTank(kind) || RtsBalance.NormalizeUnitKind(kind) == UnitKind.Harvester);
+        }
+
+        private Quaternion GetProductionRotation()
+        {
+            Vector3 forward = transform.forward.sqrMagnitude > 0.01f ? transform.forward : Vector3.back;
+            forward.y = 0f;
+            return Quaternion.LookRotation(forward.normalized, Vector3.up);
+        }
+
+        private Vector3 ClampProductionPoint(Vector3 point)
+        {
+            point.y = 0f;
+            return RtsGame.HasInstance ? RtsGame.Instance.ClampWorldPoint(point) : point;
+        }
+
+        private void SpawnWarFactoryDeploymentEffect(UnitKind kind)
+        {
+            if (!ShouldUseWarFactoryDeployment(kind))
+            {
+                return;
+            }
+
+            CreateTimedDeploymentPrimitive("War Factory Deployment Ramp Flash", new Vector3(0f, 0.11f, FootprintRadius + 1.15f), new Vector3(2.35f, 0.035f, 1.45f), new Color(0.22f, 0.82f, 0.95f, 0.82f), 1.2f);
+            CreateTimedDeploymentPrimitive("War Factory Deployment Bay Rails", new Vector3(0f, 0.18f, FootprintRadius * 0.55f), new Vector3(1.65f, 0.055f, 1.05f), new Color(0.95f, 0.68f, 0.18f, 0.9f), 1.45f);
+        }
+
+        private void CreateTimedDeploymentPrimitive(string name, Vector3 localPosition, Vector3 localScale, Color color, float lifetime)
+        {
+            GameObject effect = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            effect.name = name;
+            effect.transform.SetParent(transform, false);
+            effect.transform.localPosition = localPosition;
+            effect.transform.localRotation = Quaternion.identity;
+            effect.transform.localScale = localScale;
+            Renderer renderer = effect.GetComponent<Renderer>();
+            if (renderer != null)
+            {
+                renderer.sharedMaterial = RtsGame.CreateMaterial(color);
+            }
+
+            Collider collider = effect.GetComponent<Collider>();
+            if (collider != null)
+            {
+                if (Application.isPlaying)
+                {
+                    Destroy(collider);
+                }
+                else
+                {
+                    DestroyImmediate(collider);
+                }
+            }
+
+            RtsTimedDestroy timedDestroy = effect.AddComponent<RtsTimedDestroy>();
+            timedDestroy.Lifetime = lifetime;
+        }
+
+        private static float PlanarDistance(Vector3 a, Vector3 b)
+        {
+            float dx = a.x - b.x;
+            float dz = a.z - b.z;
+            return Mathf.Sqrt(dx * dx + dz * dz);
         }
 
         private void EnsureRallyVisual()
