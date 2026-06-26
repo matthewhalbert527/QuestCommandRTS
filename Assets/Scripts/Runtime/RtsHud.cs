@@ -140,6 +140,10 @@ namespace QuestCommandRTS
             y -= 48f;
             AddCommandButton(commandPanel, "Harvester", y, () => game.PlayerCommands.QueueProduction(UnitKind.Harvester), () => CanQueue(UnitKind.Harvester), () => "Harvester  " + RtsBalance.GetUnit(UnitKind.Harvester).Cost);
             y -= 48f;
+            AddCommandButton(commandPanel, "Humvee", y, () => game.PlayerCommands.QueueProduction(UnitKind.Humvee), () => CanQueue(UnitKind.Humvee), () => "Humvee  " + RtsBalance.GetUnit(UnitKind.Humvee).Cost);
+            y -= 48f;
+            AddCommandButton(commandPanel, "APC", y, () => game.PlayerCommands.QueueProduction(UnitKind.Apc), () => CanQueue(UnitKind.Apc), () => "APC  " + RtsBalance.GetUnit(UnitKind.Apc).Cost);
+            y -= 48f;
             AddCommandButton(commandPanel, "Light Tank", y, () => game.PlayerCommands.QueueProduction(UnitKind.LightTank), () => CanQueue(UnitKind.LightTank), () => "Light Tank  " + RtsBalance.GetUnit(UnitKind.LightTank).Cost);
             y -= 48f;
             AddCommandButton(commandPanel, "Medium Tank", y, () => game.PlayerCommands.QueueProduction(UnitKind.MediumTank), () => CanQueue(UnitKind.MediumTank), () => "Medium Tank  " + RtsBalance.GetUnit(UnitKind.MediumTank).Cost);

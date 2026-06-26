@@ -234,13 +234,21 @@ namespace QuestCommandRTS
             }
             else if (Input.GetKeyDown(KeyCode.Alpha3))
             {
-                game.PlayerCommands.QueueProduction(UnitKind.LightTank);
+                game.PlayerCommands.QueueProduction(UnitKind.Humvee);
             }
             else if (Input.GetKeyDown(KeyCode.Alpha4))
             {
-                game.PlayerCommands.QueueProduction(UnitKind.MediumTank);
+                game.PlayerCommands.QueueProduction(UnitKind.Apc);
             }
             else if (Input.GetKeyDown(KeyCode.Alpha5))
+            {
+                game.PlayerCommands.QueueProduction(UnitKind.LightTank);
+            }
+            else if (Input.GetKeyDown(KeyCode.Alpha6))
+            {
+                game.PlayerCommands.QueueProduction(UnitKind.MediumTank);
+            }
+            else if (Input.GetKeyDown(KeyCode.Alpha7))
             {
                 game.PlayerCommands.QueueProduction(UnitKind.HeavyTank);
             }

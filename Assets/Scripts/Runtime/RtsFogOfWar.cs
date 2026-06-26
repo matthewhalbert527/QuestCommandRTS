@@ -492,6 +492,10 @@ namespace QuestCommandRTS
                         return 18f;
                     case UnitKind.Engineer:
                         return 15f;
+                    case UnitKind.Humvee:
+                        return 19f;
+                    case UnitKind.Apc:
+                        return 20f;
                     case UnitKind.Tank:
                     case UnitKind.LightTank:
                     case UnitKind.MediumTank:

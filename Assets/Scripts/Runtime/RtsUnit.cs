@@ -764,7 +764,7 @@ namespace QuestCommandRTS
         private void TickAttackOrder(float deltaTime, bool allowIndependentMovement)
         {
             float distance = PlanarDistance(transform.position, attackTarget.transform.position);
-            float desiredRange = Mathf.Max(1.2f, AttackRange * (RtsBalance.IsTank(UnitKind) ? 0.98f : 0.88f));
+            float desiredRange = Mathf.Max(1.2f, AttackRange * (RtsBalance.HasTurretedWeapon(UnitKind) ? 0.98f : 0.88f));
 
             if (distance > desiredRange)
             {
@@ -776,7 +776,7 @@ namespace QuestCommandRTS
                 return;
             }
 
-            if (RtsBalance.IsTank(UnitKind))
+            if (RtsBalance.HasTurretedWeapon(UnitKind))
             {
                 if (!IsTurretReadyToFireAt(attackTarget, deltaTime))
                 {
@@ -831,12 +831,12 @@ namespace QuestCommandRTS
 
         private bool CanMoveWhileAttacking()
         {
-            return RtsBalance.IsTank(UnitKind);
+            return RtsBalance.HasTurretedWeapon(UnitKind);
         }
 
         private Vector3 GetWeaponMuzzlePoint()
         {
-            if (RtsBalance.IsTank(UnitKind))
+            if (RtsBalance.HasTurretedWeapon(UnitKind))
             {
                 if (visualAnimator == null)
                 {
@@ -872,6 +872,9 @@ namespace QuestCommandRTS
                     return RtsProjectileKind.Rocket;
                 case UnitKind.FlameTrooper:
                     return RtsProjectileKind.FlameBolt;
+                case UnitKind.Humvee:
+                case UnitKind.Apc:
+                    return RtsProjectileKind.RifleRound;
                 case UnitKind.LightTank:
                 case UnitKind.MediumTank:
                 case UnitKind.HeavyTank:
@@ -963,8 +966,12 @@ namespace QuestCommandRTS
             {
                 case UnitKind.LightTank:
                     return 1.0f;
+                case UnitKind.Humvee:
+                    return 0.95f;
                 case UnitKind.MediumTank:
                     return 1.15f;
+                case UnitKind.Apc:
+                    return 1.18f;
                 case UnitKind.HeavyTank:
                     return 1.45f;
                 default:
@@ -983,7 +990,10 @@ namespace QuestCommandRTS
             switch (RtsBalance.NormalizeUnitKind(kind))
             {
                 case UnitKind.LightTank:
+                case UnitKind.Humvee:
                     return 330f;
+                case UnitKind.Apc:
+                    return 285f;
                 case UnitKind.MediumTank:
                     return 270f;
                 case UnitKind.HeavyTank:
@@ -1045,10 +1055,13 @@ namespace QuestCommandRTS
             switch (RtsBalance.NormalizeUnitKind(kind))
             {
                 case UnitKind.LightTank:
+                case UnitKind.Humvee:
                     return 0.88f;
                 case UnitKind.MediumTank:
                 case UnitKind.Tank:
                     return 1.02f;
+                case UnitKind.Apc:
+                    return 1.06f;
                 case UnitKind.HeavyTank:
                     return 1.28f;
                 case UnitKind.Harvester:
@@ -1074,6 +1087,10 @@ namespace QuestCommandRTS
                 case UnitKind.MediumTank:
                 case UnitKind.Tank:
                     return Mathf.Max(13f, attackRange * 1.35f);
+                case UnitKind.Apc:
+                    return Mathf.Max(12.5f, attackRange * 1.35f);
+                case UnitKind.Humvee:
+                    return Mathf.Max(12f, attackRange * 1.45f);
                 case UnitKind.LightTank:
                     return Mathf.Max(12f, attackRange * 1.45f);
                 default:
@@ -1084,7 +1101,7 @@ namespace QuestCommandRTS
         private static bool IsArmoredTarget(RtsEntity target)
         {
             RtsUnit unit = target as RtsUnit;
-            return unit != null && RtsBalance.IsTank(unit.UnitKind);
+            return unit != null && (RtsBalance.IsTank(unit.UnitKind) || unit.UnitKind == UnitKind.Apc);
         }
     }
 

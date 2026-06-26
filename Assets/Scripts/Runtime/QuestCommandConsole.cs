@@ -299,7 +299,7 @@ namespace QuestCommandRTS
             for (int i = 0; i < productionRows.Length; i++)
             {
                 UnitKind kind = RtsCommandConsoleModel.UnitKinds[i];
-                ConsoleRow row = CreateSelectionTile(produceRoot, "Produce Row " + i, i, new Vector2(220f, 92f), () => OnProduceClicked(kind));
+                ConsoleRow row = CreateSelectionTile(produceRoot, "Produce Row " + i, i, new Vector2(160f, 92f), () => OnProduceClicked(kind), 4, 16f, 12f);
                 AddUnitGlyph(row.Icon.rectTransform, kind);
                 productionRows[i] = row;
             }
@@ -336,12 +336,11 @@ namespace QuestCommandRTS
             restartButton = CreateButton(systemRoot, "New Match Button", "New Match", new Vector2(486f, -182f), new Vector2(218f, 44f), () => game.TryRestartMatch());
         }
 
-        private ConsoleRow CreateSelectionTile(RectTransform parent, string name, int index, Vector2 size, Action clicked)
+        private ConsoleRow CreateSelectionTile(RectTransform parent, string name, int index, Vector2 size, Action clicked, int columns = 3, float columnGap = 18f, float rowGap = 12f)
         {
-            const float columnGap = 18f;
-            const float rowGap = 12f;
-            int column = index % 3;
-            int row = index / 3;
+            columns = Mathf.Max(1, columns);
+            int column = index % columns;
+            int row = index / columns;
             Vector2 position = new Vector2(column * (size.x + columnGap), -12f - row * (size.y + rowGap));
             ConsoleButton button = CreateButton(parent, name, "", position, size, clicked);
 
@@ -548,6 +547,20 @@ namespace QuestCommandRTS
                     CreatePanelImage(parent, "Harvester Glyph Scoop", dim, new Vector2(90f, -44f), new Vector2(24f, 16f));
                     CreatePanelImage(parent, "Harvester Glyph Tread", new Color(0.02f, 0.08f, 0.09f, 0.75f), new Vector2(24f, -54f), new Vector2(76f, 10f));
                     break;
+                case UnitKind.Humvee:
+                    CreatePanelImage(parent, "Humvee Glyph Body", glyph, new Vector2(28f, -42f), new Vector2(66f, 20f));
+                    CreatePanelImage(parent, "Humvee Glyph Cabin", glyph, new Vector2(48f, -28f), new Vector2(28f, 16f));
+                    CreatePanelImage(parent, "Humvee Glyph Gun", dim, new Vector2(66f, -18f), new Vector2(38f, 5f));
+                    CreatePanelImage(parent, "Humvee Glyph Wheel L", new Color(0.02f, 0.08f, 0.09f, 0.78f), new Vector2(30f, -57f), new Vector2(18f, 8f));
+                    CreatePanelImage(parent, "Humvee Glyph Wheel R", new Color(0.02f, 0.08f, 0.09f, 0.78f), new Vector2(78f, -57f), new Vector2(18f, 8f));
+                    break;
+                case UnitKind.Apc:
+                    CreatePanelImage(parent, "APC Glyph Body", glyph, new Vector2(22f, -44f), new Vector2(80f, 25f));
+                    CreatePanelImage(parent, "APC Glyph Armor Roof", glyph, new Vector2(42f, -27f), new Vector2(38f, 18f));
+                    CreatePanelImage(parent, "APC Glyph Gun", dim, new Vector2(72f, -18f), new Vector2(36f, 5f));
+                    CreatePanelImage(parent, "APC Glyph Wheel L", new Color(0.02f, 0.08f, 0.09f, 0.78f), new Vector2(26f, -58f), new Vector2(22f, 8f));
+                    CreatePanelImage(parent, "APC Glyph Wheel R", new Color(0.02f, 0.08f, 0.09f, 0.78f), new Vector2(78f, -58f), new Vector2(22f, 8f));
+                    break;
                 case UnitKind.LightTank:
                     CreatePanelImage(parent, "Light Tank Glyph Hull", glyph, new Vector2(28f, -42f), new Vector2(66f, 18f));
                     CreatePanelImage(parent, "Light Tank Glyph Turret", glyph, new Vector2(52f, -28f), new Vector2(20f, 14f));
@@ -613,6 +626,18 @@ namespace QuestCommandRTS
                     CreatePanelImage(parent, "Harvester Compact Body", glyph, new Vector2(28f, -12f), new Vector2(58f, 20f));
                     CreatePanelImage(parent, "Harvester Compact Scoop", dim, new Vector2(86f, -23f), new Vector2(22f, 12f));
                     CreatePanelImage(parent, "Harvester Compact Tread", new Color(0.02f, 0.08f, 0.09f, 0.75f), new Vector2(24f, -34f), new Vector2(76f, 7f));
+                    break;
+                case UnitKind.Humvee:
+                    CreatePanelImage(parent, "Humvee Compact Body", glyph, new Vector2(28f, -21f), new Vector2(66f, 15f));
+                    CreatePanelImage(parent, "Humvee Compact Cabin", glyph, new Vector2(50f, -10f), new Vector2(26f, 11f));
+                    CreatePanelImage(parent, "Humvee Compact Gun", dim, new Vector2(72f, -8f), new Vector2(34f, 4f));
+                    CreatePanelImage(parent, "Humvee Compact Tires", new Color(0.02f, 0.08f, 0.09f, 0.75f), new Vector2(24f, -34f), new Vector2(76f, 7f));
+                    break;
+                case UnitKind.Apc:
+                    CreatePanelImage(parent, "APC Compact Body", glyph, new Vector2(22f, -21f), new Vector2(80f, 17f));
+                    CreatePanelImage(parent, "APC Compact Roof", glyph, new Vector2(46f, -9f), new Vector2(34f, 12f));
+                    CreatePanelImage(parent, "APC Compact Gun", dim, new Vector2(74f, -8f), new Vector2(34f, 4f));
+                    CreatePanelImage(parent, "APC Compact Tires", new Color(0.02f, 0.08f, 0.09f, 0.75f), new Vector2(24f, -34f), new Vector2(80f, 7f));
                     break;
                 case UnitKind.HeavyTank:
                     CreatePanelImage(parent, "Heavy Compact Hull", glyph, new Vector2(20f, -20f), new Vector2(84f, 17f));
@@ -904,6 +929,10 @@ namespace QuestCommandRTS
             {
                 case UnitKind.Harvester:
                     return new Color(0.24f, 0.96f, 0.62f, 0.98f);
+                case UnitKind.Humvee:
+                    return new Color(0.72f, 0.92f, 0.42f, 0.98f);
+                case UnitKind.Apc:
+                    return new Color(0.56f, 0.78f, 0.62f, 0.98f);
                 case UnitKind.LightTank:
                     return new Color(0.88f, 0.84f, 0.38f, 0.98f);
                 case UnitKind.MediumTank:

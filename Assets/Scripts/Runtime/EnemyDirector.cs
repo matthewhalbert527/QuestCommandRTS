@@ -329,6 +329,16 @@ namespace QuestCommandRTS
                 return UnitKind.MediumTank;
             }
 
+            if (hasWarFactory && enemyCredits >= RtsBalance.GetUnit(UnitKind.Apc).Cost && CountLivingEnemyUnits(UnitKind.Apc) < 3)
+            {
+                return UnitKind.Apc;
+            }
+
+            if (hasWarFactory && enemyCredits >= RtsBalance.GetUnit(UnitKind.Humvee).Cost && CountLivingEnemyUnits(UnitKind.Humvee) < 4)
+            {
+                return UnitKind.Humvee;
+            }
+
             if (hasWarFactory && enemyCredits >= RtsBalance.GetUnit(UnitKind.LightTank).Cost && CountLivingEnemyUnits(UnitKind.LightTank) < 5)
             {
                 return UnitKind.LightTank;

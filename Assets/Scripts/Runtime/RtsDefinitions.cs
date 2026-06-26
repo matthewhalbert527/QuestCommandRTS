@@ -27,7 +27,9 @@ namespace QuestCommandRTS
         Grenadier,
         RocketSoldier,
         FlameTrooper,
-        Engineer
+        Engineer,
+        Humvee,
+        Apc
     }
 
     public enum StructureKind
@@ -473,6 +475,10 @@ namespace QuestCommandRTS
                     return new UnitStats("Engineer", 300, 4.5f, 60f, 4.35f, 0f, 0f, 1f);
                 case UnitKind.Harvester:
                     return new UnitStats("Harvester", 900, 9f, 180f, 3.4f, 0f, 0f, 1f);
+                case UnitKind.Humvee:
+                    return new UnitStats("Humvee", 520, 5.6f, 135f, 5.25f, 8.8f, 7f, 0.22f);
+                case UnitKind.Apc:
+                    return new UnitStats("APC", 720, 6.8f, 225f, 4.15f, 8.6f, 12f, 0.34f);
                 case UnitKind.LightTank:
                     return new UnitStats("Light Tank", 620, 6.2f, 170f, 3.75f, 8.4f, 22f, 0.85f);
                 case UnitKind.MediumTank:
@@ -494,6 +500,23 @@ namespace QuestCommandRTS
         {
             UnitKind normalized = NormalizeUnitKind(kind);
             return normalized == UnitKind.LightTank || normalized == UnitKind.MediumTank || normalized == UnitKind.HeavyTank;
+        }
+
+        public static bool IsWheeledCombatVehicle(UnitKind kind)
+        {
+            UnitKind normalized = NormalizeUnitKind(kind);
+            return normalized == UnitKind.Humvee || normalized == UnitKind.Apc;
+        }
+
+        public static bool IsVehicle(UnitKind kind)
+        {
+            UnitKind normalized = NormalizeUnitKind(kind);
+            return normalized == UnitKind.Harvester || IsTank(normalized) || IsWheeledCombatVehicle(normalized);
+        }
+
+        public static bool HasTurretedWeapon(UnitKind kind)
+        {
+            return IsTank(kind) || IsWheeledCombatVehicle(kind);
         }
 
         public static bool IsInfantry(UnitKind kind)

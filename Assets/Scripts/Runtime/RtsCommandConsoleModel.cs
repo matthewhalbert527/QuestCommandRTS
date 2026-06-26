@@ -71,6 +71,8 @@ namespace QuestCommandRTS
             UnitKind.FlameTrooper,
             UnitKind.Engineer,
             UnitKind.Harvester,
+            UnitKind.Humvee,
+            UnitKind.Apc,
             UnitKind.LightTank,
             UnitKind.MediumTank,
             UnitKind.HeavyTank

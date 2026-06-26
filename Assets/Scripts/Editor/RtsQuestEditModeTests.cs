@@ -383,8 +383,12 @@ namespace QuestCommandRTS.Editor
 
             Image gunnerIcon = AssertPanelImage("Produce Row 0 Icon", 0.6f);
             Image harvesterIcon = AssertPanelImage("Produce Row 5 Icon", 0.6f);
-            Image heavyTankIcon = AssertPanelImage("Produce Row 8 Icon", 0.6f);
+            Image humveeIcon = AssertPanelImage("Produce Row 6 Icon", 0.6f);
+            Image apcIcon = AssertPanelImage("Produce Row 7 Icon", 0.6f);
+            Image heavyTankIcon = AssertPanelImage("Produce Row 10 Icon", 0.6f);
             Assert.AreNotEqual(gunnerIcon.color, harvesterIcon.color);
+            Assert.AreNotEqual(harvesterIcon.color, humveeIcon.color);
+            Assert.AreNotEqual(humveeIcon.color, apcIcon.color);
             Assert.AreNotEqual(harvesterIcon.color, heavyTankIcon.color);
             AssertPanelImage("Production Queue Backplate", 0.7f);
         }
@@ -407,6 +411,31 @@ namespace QuestCommandRTS.Editor
             Assert.IsNotNull(light.transform.Find("Tank Team Roof Plate"));
             Assert.IsNotNull(medium.transform.Find("Tank Team Left Plate"));
             Assert.IsNotNull(heavy.transform.Find("Tank Armor Detail Plate"));
+        }
+
+        [Test]
+        public void WheeledGunVehiclesUseDetailedProceduralModels()
+        {
+            RtsGame game = CreateInitializedGame(RtsRuntimeMode.Desktop);
+
+            RtsUnit humvee = game.CreateUnit(RtsTeam.Player, UnitKind.Humvee, new Vector3(-52f, 0f, -46f));
+            RtsUnit apc = game.CreateUnit(RtsTeam.Player, UnitKind.Apc, new Vector3(-48f, 0f, -46f));
+
+            Assert.AreEqual(UnitKind.Humvee, humvee.UnitKind);
+            Assert.AreEqual(UnitKind.Apc, apc.UnitKind);
+            Assert.AreEqual("Humvee", RtsBalance.GetUnit(UnitKind.Humvee).Name);
+            Assert.AreEqual("APC", RtsBalance.GetUnit(UnitKind.Apc).Name);
+            Assert.IsNotNull(humvee.transform.Find("Humvee Hull"));
+            Assert.IsNotNull(humvee.transform.Find("Humvee Cabin"));
+            Assert.IsNotNull(humvee.transform.Find("Wheeled Vehicle Roof Team Plate"));
+            Assert.IsNotNull(humvee.transform.Find("Humvee Spare Tire Mount"));
+            Assert.IsNotNull(humvee.transform.Find("Roll Wheel LF"));
+            Assert.IsNotNull(humvee.transform.Find("Animated Turret Pivot/Animated Turret Barrel Twin"));
+            Assert.IsNotNull(apc.transform.Find("APC Armored Hull"));
+            Assert.IsNotNull(apc.transform.Find("APC Command Cabin"));
+            Assert.IsNotNull(apc.transform.Find("APC Troop Hatch"));
+            Assert.IsNotNull(apc.transform.Find("Roll Wheel RR"));
+            Assert.IsNotNull(apc.transform.Find("Animated Turret Pivot/Animated Turret Shield"));
         }
 
         [Test]
@@ -438,10 +467,14 @@ namespace QuestCommandRTS.Editor
             RtsUnit rifleman = game.CreateUnit(RtsTeam.Player, UnitKind.Rifleman, new Vector3(-52f, 0f, -50f));
             RtsUnit medium = game.CreateUnit(RtsTeam.Player, UnitKind.MediumTank, new Vector3(-48f, 0f, -50f));
             RtsUnit harvester = game.CreateUnit(RtsTeam.Player, UnitKind.Harvester, new Vector3(-44f, 0f, -50f));
+            RtsUnit humvee = game.CreateUnit(RtsTeam.Player, UnitKind.Humvee, new Vector3(-40f, 0f, -50f));
+            RtsUnit apc = game.CreateUnit(RtsTeam.Player, UnitKind.Apc, new Vector3(-36f, 0f, -50f));
 
             RtsUnitVisualAnimator infantryAnimator = rifleman.GetComponent<RtsUnitVisualAnimator>();
             RtsUnitVisualAnimator tankAnimator = medium.GetComponent<RtsUnitVisualAnimator>();
             RtsUnitVisualAnimator harvesterAnimator = harvester.GetComponent<RtsUnitVisualAnimator>();
+            RtsUnitVisualAnimator humveeAnimator = humvee.GetComponent<RtsUnitVisualAnimator>();
+            RtsUnitVisualAnimator apcAnimator = apc.GetComponent<RtsUnitVisualAnimator>();
 
             Assert.IsNotNull(infantryAnimator);
             Assert.IsTrue(infantryAnimator.HasLegRigForTests);
@@ -453,6 +486,14 @@ namespace QuestCommandRTS.Editor
             Assert.IsTrue(harvesterAnimator.HasTrackRigForTests);
             Assert.IsFalse(harvesterAnimator.HasRoundWheelRigForTests);
             Assert.IsFalse(harvesterAnimator.HasTurretRigForTests);
+            Assert.IsNotNull(humveeAnimator);
+            Assert.IsTrue(humveeAnimator.HasRoundWheelRigForTests);
+            Assert.IsFalse(humveeAnimator.HasTrackRigForTests);
+            Assert.IsTrue(humveeAnimator.HasTurretRigForTests);
+            Assert.IsNotNull(apcAnimator);
+            Assert.IsTrue(apcAnimator.HasRoundWheelRigForTests);
+            Assert.IsFalse(apcAnimator.HasTrackRigForTests);
+            Assert.IsTrue(apcAnimator.HasTurretRigForTests);
         }
 
         [Test]
@@ -493,6 +534,58 @@ namespace QuestCommandRTS.Editor
 
             Assert.Greater((track.localPosition - trackStart).sqrMagnitude, 0.0001f);
             Assert.Greater(Quaternion.Angle(turretStart, turret.localRotation), 1f);
+
+            RtsUnit humvee = game.CreateUnit(RtsTeam.Player, UnitKind.Humvee, new Vector3(-44f, 0f, -52f));
+            RtsUnit humveeEnemy = game.CreateUnit(RtsTeam.Enemy, UnitKind.Rifleman, humvee.transform.position + humvee.transform.right * 6f);
+            RtsUnitVisualAnimator humveeAnimator = humvee.GetComponent<RtsUnitVisualAnimator>();
+            Transform wheel = humveeAnimator.FirstWheelForTests;
+            Transform humveeTurret = humveeAnimator.TurretPivotForTests;
+            Quaternion wheelStart = wheel.localRotation;
+            Quaternion humveeTurretStart = humveeTurret.localRotation;
+
+            humvee.transform.position += humvee.transform.forward * 1.2f;
+            humvee.IssueAttack(humveeEnemy);
+            humveeAnimator.TickVisualsForTests(0.2f);
+
+            Assert.Greater(Quaternion.Angle(wheelStart, wheel.localRotation), 1f);
+            Assert.Greater(Quaternion.Angle(humveeTurretStart, humveeTurret.localRotation), 1f);
+        }
+
+        [Test]
+        public void WheeledGunVehiclesFireVisibleRifleRoundsFromRoofGuns()
+        {
+            RtsGame game = CreateInitializedGame(RtsRuntimeMode.Desktop);
+            RtsUnit humvee = game.CreateUnit(RtsTeam.Player, UnitKind.Humvee, new Vector3(-52f, 0f, -54f));
+            RtsUnit enemy = game.CreateUnit(RtsTeam.Enemy, UnitKind.Rifleman, humvee.transform.position + humvee.transform.right * 5.5f);
+
+            humvee.IssueAttack(enemy);
+            for (int i = 0; i < 12 && !HasProjectileNamed("RifleRound Projectile"); i++)
+            {
+                humvee.TickOrdersForTests(0.1f);
+            }
+
+            Assert.IsTrue(HasProjectileNamed("RifleRound Projectile"), "Humvee roof guns should spawn visible bullet projectiles.");
+        }
+
+        [Test]
+        public void WarFactoryTrainsHumveeAndApcVehicles()
+        {
+            RtsGame game = CreateInitializedGame(RtsRuntimeMode.Desktop);
+            ProductionStructure barracks = FindPlayerProduction(game, StructureKind.Barracks);
+            ProductionStructure warFactory = FindPlayerProduction(game, StructureKind.WarFactory);
+
+            Assert.IsTrue(warFactory.CanTrain(UnitKind.Humvee));
+            Assert.IsTrue(warFactory.CanTrain(UnitKind.Apc));
+            Assert.IsFalse(barracks.CanTrain(UnitKind.Humvee));
+            Assert.IsFalse(barracks.CanTrain(UnitKind.Apc));
+
+            RtsUnit humvee = warFactory.SpawnProducedUnitForTests(UnitKind.Humvee, null);
+            RtsUnit apc = warFactory.SpawnProducedUnitForTests(UnitKind.Apc, null);
+
+            Assert.AreEqual(UnitKind.Humvee, humvee.UnitKind);
+            Assert.AreEqual(UnitKind.Apc, apc.UnitKind);
+            Assert.Less(humvee.transform.position.z, warFactory.transform.position.z, "Vehicles should deploy downward from the war factory front.");
+            Assert.Less(apc.transform.position.z, warFactory.transform.position.z, "Vehicles should deploy downward from the war factory front.");
         }
 
         [Test]
@@ -2613,6 +2706,20 @@ namespace QuestCommandRTS.Editor
 
             Assert.Fail("Missing player production structure " + kind);
             return null;
+        }
+
+        private static bool HasProjectileNamed(string projectileName)
+        {
+            RtsProjectile[] projectiles = Object.FindObjectsOfType<RtsProjectile>();
+            for (int i = 0; i < projectiles.Length; i++)
+            {
+                if (projectiles[i] != null && projectiles[i].name == projectileName)
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         private static RtsCommandConsoleModel CreateModel(RtsGame game)

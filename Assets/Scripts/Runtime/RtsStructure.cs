@@ -109,17 +109,7 @@ namespace QuestCommandRTS
                 return StructureKind == StructureKind.Barracks;
             }
 
-            switch (kind)
-            {
-                case UnitKind.Harvester:
-                case UnitKind.Tank:
-                case UnitKind.LightTank:
-                case UnitKind.MediumTank:
-                case UnitKind.HeavyTank:
-                    return StructureKind == StructureKind.WarFactory;
-                default:
-                    return false;
-            }
+            return RtsBalance.IsVehicle(kind) && StructureKind == StructureKind.WarFactory;
         }
 
         public bool QueueUnit(UnitKind kind)
@@ -444,7 +434,7 @@ namespace QuestCommandRTS
 
         private bool ShouldUseWarFactoryDeployment(UnitKind kind)
         {
-            return StructureKind == StructureKind.WarFactory && (RtsBalance.IsTank(kind) || RtsBalance.NormalizeUnitKind(kind) == UnitKind.Harvester);
+            return StructureKind == StructureKind.WarFactory && RtsBalance.IsVehicle(kind);
         }
 
         private Quaternion GetProductionRotation()

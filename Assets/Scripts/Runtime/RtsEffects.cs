@@ -211,7 +211,7 @@ namespace QuestCommandRTS
             RtsUnit unit = entity as RtsUnit;
             if (unit != null)
             {
-                return RtsBalance.IsTank(unit.UnitKind) || unit.UnitKind == UnitKind.Harvester ? 0.85f : 0.8f;
+                return RtsBalance.IsVehicle(unit.UnitKind) ? 0.85f : 0.8f;
             }
 
             RtsStructure structure = entity as RtsStructure;

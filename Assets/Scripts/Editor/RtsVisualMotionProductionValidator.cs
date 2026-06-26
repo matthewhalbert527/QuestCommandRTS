@@ -44,15 +44,21 @@ namespace QuestCommandRTS.Editor
             RtsUnit rifleman = game.CreateUnit(RtsTeam.Player, UnitKind.Rifleman, new Vector3(-54f, 0f, -52f));
             RtsUnit tank = game.CreateUnit(RtsTeam.Player, UnitKind.MediumTank, new Vector3(-50f, 0f, -52f));
             RtsUnit harvester = game.CreateUnit(RtsTeam.Player, UnitKind.Harvester, new Vector3(-46f, 0f, -52f));
+            RtsUnit humvee = game.CreateUnit(RtsTeam.Player, UnitKind.Humvee, new Vector3(-42f, 0f, -52f));
+            RtsUnit apc = game.CreateUnit(RtsTeam.Player, UnitKind.Apc, new Vector3(-38f, 0f, -52f));
 
             RtsUnitVisualAnimator infantryAnimator = RequireAnimator(rifleman, "Infantry animator");
             RtsUnitVisualAnimator tankAnimator = RequireAnimator(tank, "Tank animator");
             RtsUnitVisualAnimator harvesterAnimator = RequireAnimator(harvester, "Harvester animator");
+            RtsUnitVisualAnimator humveeAnimator = RequireAnimator(humvee, "Humvee animator");
+            RtsUnitVisualAnimator apcAnimator = RequireAnimator(apc, "APC animator");
 
             Require(infantryAnimator.HasLegRigForTests, "Infantry leg rig", "Infantry should have procedural walk legs.");
             Require(tankAnimator.HasTrackRigForTests && tankAnimator.HasTurretRigForTests, "Tank rig", "Tanks should have procedural tracks and turret.");
             Require(harvesterAnimator.HasTrackRigForTests && harvesterAnimator.HasHarvestRigForTests && harvesterAnimator.HasCargoFillRigForTests && !harvesterAnimator.HasTurretRigForTests, "Harvester motion rig", "Harvesters should use treads, a harvesting rig, and a visible cargo-fill rig without a turret rig.");
             Require(!harvesterAnimator.HasRoundWheelRigForTests && harvester.transform.Find("Roll Wheel LF") == null, "Harvester tread rig", "Harvesters should not use the old rotating round wheel primitives.");
+            Require(humveeAnimator.HasRoundWheelRigForTests && humveeAnimator.HasTurretRigForTests && !humveeAnimator.HasTrackRigForTests, "Humvee wheel gun rig", "Humvees should use round tire rigs and a roof gun turret.");
+            Require(apcAnimator.HasRoundWheelRigForTests && apcAnimator.HasTurretRigForTests && !apcAnimator.HasTrackRigForTests, "APC wheel gun rig", "APCs should use round tire rigs and a roof gun turret.");
         }
 
         private static void ValidateVisualAnimation(RtsGame game)
@@ -77,6 +83,20 @@ namespace QuestCommandRTS.Editor
             tankAnimator.TickVisualsForTests(0.2f);
             Require((track.localPosition - trackStart).sqrMagnitude > 0.0001f, "Track animation", "Tank treads should move when the unit moves.");
             Require(Quaternion.Angle(turretStart, turret.localRotation) > 1f, "Turret animation", "Tank turret should yaw toward an attack target.");
+
+            RtsUnit humvee = game.CreateUnit(RtsTeam.Player, UnitKind.Humvee, new Vector3(-42f, 0f, -56f));
+            RtsUnit humveeEnemy = game.CreateUnit(RtsTeam.Enemy, UnitKind.Rifleman, humvee.transform.position + humvee.transform.right * 6f);
+            RtsUnitVisualAnimator humveeAnimator = RequireAnimator(humvee, "Humvee animation");
+            Transform humveeWheel = humveeAnimator.FirstWheelForTests;
+            Transform humveeTurret = humveeAnimator.TurretPivotForTests;
+            Quaternion wheelStart = humveeWheel.localRotation;
+            Quaternion humveeTurretStart = humveeTurret.localRotation;
+            humvee.transform.position += humvee.transform.forward * 1.2f;
+            humvee.IssueAttack(humveeEnemy);
+            humveeAnimator.TickVisualsForTests(0.2f);
+            Require(Quaternion.Angle(wheelStart, humveeWheel.localRotation) > 1f, "Humvee tire animation", "Humvee tires should spin when the unit moves.");
+            Require(Quaternion.Angle(humveeTurretStart, humveeTurret.localRotation) > 1f, "Humvee roof gun animation", "Humvee roof guns should yaw toward an attack target.");
+            RequireFiresRifleRound(humvee, humveeEnemy, "Humvee visible bullets");
 
             HarvesterUnit harvester = game.CreateUnit(RtsTeam.Player, UnitKind.Harvester, new Vector3(-46f, 0f, -56f)) as HarvesterUnit;
             RtsUnitVisualAnimator harvesterAnimator = RequireAnimator(harvester, "Harvester harvest animation");
@@ -132,6 +152,8 @@ namespace QuestCommandRTS.Editor
             RtsUnit rifleman = game.CreateUnit(RtsTeam.Player, UnitKind.Rifleman, new Vector3(-54f, 0f, -62f));
             RtsUnit tank = game.CreateUnit(RtsTeam.Player, UnitKind.MediumTank, new Vector3(-50f, 0f, -62f));
             RtsUnit harvester = game.CreateUnit(RtsTeam.Player, UnitKind.Harvester, new Vector3(-46f, 0f, -62f));
+            RtsUnit humvee = game.CreateUnit(RtsTeam.Player, UnitKind.Humvee, new Vector3(-42f, 0f, -62f));
+            RtsUnit apc = game.CreateUnit(RtsTeam.Player, UnitKind.Apc, new Vector3(-38f, 0f, -62f));
             RtsStructure command = game.CreateStructure(RtsTeam.Player, StructureKind.CommandCenter, new Vector3(-62f, 0f, -62f));
 
             Require(rifleman.transform.Find("Infantry Left Shoulder Highlight") != null, "Infantry highlights", "Infantry should have bright shoulder edge highlights.");
@@ -139,6 +161,8 @@ namespace QuestCommandRTS.Editor
             Require(tank.transform.Find("Tank Front Edge Highlight") != null, "Tank edge highlights", "Tanks should have visible hull edge highlights.");
             Require(tank.transform.Find("Tank Rear Recess Shadow") != null, "Tank shadow panels", "Tanks should have dark recessed panels.");
             Require(harvester.transform.Find("Harvester Caution Intake Strip") != null, "Harvester contrast strip", "Harvesters should have caution-color detail contrast.");
+            Require(humvee.transform.Find("Wheeled Vehicle Front Highlight") != null && humvee.transform.Find("Humvee Spare Tire Mount") != null, "Humvee contrast detailing", "Humvees should have highlighted edges, glass, tires, and equipment details.");
+            Require(apc.transform.Find("APC Troop Hatch") != null && apc.transform.Find("APC Rear Ramp Line") != null, "APC contrast detailing", "APCs should have hatch, ramp, tire, and armor details.");
             Require(command.transform.Find("Structure Base Shadow Plinth") != null, "Structure base contrast", "Structures should have dark base plinths.");
             Require(command.transform.Find("Structure Roof Lip Highlight") != null, "Structure roof highlight", "Structures should have bright roof lip highlights.");
             Require(command.transform.Find("Structure Caution Threshold") != null, "Structure caution detail", "Major structures should have caution accent strips.");
@@ -168,6 +192,12 @@ namespace QuestCommandRTS.Editor
             tankSpawnOffset.y = 0f;
             Require(tankSpawnOffset.z > 0.35f && tankSpawnOffset.magnitude < factory.FootprintRadius, "Factory rear bay spawn", "Vehicles should start deeper inside the war factory bay before rolling out.");
             Require(tank.QueuedMoveWaypointCountForTests >= 2 && tank.DestinationForTests.z < factory.transform.position.z, "Factory staged deployment", "War factory vehicles should follow staged southbound rollout waypoints.");
+            Require(factory.CanTrain(UnitKind.Humvee) && factory.CanTrain(UnitKind.Apc), "Factory trains wheeled gun vehicles", "War factories should produce Humvees and APCs.");
+
+            RtsUnit humvee = factory.SpawnProducedUnit(UnitKind.Humvee, null);
+            RtsUnit apc = factory.SpawnProducedUnit(UnitKind.Apc, null);
+            Require(humvee != null && humvee.UnitKind == UnitKind.Humvee && humvee.QueuedMoveWaypointCountForTests >= 2, "Humvee factory rollout", "Humvees should roll out from the war factory with staged deployment.");
+            Require(apc != null && apc.UnitKind == UnitKind.Apc && apc.QueuedMoveWaypointCountForTests >= 2, "APC factory rollout", "APCs should roll out from the war factory with staged deployment.");
         }
 
         private static void ValidateStructureFacing(RtsGame game)
@@ -204,6 +234,31 @@ namespace QuestCommandRTS.Editor
             }
 
             throw new InvalidOperationException("Missing player producer " + kind + ".");
+        }
+
+        private static void RequireFiresRifleRound(RtsUnit attacker, RtsUnit target, string label)
+        {
+            attacker.IssueAttack(target);
+            for (int i = 0; i < 12 && !HasProjectileNamed("RifleRound Projectile"); i++)
+            {
+                attacker.TickOrdersForTests(0.1f);
+            }
+
+            Require(HasProjectileNamed("RifleRound Projectile"), label, "Roof gun vehicles should spawn visible rifle-round projectiles.");
+        }
+
+        private static bool HasProjectileNamed(string projectileName)
+        {
+            RtsProjectile[] projectiles = Object.FindObjectsOfType<RtsProjectile>();
+            for (int i = 0; i < projectiles.Length; i++)
+            {
+                if (projectiles[i] != null && projectiles[i].name == projectileName)
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         private static void Require(bool condition, string label, string detail)

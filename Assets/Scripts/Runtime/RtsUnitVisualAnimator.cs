@@ -396,7 +396,7 @@ namespace QuestCommandRTS
 
         private void AnimateTurret(float deltaTime)
         {
-            if (turretPivot == null || owner == null || !RtsBalance.IsTank(unitKind))
+            if (turretPivot == null || owner == null || !RtsBalance.HasTurretedWeapon(unitKind))
             {
                 return;
             }

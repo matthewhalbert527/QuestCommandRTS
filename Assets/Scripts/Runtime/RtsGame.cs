@@ -1519,7 +1519,7 @@ namespace QuestCommandRTS
             RtsUnit unit = entity as RtsUnit;
             if (unit != null)
             {
-                return RtsBalance.IsTank(unit.UnitKind) || unit.UnitKind == UnitKind.Harvester ? 0.85f : 0.8f;
+                return RtsBalance.IsVehicle(unit.UnitKind) ? 0.85f : 0.8f;
             }
 
             RtsStructure structure = entity as RtsStructure;
@@ -2686,11 +2686,24 @@ namespace QuestCommandRTS
         private void AddUnitCollider(GameObject root, UnitKind kind)
         {
             UnitKind normalized = RtsBalance.NormalizeUnitKind(kind);
-            if (RtsBalance.IsTank(normalized) || normalized == UnitKind.Harvester)
+            if (RtsBalance.IsVehicle(normalized))
             {
                 BoxCollider box = root.AddComponent<BoxCollider>();
-                box.center = normalized == UnitKind.Harvester ? new Vector3(0f, 0.55f, 0f) : GetTankColliderCenter(normalized);
-                box.size = normalized == UnitKind.Harvester ? new Vector3(1.5f, 1.2f, 2.0f) : GetTankColliderSize(normalized);
+                if (normalized == UnitKind.Harvester)
+                {
+                    box.center = new Vector3(0f, 0.55f, 0f);
+                    box.size = new Vector3(1.5f, 1.2f, 2.0f);
+                }
+                else if (RtsBalance.IsWheeledCombatVehicle(normalized))
+                {
+                    box.center = GetWheeledVehicleColliderCenter(normalized);
+                    box.size = GetWheeledVehicleColliderSize(normalized);
+                }
+                else
+                {
+                    box.center = GetTankColliderCenter(normalized);
+                    box.size = GetTankColliderSize(normalized);
+                }
             }
             else
             {
@@ -2739,6 +2752,12 @@ namespace QuestCommandRTS
                 }
 
                 BuildFallbackTankVisual(root, kind, teamMaterial);
+                return;
+            }
+
+            if (RtsBalance.IsWheeledCombatVehicle(kind))
+            {
+                BuildFallbackWheeledVehicleVisual(root, kind, teamMaterial);
                 return;
             }
 
@@ -2899,6 +2918,63 @@ namespace QuestCommandRTS
             }
         }
 
+        private void BuildFallbackWheeledVehicleVisual(Transform root, UnitKind kind, Material teamMaterial)
+        {
+            bool apc = RtsBalance.NormalizeUnitKind(kind) == UnitKind.Apc;
+            Material hullMaterial = apc ? vehicleDetailMaterial : teamMaterial;
+            Vector3 hullSize = apc ? new Vector3(1.75f, 0.56f, 2.55f) : new Vector3(1.48f, 0.42f, 2.05f);
+            Vector3 cabinSize = apc ? new Vector3(1.25f, 0.48f, 1.2f) : new Vector3(1.02f, 0.42f, 0.92f);
+            float roofY = apc ? 0.98f : 0.78f;
+            float sideOffset = apc ? 0.82f : 0.68f;
+            float frontZ = apc ? 0.92f : 0.74f;
+            float rearZ = apc ? -0.98f : -0.74f;
+
+            CreatePrimitive(PrimitiveType.Cube, root, apc ? "APC Armored Hull" : "Humvee Hull", new Vector3(0f, 0.42f, 0f), hullSize, hullMaterial);
+            CreatePrimitive(PrimitiveType.Cube, root, apc ? "APC Sloped Nose" : "Humvee Hood", new Vector3(0f, 0.58f, frontZ), new Vector3(hullSize.x * 0.78f, apc ? 0.3f : 0.24f, 0.62f), vehicleDetailMaterial);
+            CreatePrimitive(PrimitiveType.Cube, root, apc ? "APC Command Cabin" : "Humvee Cabin", new Vector3(0f, roofY, -0.12f), cabinSize, hullMaterial);
+            CreatePrimitive(PrimitiveType.Cube, root, "Wheeled Vehicle Windshield", new Vector3(0f, roofY + 0.03f, frontZ - 0.36f), new Vector3(cabinSize.x * 0.78f, 0.1f, 0.055f), sensorGlassMaterial);
+            CreatePrimitive(PrimitiveType.Cube, root, "Wheeled Vehicle Rear Window", new Vector3(0f, roofY + 0.02f, rearZ + 0.32f), new Vector3(cabinSize.x * 0.66f, 0.08f, 0.05f), sensorGlassMaterial);
+
+            for (int side = -1; side <= 1; side += 2)
+            {
+                string label = side < 0 ? "Left" : "Right";
+                float x = sideOffset * side;
+                CreatePrimitive(PrimitiveType.Cube, root, label + " Door Armor", new Vector3(x, 0.68f, -0.05f), new Vector3(0.07f, 0.42f, apc ? 1.15f : 0.92f), teamMaterial);
+                CreatePrimitive(PrimitiveType.Cube, root, label + " Door Glass", new Vector3(x, roofY + 0.04f, 0.08f), new Vector3(0.055f, 0.18f, 0.34f), sensorGlassMaterial);
+                CreatePrimitive(PrimitiveType.Cube, root, label + " Rocker Shadow", new Vector3(x, 0.29f, -0.02f), new Vector3(0.08f, 0.14f, hullSize.z * 0.82f), shadowPanelMaterial);
+                CreatePrimitive(PrimitiveType.Cube, root, label + " Front Wheel Arch", new Vector3(x, 0.42f, frontZ), new Vector3(0.08f, 0.34f, 0.52f), shadowPanelMaterial);
+                CreatePrimitive(PrimitiveType.Cube, root, label + " Rear Wheel Arch", new Vector3(x, 0.42f, rearZ), new Vector3(0.08f, 0.34f, 0.52f), shadowPanelMaterial);
+                CreatePrimitive(PrimitiveType.Cube, root, label + " Armor Rivet Rail", new Vector3(x, 0.9f, -0.06f), new Vector3(0.05f, 0.05f, hullSize.z * 0.66f), panelTrimMaterial);
+            }
+
+            CreatePrimitive(PrimitiveType.Cube, root, "Wheeled Vehicle Front Bumper", new Vector3(0f, 0.33f, hullSize.z * 0.54f), new Vector3(hullSize.x * 0.9f, 0.12f, 0.12f), weaponMetalMaterial);
+            CreatePrimitive(PrimitiveType.Cube, root, "Wheeled Vehicle Rear Bumper", new Vector3(0f, 0.33f, -hullSize.z * 0.54f), new Vector3(hullSize.x * 0.86f, 0.1f, 0.12f), weaponMetalMaterial);
+            CreatePrimitive(PrimitiveType.Cube, root, "Wheeled Vehicle Roof Team Plate", new Vector3(0f, roofY + cabinSize.y * 0.58f, -0.08f), new Vector3(cabinSize.x * 0.72f, 0.07f, cabinSize.z * 0.48f), teamMaterial);
+            CreatePrimitive(PrimitiveType.Cube, root, "Wheeled Vehicle Front Team Strip", new Vector3(0f, 0.72f, hullSize.z * 0.55f), new Vector3(hullSize.x * 0.52f, 0.07f, 0.08f), teamMaterial);
+            CreatePrimitive(PrimitiveType.Cube, root, "Wheeled Vehicle Hood Vent", new Vector3(-hullSize.x * 0.22f, 0.74f, frontZ + 0.1f), new Vector3(0.28f, 0.04f, 0.22f), darkMaterial);
+            CreatePrimitive(PrimitiveType.Cube, root, "Wheeled Vehicle Hood Vent Mirror", new Vector3(hullSize.x * 0.22f, 0.74f, frontZ + 0.1f), new Vector3(0.28f, 0.04f, 0.22f), darkMaterial);
+            CreatePrimitive(PrimitiveType.Cube, root, "Wheeled Vehicle Front Highlight", new Vector3(0f, 0.63f, hullSize.z * 0.56f), new Vector3(hullSize.x * 0.74f, 0.045f, 0.06f), edgeHighlightMaterial);
+            CreatePrimitive(PrimitiveType.Cube, root, "Wheeled Vehicle Rear Shadow", new Vector3(0f, 0.53f, -hullSize.z * 0.56f), new Vector3(hullSize.x * 0.68f, 0.07f, 0.06f), shadowPanelMaterial);
+            CreatePrimitive(PrimitiveType.Sphere, root, "Wheeled Vehicle Left Headlamp", new Vector3(-hullSize.x * 0.32f, 0.5f, hullSize.z * 0.6f), new Vector3(0.07f, 0.04f, 0.07f), warningLightMaterial);
+            CreatePrimitive(PrimitiveType.Sphere, root, "Wheeled Vehicle Right Headlamp", new Vector3(hullSize.x * 0.32f, 0.5f, hullSize.z * 0.6f), new Vector3(0.07f, 0.04f, 0.07f), warningLightMaterial);
+            CreateBoltRow(root, "Wheeled Vehicle Front Armor Bolt", new Vector3(-hullSize.x * 0.34f, 0.58f, hullSize.z * 0.54f), new Vector3(hullSize.x * 0.11f, 0f, 0f), 7, new Vector3(0.032f, 0.024f, 0.026f), panelTrimMaterial);
+            CreateVentSlats(root, "Wheeled Vehicle Engine Slat", new Vector3(-0.34f, 0.79f, frontZ + 0.31f), new Vector3(0.17f, 0f, 0f), 5, new Vector3(0.09f, 0.025f, 0.05f), panelTrimMaterial);
+
+            if (apc)
+            {
+                CreatePrimitive(PrimitiveType.Cube, root, "APC Troop Hatch", new Vector3(0f, 1.29f, -0.48f), new Vector3(0.62f, 0.065f, 0.42f), panelTrimMaterial);
+                CreatePrimitive(PrimitiveType.Cube, root, "APC Side Storage Box L", new Vector3(-0.9f, 0.63f, -0.56f), new Vector3(0.1f, 0.24f, 0.46f), vehicleDetailMaterial);
+                CreatePrimitive(PrimitiveType.Cube, root, "APC Side Storage Box R", new Vector3(0.9f, 0.63f, -0.56f), new Vector3(0.1f, 0.24f, 0.46f), vehicleDetailMaterial);
+                CreatePrimitive(PrimitiveType.Cube, root, "APC Rear Ramp Line", new Vector3(0f, 0.58f, -1.36f), new Vector3(1.18f, 0.05f, 0.045f), cautionStripeMaterial);
+            }
+            else
+            {
+                CreatePrimitive(PrimitiveType.Cube, root, "Humvee Spare Tire Mount", new Vector3(0f, 0.64f, -1.1f), new Vector3(0.48f, 0.12f, 0.12f), trackRubberMaterial);
+                CreatePrimitive(PrimitiveType.Cube, root, "Humvee Antenna Base", new Vector3(-0.48f, 1.13f, -0.62f), new Vector3(0.05f, 0.48f, 0.05f), weaponMetalMaterial);
+                CreatePrimitive(PrimitiveType.Sphere, root, "Humvee Antenna Tip", new Vector3(-0.48f, 1.42f, -0.62f), new Vector3(0.045f, 0.045f, 0.045f), sensorGlassMaterial);
+            }
+        }
+
         private void BuildUnitMotionRig(Transform root, UnitKind kind)
         {
             kind = RtsBalance.NormalizeUnitKind(kind);
@@ -2911,6 +2987,13 @@ namespace QuestCommandRTS
             if (RtsBalance.IsTank(kind))
             {
                 CreateVehicleTrackRig(root, kind);
+                CreateTankTurretMotionRig(root, kind);
+                return;
+            }
+
+            if (RtsBalance.IsWheeledCombatVehicle(kind))
+            {
+                CreateVehicleWheelRig(root, kind);
                 CreateTankTurretMotionRig(root, kind);
                 return;
             }
@@ -3004,8 +3087,17 @@ namespace QuestCommandRTS
 
         private void CreateWheel(Transform root, string name, Vector3 localPosition, float radius, float thickness)
         {
-            GameObject wheel = CreatePrimitive(PrimitiveType.Cylinder, root, name, localPosition, new Vector3(radius, thickness, radius), trackRubberMaterial);
+            GameObject wheel = new GameObject(name);
+            wheel.transform.SetParent(root, false);
+            wheel.transform.localPosition = localPosition;
             wheel.transform.localRotation = Quaternion.Euler(0f, 0f, 90f);
+
+            string suffix = name.Replace("Roll Wheel ", string.Empty);
+            CreatePrimitive(PrimitiveType.Cylinder, wheel.transform, "Tire " + suffix, Vector3.zero, new Vector3(radius, thickness, radius), trackRubberMaterial);
+            CreatePrimitive(PrimitiveType.Cylinder, wheel.transform, "Metal Hub " + suffix, new Vector3(0f, thickness * 0.04f, 0f), new Vector3(radius * 0.46f, thickness * 1.08f, radius * 0.46f), panelTrimMaterial);
+            CreatePrimitive(PrimitiveType.Cylinder, wheel.transform, "Inner Rim " + suffix, new Vector3(0f, thickness * 0.08f, 0f), new Vector3(radius * 0.72f, thickness * 0.28f, radius * 0.72f), weaponMetalMaterial);
+            CreatePrimitive(PrimitiveType.Cube, wheel.transform, "Tread Crossbar A " + suffix, new Vector3(0f, 0f, radius * 0.72f), new Vector3(radius * 1.36f, thickness * 1.1f, radius * 0.08f), shadowPanelMaterial);
+            CreatePrimitive(PrimitiveType.Cube, wheel.transform, "Tread Crossbar B " + suffix, new Vector3(radius * 0.72f, 0f, 0f), new Vector3(radius * 0.08f, thickness * 1.1f, radius * 1.36f), shadowPanelMaterial);
         }
 
         private void CreateTankTurretMotionRig(Transform root, UnitKind kind)
@@ -3019,6 +3111,15 @@ namespace QuestCommandRTS
             CreatePrimitive(PrimitiveType.Cube, pivot.transform, "Animated Turret Cap", Vector3.zero, capSize, vehicleDetailMaterial);
             GameObject barrel = CreatePrimitive(PrimitiveType.Cylinder, pivot.transform, "Animated Turret Barrel", barrelPosition, barrelScale, weaponMetalMaterial);
             barrel.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
+            if (RtsBalance.IsWheeledCombatVehicle(kind))
+            {
+                CreatePrimitive(PrimitiveType.Cube, pivot.transform, "Animated Turret Shield", new Vector3(0f, 0.02f, 0.16f), new Vector3(capSize.x * 0.82f, capSize.y * 0.78f, 0.08f), shadowPanelMaterial);
+                GameObject secondBarrel = CreatePrimitive(PrimitiveType.Cylinder, pivot.transform, "Animated Turret Barrel Twin", barrelPosition + new Vector3(capSize.x * 0.22f, 0f, 0f), barrelScale * 0.78f, weaponMetalMaterial);
+                secondBarrel.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
+                GameObject firstBarrel = barrel;
+                firstBarrel.transform.localPosition = barrelPosition - new Vector3(capSize.x * 0.22f, 0f, 0f);
+            }
+
             GameObject muzzle = new GameObject("Animated Turret Muzzle");
             muzzle.transform.SetParent(pivot.transform, false);
             muzzle.transform.localPosition = barrelPosition + new Vector3(0f, 0f, barrelScale.y * 0.96f);
@@ -3028,6 +3129,20 @@ namespace QuestCommandRTS
         {
             switch (RtsBalance.NormalizeUnitKind(kind))
             {
+                case UnitKind.Humvee:
+                    sideOffset = 0.72f;
+                    centerY = 0.34f;
+                    forwardZ = 0.82f;
+                    wheelRadius = 0.23f;
+                    wheelThickness = 0.16f;
+                    return;
+                case UnitKind.Apc:
+                    sideOffset = 0.86f;
+                    centerY = 0.36f;
+                    forwardZ = 0.98f;
+                    wheelRadius = 0.27f;
+                    wheelThickness = 0.18f;
+                    return;
                 case UnitKind.LightTank:
                     sideOffset = 0.68f;
                     centerY = 0.32f;
@@ -3098,6 +3213,18 @@ namespace QuestCommandRTS
         {
             switch (RtsBalance.NormalizeUnitKind(kind))
             {
+                case UnitKind.Humvee:
+                    pivotPosition = new Vector3(0f, 1.08f, -0.14f);
+                    capSize = new Vector3(0.44f, 0.13f, 0.36f);
+                    barrelPosition = new Vector3(0f, 0f, 0.38f);
+                    barrelScale = new Vector3(0.045f, 0.46f, 0.045f);
+                    return;
+                case UnitKind.Apc:
+                    pivotPosition = new Vector3(0f, 1.32f, -0.1f);
+                    capSize = new Vector3(0.58f, 0.16f, 0.42f);
+                    barrelPosition = new Vector3(0f, 0f, 0.44f);
+                    barrelScale = new Vector3(0.055f, 0.52f, 0.055f);
+                    return;
                 case UnitKind.LightTank:
                     pivotPosition = new Vector3(0f, 0.9f, 0.05f);
                     capSize = new Vector3(0.62f, 0.16f, 0.48f);
@@ -3192,6 +3319,28 @@ namespace QuestCommandRTS
                     return new Vector3(2.25f, 1.4f, 3.35f);
                 default:
                     return new Vector3(1.75f, 1.2f, 2.55f);
+            }
+        }
+
+        private static Vector3 GetWheeledVehicleColliderCenter(UnitKind kind)
+        {
+            switch (RtsBalance.NormalizeUnitKind(kind))
+            {
+                case UnitKind.Apc:
+                    return new Vector3(0f, 0.68f, 0f);
+                default:
+                    return new Vector3(0f, 0.58f, 0f);
+            }
+        }
+
+        private static Vector3 GetWheeledVehicleColliderSize(UnitKind kind)
+        {
+            switch (RtsBalance.NormalizeUnitKind(kind))
+            {
+                case UnitKind.Apc:
+                    return new Vector3(1.85f, 1.28f, 2.75f);
+                default:
+                    return new Vector3(1.55f, 1.08f, 2.2f);
             }
         }
 
