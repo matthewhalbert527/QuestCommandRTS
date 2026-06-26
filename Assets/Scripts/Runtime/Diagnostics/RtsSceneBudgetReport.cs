@@ -229,6 +229,10 @@ namespace QuestCommandRTS
             return objectName.StartsWith("Projected Water", StringComparison.Ordinal) ||
                 objectName.Contains("Dune Shelf") ||
                 objectName.Contains("Mesa Ridge") ||
+                objectName.Contains("Cliff") ||
+                objectName.Contains("Mountain") ||
+                objectName.Contains("Talus") ||
+                objectName.Contains("Dry Wash") ||
                 objectName.Contains("Blast Scorch") ||
                 objectName.Contains(" Rock ") ||
                 objectName.Contains("Table Rail") ||

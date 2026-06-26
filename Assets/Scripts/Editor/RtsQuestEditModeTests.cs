@@ -694,6 +694,9 @@ namespace QuestCommandRTS.Editor
             AssertSceneObjectHasNoCollider("Projected Water Channel B");
             AssertSceneObjectHasNoCollider("West Mesa Ridge");
             AssertSceneObjectHasNoCollider("Southwest Rock 1");
+            AssertSceneObjectHasNoCollider("South Canyon Cliff Face");
+            AssertSceneObjectHasNoCollider("Northwest Mountain Peak 1");
+            AssertSceneObjectHasNoCollider("Central Dry Wash");
             AssertSceneObjectHasNoCollider("Northwest Table Pylon");
 
             RaycastHit hit;
@@ -710,6 +713,10 @@ namespace QuestCommandRTS.Editor
             AssertSceneObjectUsesTexture("West Dune Shelf", "Dune Accent");
             AssertSceneObjectUsesTexture("Projected Water Channel A", "Water Ripple");
             AssertSceneObjectUsesTexture("West Mesa Ridge", "Ridge Rock");
+            AssertSceneObjectUsesTexture("South Canyon Cliff Face", "Cliff Face");
+            AssertSceneObjectUsesTexture("Northwest Mountain Peak 1", "Mountain Stone");
+            AssertSceneObjectUsesTexture("South Canyon Cliff Talus Fan 1", "Talus");
+            AssertSceneObjectUsesTexture("Central Dry Wash", "Dry Wash");
             AssertSceneObjectUsesTexture("Southwest Blast Scorch", "Scorch");
         }
 

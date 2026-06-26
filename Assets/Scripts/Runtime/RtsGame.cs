@@ -65,6 +65,10 @@ namespace QuestCommandRTS
         private Material terrainAccentMaterial;
         private Material waterMaterial;
         private Material ridgeMaterial;
+        private Material cliffMaterial;
+        private Material mountainMaterial;
+        private Material talusMaterial;
+        private Material dryWashMaterial;
         private Material craterMaterial;
         private Material resourceMaterial;
         private Material depletedResourceMaterial;
@@ -226,8 +230,8 @@ namespace QuestCommandRTS
 
         private static Texture2D CreateTerrainTexture(string name, Color baseColor, Color lowColor, Color highColor, Color lineColor, int seed, float grainStrength, float crackStrength, float stripeStrength)
         {
-            const int size = 128;
-            Texture2D texture = new Texture2D(size, size, TextureFormat.RGBA32, false);
+            const int size = 256;
+            Texture2D texture = new Texture2D(size, size, TextureFormat.RGBA32, true);
             texture.name = name;
             texture.hideFlags = HideFlags.DontSave;
 
@@ -238,12 +242,15 @@ namespace QuestCommandRTS
                 {
                     float u = x / (float)(size - 1);
                     float v = y / (float)(size - 1);
+                    float broadNoise = Mathf.PerlinNoise((x + seed * 29) * 0.011f, (y + seed * 17) * 0.011f);
                     float largeNoise = Mathf.PerlinNoise((x + seed * 13) * 0.028f, (y - seed * 7) * 0.028f);
                     float fineNoise = Mathf.PerlinNoise((x - seed * 5) * 0.19f, (y + seed * 11) * 0.19f);
+                    float mineralNoise = Mathf.PerlinNoise((x + seed * 19) * 0.42f, (y - seed * 23) * 0.42f);
                     float grain = (Hash01(x, y, seed) - 0.5f) * grainStrength;
-                    float shade = Mathf.Clamp01(largeNoise * 0.72f + fineNoise * 0.28f + grain);
+                    float shade = Mathf.Clamp01(broadNoise * 0.22f + largeNoise * 0.48f + fineNoise * 0.24f + mineralNoise * 0.06f + grain);
                     Color color = Color.Lerp(lowColor, highColor, shade);
-                    color = Color.Lerp(color, baseColor, 0.42f);
+                    color = Color.Lerp(color, baseColor, 0.32f);
+                    color = Color.Lerp(color, lowColor, Mathf.Clamp01(1f - largeNoise) * 0.1f);
 
                     if (stripeStrength > 0f)
                     {
@@ -251,6 +258,10 @@ namespace QuestCommandRTS
                         float stripe = Mathf.Sin((u * 18f + v * 5.5f + stripeNoise * 2f) * Mathf.PI * 2f);
                         float stripeMask = Mathf.SmoothStep(0.42f, 0.96f, Mathf.Abs(stripe));
                         color = Color.Lerp(color, lineColor, stripeMask * stripeStrength);
+
+                        float crossStripe = Mathf.Sin((v * 22f - u * 3.8f + stripeNoise * 1.35f) * Mathf.PI * 2f);
+                        float crossMask = Mathf.SmoothStep(0.78f, 0.985f, Mathf.Abs(crossStripe));
+                        color = Color.Lerp(color, highColor, crossMask * stripeStrength * 0.18f);
                     }
 
                     if (crackStrength > 0f)
@@ -258,7 +269,19 @@ namespace QuestCommandRTS
                         float crackNoise = Mathf.PerlinNoise((x + seed * 3) * 0.115f, (y - seed * 2) * 0.115f);
                         float crackGuide = Mathf.PerlinNoise((x - seed) * 0.035f, (y + seed) * 0.035f);
                         float crack = Mathf.SmoothStep(0.72f, 0.9f, crackNoise) * Mathf.SmoothStep(0.42f, 0.88f, crackGuide);
+                        float hairline = Mathf.SmoothStep(0.84f, 0.965f, crackNoise) * Mathf.SmoothStep(0.22f, 0.72f, crackGuide);
                         color = Color.Lerp(color, lineColor, crack * crackStrength);
+                        color = Color.Lerp(color, highColor, hairline * crackStrength * 0.09f);
+                    }
+
+                    float speckle = Hash01(x * 17 + seed, y * 31 - seed, seed);
+                    if (speckle > 0.985f)
+                    {
+                        color = Color.Lerp(color, highColor, 0.32f * grainStrength);
+                    }
+                    else if (speckle < 0.012f)
+                    {
+                        color = Color.Lerp(color, lineColor, 0.18f * grainStrength);
                     }
 
                     color.a = baseColor.a;
@@ -267,7 +290,7 @@ namespace QuestCommandRTS
             }
 
             texture.SetPixels(pixels);
-            texture.Apply(false, false);
+            texture.Apply(true, false);
             return texture;
         }
 
@@ -1881,6 +1904,46 @@ namespace QuestCommandRTS
                 0.22f,
                 0.52f,
                 0.18f);
+            Texture2D cliffFaceTexture = CreateTerrainTexture(
+                "Command RTS Cliff Face Texture",
+                new Color(0.49f, 0.39f, 0.29f),
+                new Color(0.22f, 0.18f, 0.14f),
+                new Color(0.68f, 0.56f, 0.42f),
+                new Color(0.12f, 0.095f, 0.075f),
+                61,
+                0.26f,
+                0.88f,
+                0.42f);
+            Texture2D mountainStoneTexture = CreateTerrainTexture(
+                "Command RTS Mountain Stone Texture",
+                new Color(0.38f, 0.36f, 0.32f),
+                new Color(0.18f, 0.18f, 0.16f),
+                new Color(0.62f, 0.58f, 0.49f),
+                new Color(0.09f, 0.085f, 0.075f),
+                67,
+                0.24f,
+                0.66f,
+                0.28f);
+            Texture2D talusTexture = CreateTerrainTexture(
+                "Command RTS Talus Texture",
+                new Color(0.4f, 0.33f, 0.24f),
+                new Color(0.22f, 0.18f, 0.13f),
+                new Color(0.65f, 0.55f, 0.39f),
+                new Color(0.14f, 0.105f, 0.075f),
+                69,
+                0.32f,
+                0.38f,
+                0.12f);
+            Texture2D dryWashTexture = CreateTerrainTexture(
+                "Command RTS Dry Wash Texture",
+                new Color(0.61f, 0.51f, 0.35f),
+                new Color(0.33f, 0.27f, 0.18f),
+                new Color(0.82f, 0.7f, 0.47f),
+                new Color(0.18f, 0.14f, 0.09f),
+                71,
+                0.2f,
+                0.5f,
+                0.34f);
             Texture2D scorchTexture = CreateTerrainTexture(
                 "Command RTS Scorch Texture",
                 new Color(0.055f, 0.047f, 0.04f, 0.58f),
@@ -1918,6 +1981,22 @@ namespace QuestCommandRTS
                 new Color(0.44f, 0.36f, 0.27f),
                 ridgeRockTexture,
                 new Vector2(2.4f, 2.4f));
+            cliffMaterial = CreateTexturedMaterial(
+                new Color(0.49f, 0.39f, 0.29f),
+                cliffFaceTexture,
+                new Vector2(2.8f, 3.6f));
+            mountainMaterial = CreateTexturedMaterial(
+                new Color(0.38f, 0.36f, 0.32f),
+                mountainStoneTexture,
+                new Vector2(2.2f, 2.2f));
+            talusMaterial = CreateTexturedMaterial(
+                new Color(0.4f, 0.33f, 0.24f),
+                talusTexture,
+                new Vector2(3.4f, 2.1f));
+            dryWashMaterial = CreateTexturedMaterial(
+                new Color(0.61f, 0.51f, 0.35f),
+                dryWashTexture,
+                new Vector2(4.5f, 1.8f));
             craterMaterial = CreateTexturedTransparentMaterial(
                 new Color(0.055f, 0.047f, 0.04f, 0.58f),
                 scorchTexture,
@@ -2033,15 +2112,100 @@ namespace QuestCommandRTS
             CreateTerrainDisk("North Dune Shelf", new Vector3(-24f, 0.031f, 76f), new Vector3(38f, 0.02f, 13f), -12f, terrainAccentMaterial);
             CreateTerrainDisk("East Dune Shelf", new Vector3(78f, 0.031f, 54f), new Vector3(24f, 0.02f, 18f), 34f, terrainAccentMaterial);
 
+            CreateTerrainDisk("Central Dry Wash", new Vector3(-12f, 0.029f, 8f), new Vector3(58f, 0.014f, 6.4f), -18f, dryWashMaterial);
+            CreateTerrainDisk("South Dry Wash Delta", new Vector3(-50f, 0.028f, -74f), new Vector3(32f, 0.014f, 8.6f), 12f, dryWashMaterial);
+            CreateTerrainDisk("East Dry Wash Fork", new Vector3(54f, 0.028f, 26f), new Vector3(28f, 0.014f, 5.4f), 32f, dryWashMaterial);
+
             CreateTerrainBlock("West Mesa Ridge", new Vector3(-101f, 0.72f, 6f), new Vector3(9f, 1.45f, 34f), -12f, ridgeMaterial);
             CreateTerrainBlock("North Mesa Ridge", new Vector3(-12f, 0.64f, 102f), new Vector3(48f, 1.28f, 7f), 7f, ridgeMaterial);
             CreateTerrainBlock("East Mesa Ridge", new Vector3(101f, 0.68f, 28f), new Vector3(8f, 1.36f, 31f), 18f, ridgeMaterial);
+
+            CreateCliffBand("South Canyon Cliff", new Vector3(-18f, 1.16f, -103f), new Vector3(78f, 2.3f, 5.6f), -3f, 4);
+            CreateCliffBand("West Rim Cliff", new Vector3(-103f, 1.08f, -34f), new Vector3(42f, 2.15f, 5.2f), 82f, 3);
+            CreateCliffBand("Northeast Escarpment Cliff", new Vector3(91f, 1.3f, 70f), new Vector3(36f, 2.6f, 6.2f), 48f, 3);
+
+            CreateMountainCluster("Northwest", new Vector3(-92f, 0f, 91f), 3, 6.8f, 1.25f);
+            CreateMountainCluster("Northeast", new Vector3(88f, 0f, 95f), 2, 6.2f, 1.1f);
+            CreateMountainCluster("Southeast", new Vector3(96f, 0f, -78f), 2, 5.8f, 1f);
 
             CreateTerrainDisk("Southwest Blast Scorch", new Vector3(-48f, 0.036f, -38f), new Vector3(7f, 0.012f, 4.8f), 22f, craterMaterial);
             CreateTerrainDisk("Central Blast Scorch", new Vector3(20f, 0.036f, 34f), new Vector3(8f, 0.012f, 5.2f), -18f, craterMaterial);
             CreateRockCluster("Southwest", new Vector3(-92f, 0f, -6f), 7);
             CreateRockCluster("Northeast", new Vector3(88f, 0f, 70f), 6);
             CreateRockCluster("Midfield", new Vector3(36f, 0f, -42f), 5);
+            CreateTerrainPebbleField("South Canyon", new Vector3(-18f, 0f, -96f), 6, 48f, 4.8f, -3f);
+            CreateTerrainPebbleField("West Rim", new Vector3(-97f, 0f, -34f), 5, 30f, 4.4f, 82f);
+            CreateTerrainPebbleField("Northeast Escarpment", new Vector3(86f, 0f, 65f), 5, 28f, 4.2f, 48f);
+        }
+
+        private void CreateCliffBand(string cliffName, Vector3 center, Vector3 scale, float yawDegrees, int strataCount)
+        {
+            Quaternion rotation = Quaternion.Euler(0f, yawDegrees, 0f);
+            Vector3 forward = rotation * Vector3.forward;
+            Vector3 right = rotation * Vector3.right;
+
+            CreateTerrainBlock(cliffName + " Face", center, scale, yawDegrees, cliffMaterial);
+            CreateTerrainBlock(cliffName + " Shadow Base", center + forward * (scale.z * 0.55f) + Vector3.down * (scale.y * 0.35f), new Vector3(scale.x * 0.96f, 0.16f, 0.2f), yawDegrees, shadowPanelMaterial);
+            CreateTerrainBlock(cliffName + " Sunlit Rim", center - forward * (scale.z * 0.53f) + Vector3.up * (scale.y * 0.52f), new Vector3(scale.x * 0.94f, 0.12f, 0.36f), yawDegrees, ridgeMaterial);
+
+            for (int i = 0; i < strataCount; i++)
+            {
+                float t = strataCount <= 1 ? 0.5f : i / (float)(strataCount - 1);
+                float lateral = Mathf.Sin((i + 1) * 1.91f) * scale.x * 0.07f;
+                float height = Mathf.Lerp(-scale.y * 0.38f, scale.y * 0.42f, t);
+                float ledgeDepth = 0.12f + (i % 3) * 0.045f;
+                Vector3 position = center + right * lateral + forward * (scale.z * (0.18f + t * 0.18f)) + Vector3.up * height;
+                Vector3 ledgeScale = new Vector3(scale.x * (0.32f + (i % 2) * 0.08f), 0.045f, ledgeDepth);
+                CreateTerrainBlock(cliffName + " Strata " + (i + 1), position, ledgeScale, yawDegrees + Mathf.Sin(i * 2.1f) * 3f, i % 2 == 0 ? ridgeMaterial : mountainMaterial);
+            }
+
+            for (int i = 0; i < 3; i++)
+            {
+                float offset = ((i - 1) * scale.x * 0.28f) + Mathf.Sin(i * 2.4f) * scale.x * 0.04f;
+                Vector3 talusPosition = center + right * offset + forward * (scale.z * 0.92f + i * 0.18f);
+                Vector3 talusScale = new Vector3(scale.x * 0.18f + i * 0.75f, 0.018f, scale.z * (0.78f + i * 0.18f));
+                CreateTerrainDisk(cliffName + " Talus Fan " + (i + 1), new Vector3(talusPosition.x, 0.033f, talusPosition.z), talusScale, yawDegrees + i * 9f, talusMaterial);
+            }
+        }
+
+        private void CreateMountainCluster(string clusterName, Vector3 center, int peakCount, float footprint, float heightBias)
+        {
+            for (int i = 0; i < peakCount; i++)
+            {
+                float angle = i * 2.07f + footprint * 0.13f;
+                float radius = i == 0 ? 0f : footprint * (0.42f + (i % 3) * 0.16f);
+                Vector3 basePosition = center + new Vector3(Mathf.Cos(angle) * radius, 0f, Mathf.Sin(angle) * radius);
+                float peakHeight = (1.9f + (i % 3) * 0.38f) * heightBias;
+                float peakRadius = footprint * (0.42f - Mathf.Min(i, 2) * 0.045f);
+                float yaw = angle * Mathf.Rad2Deg + i * 19f;
+
+                CreateTerrainDisk(clusterName + " Mountain Base " + (i + 1), new Vector3(basePosition.x, peakHeight * 0.52f, basePosition.z), new Vector3(peakRadius * 1.45f, peakHeight * 0.52f, peakRadius * 1.12f), yaw, talusMaterial);
+                CreateTerrainDisk(clusterName + " Mountain Shoulder " + (i + 1), new Vector3(basePosition.x + Mathf.Sin(angle) * 0.8f, peakHeight * 1.04f, basePosition.z - Mathf.Cos(angle) * 0.55f), new Vector3(peakRadius * 1.02f, peakHeight * 0.5f, peakRadius * 0.84f), yaw + 17f, cliffMaterial);
+                CreateTerrainDisk(clusterName + " Mountain Peak " + (i + 1), new Vector3(basePosition.x - Mathf.Sin(angle) * 0.45f, peakHeight * 1.58f, basePosition.z + Mathf.Cos(angle) * 0.35f), new Vector3(peakRadius * 0.6f, peakHeight * 0.48f, peakRadius * 0.5f), yaw - 11f, mountainMaterial);
+
+                if (i > 0)
+                {
+                    Vector3 midPoint = Vector3.Lerp(center, basePosition, 0.55f);
+                    CreateTerrainBlock(clusterName + " Mountain Ridge Spur " + i, new Vector3(midPoint.x, 0.68f + peakHeight * 0.14f, midPoint.z), new Vector3(radius * 0.62f + 1.6f, 0.42f + peakHeight * 0.16f, 1.2f), yaw + 48f, ridgeMaterial);
+                }
+            }
+
+            CreateTerrainDisk(clusterName + " Mountain Talus Apron", new Vector3(center.x, 0.032f, center.z), new Vector3(footprint * 1.95f, 0.018f, footprint * 1.45f), footprint * 7f, talusMaterial);
+        }
+
+        private void CreateTerrainPebbleField(string fieldName, Vector3 center, int count, float width, float depth, float yawDegrees)
+        {
+            Quaternion rotation = Quaternion.Euler(0f, yawDegrees, 0f);
+            for (int i = 0; i < count; i++)
+            {
+                float u = count <= 1 ? 0.5f : i / (float)(count - 1);
+                float lateral = Mathf.Lerp(-width * 0.5f, width * 0.5f, u);
+                float forwardOffset = Mathf.Sin(i * 1.73f) * depth * 0.45f;
+                Vector3 position = center + rotation * new Vector3(lateral, 0f, forwardOffset);
+                float size = 0.28f + (i % 4) * 0.13f;
+                float height = 0.18f + (i % 3) * 0.08f;
+                CreateTerrainDisk(fieldName + " Talus Pebble " + (i + 1), new Vector3(position.x, height, position.z), new Vector3(size, height, size * (0.75f + (i % 2) * 0.24f)), yawDegrees + i * 31f, i % 3 == 0 ? ridgeMaterial : talusMaterial);
+            }
         }
 
         private void CreateTerrainDisk(string name, Vector3 position, Vector3 scale, float yawDegrees, Material material)
