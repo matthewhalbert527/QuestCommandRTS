@@ -238,7 +238,7 @@ namespace QuestCommandRTS.Editor
             {
                 RtsGame game = CreateInitializedGame();
                 RtsSaveService service = new RtsSaveService(game, new RtsSaveFileStore(tempPath));
-                RtsEntity entity = FindPlayerEntity(game, typeof(RtsUnit));
+                RtsEntity entity = game.CreateUnit(RtsTeam.Player, UnitKind.Rifleman, new Vector3(-76f, 0f, -72f));
 
                 int entityId = entity.PersistentId;
                 int credits = game.Resources.Credits;
@@ -310,7 +310,7 @@ namespace QuestCommandRTS.Editor
                 RtsGame game = CreateInitializedGame();
                 RtsSaveFileStore store = new RtsSaveFileStore(tempPath);
                 RtsSaveService service = new RtsSaveService(game, store);
-                RtsEntity entity = FindPlayerEntity(game, typeof(RtsUnit));
+                RtsEntity entity = game.CreateUnit(RtsTeam.Player, UnitKind.Rifleman, new Vector3(-76f, 0f, -72f));
 
                 int entityId = entity.PersistentId;
                 int backupCredits = game.Resources.Credits;
@@ -425,7 +425,7 @@ namespace QuestCommandRTS.Editor
         public void DispatcherIssuesAttackMoveAndStopOrders()
         {
             RtsGame game = CreateInitializedGame();
-            RtsUnit unit = (RtsUnit)FindPlayerEntity(game, typeof(RtsUnit));
+            RtsUnit unit = game.CreateUnit(RtsTeam.Player, UnitKind.Rifleman, new Vector3(-76f, 0f, -72f));
             game.ClearSelection();
             game.SelectEntity(unit, false);
 
@@ -445,7 +445,7 @@ namespace QuestCommandRTS.Editor
         public void AttackMoveAcquiresEnemyAndPersistsThroughRestore()
         {
             RtsGame game = CreateInitializedGame();
-            RtsUnit unit = (RtsUnit)FindPlayerEntity(game, typeof(RtsUnit));
+            RtsUnit unit = game.CreateUnit(RtsTeam.Player, UnitKind.Rifleman, new Vector3(-76f, 0f, -72f));
             RtsUnit enemy = game.CreateUnit(RtsTeam.Enemy, UnitKind.Rifleman, unit.transform.position + new Vector3(3.5f, 0f, 0f));
             Physics.SyncTransforms();
 
@@ -454,7 +454,7 @@ namespace QuestCommandRTS.Editor
             float enemyHealth = enemy.Health;
 
             unit.IssueAttackMove(unit.transform.position + new Vector3(18f, 0f, 0f));
-            unit.TickOrdersForTests(0.2f);
+            TickCombatUntilDamaged(unit, enemy, enemyHealth);
 
             Assert.Less(enemy.Health, enemyHealth);
             RtsUnitOrderSaveData acquired = unit.CaptureOrderState();
@@ -497,6 +497,7 @@ namespace QuestCommandRTS.Editor
         public void EnemyDirectorSpendsCreditsToProduceUnits()
         {
             RtsGame game = CreateInitializedGame();
+            game.CreateStructure(RtsTeam.Enemy, StructureKind.Barracks, new Vector3(74f, 0f, 64f));
             int beforeUnits = CountLivingEnemyUnits(game);
 
             game.EnemyDirector.SetEnemyCreditsForTests(500);
@@ -510,6 +511,7 @@ namespace QuestCommandRTS.Editor
         public void EnemyDirectorRebuildsMissingPowerPlant()
         {
             RtsGame game = CreateInitializedGame();
+            game.CreateStructure(RtsTeam.Enemy, StructureKind.PowerPlant, new Vector3(96f, 0f, 62f));
             RtsStructure powerPlant = FindEnemyStructure(game, StructureKind.PowerPlant);
             powerPlant.SetHealthForRestore(0f);
 
@@ -526,7 +528,7 @@ namespace QuestCommandRTS.Editor
         public void SaveRestoreRoundTripsCoreSkirmishState()
         {
             RtsGame game = CreateInitializedGame();
-            RtsEntity entity = FindPlayerEntity(game, typeof(RtsUnit));
+            RtsEntity entity = game.CreateUnit(RtsTeam.Player, UnitKind.Rifleman, new Vector3(-76f, 0f, -72f));
             ResourceNode node = game.ResourceNodes[0];
 
             int entityId = entity.PersistentId;
@@ -582,12 +584,12 @@ namespace QuestCommandRTS.Editor
             Assert.AreEqual(0f, game.MatchTime, 0.001f);
             Assert.IsFalse(game.Clock.IsPaused);
             Assert.IsFalse(game.IsUserPaused);
-            Assert.AreEqual(3400, game.Resources.Credits);
+            Assert.AreEqual(6200, game.Resources.Credits);
             Assert.AreEqual(startingEntities, game.Entities.Count);
             Assert.AreEqual(startingResources, game.ResourceNodes.Count);
-            Assert.AreEqual(2, game.Selection.Count);
+            Assert.AreEqual(1, game.Selection.Count);
             Assert.IsFalse(game.BuildManager.IsPlacing);
-            Assert.AreEqual(1800, game.EnemyDirector.EnemyCreditsForTests);
+            Assert.AreEqual(2600, game.EnemyDirector.EnemyCreditsForTests);
 
             for (int i = 0; i < game.ResourceNodes.Count; i++)
             {
@@ -618,6 +620,26 @@ namespace QuestCommandRTS.Editor
 
             Assert.Fail("Missing player entity of type " + type.Name);
             return null;
+        }
+
+        private static void TickCombatUntilDamaged(RtsUnit attacker, RtsEntity target, float startingHealth)
+        {
+            for (int i = 0; i < 80 && target.Health >= startingHealth; i++)
+            {
+                if (attacker != null)
+                {
+                    attacker.TickOrdersForTests(0.1f);
+                }
+
+                RtsProjectile[] projectiles = Object.FindObjectsOfType<RtsProjectile>();
+                for (int projectileIndex = 0; projectileIndex < projectiles.Length; projectileIndex++)
+                {
+                    if (projectiles[projectileIndex] != null)
+                    {
+                        projectiles[projectileIndex].TickProjectileForTests(0.1f);
+                    }
+                }
+            }
         }
 
         private static RtsStructure FindEnemyStructure(RtsGame game, StructureKind kind)

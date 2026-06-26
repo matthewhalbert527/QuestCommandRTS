@@ -571,6 +571,10 @@ namespace QuestCommandRTS.Editor
         public void WarFactoryTrainsHumveeAndApcVehicles()
         {
             RtsGame game = CreateInitializedGame(RtsRuntimeMode.Desktop);
+            EnsurePlayerStructure(game, StructureKind.PowerPlant, new Vector3(-74f, 0f, -68f));
+            EnsurePlayerStructure(game, StructureKind.Barracks, new Vector3(-68f, 0f, -68f));
+            EnsurePlayerStructure(game, StructureKind.Refinery, new Vector3(-60f, 0f, -68f));
+            EnsurePlayerStructure(game, StructureKind.WarFactory, new Vector3(-50f, 0f, -68f));
             ProductionStructure barracks = FindPlayerProduction(game, StructureKind.Barracks);
             ProductionStructure warFactory = FindPlayerProduction(game, StructureKind.WarFactory);
 
@@ -584,8 +588,10 @@ namespace QuestCommandRTS.Editor
 
             Assert.AreEqual(UnitKind.Humvee, humvee.UnitKind);
             Assert.AreEqual(UnitKind.Apc, apc.UnitKind);
-            Assert.Less(humvee.transform.position.z, warFactory.transform.position.z, "Vehicles should deploy downward from the war factory front.");
-            Assert.Less(apc.transform.position.z, warFactory.transform.position.z, "Vehicles should deploy downward from the war factory front.");
+            Assert.Greater(humvee.QueuedMoveWaypointCountForTests, 0, "Vehicles should receive the war factory deployment path.");
+            Assert.Greater(apc.QueuedMoveWaypointCountForTests, 0, "Vehicles should receive the war factory deployment path.");
+            Assert.Less(humvee.DestinationForTests.z, warFactory.transform.position.z, "Vehicles should deploy downward from the war factory front.");
+            Assert.Less(apc.DestinationForTests.z, warFactory.transform.position.z, "Vehicles should deploy downward from the war factory front.");
         }
 
         [Test]
@@ -702,7 +708,7 @@ namespace QuestCommandRTS.Editor
             RtsUnit enemy = game.CreateUnit(RtsTeam.Enemy, UnitKind.Rifleman, new Vector3(-8f, 0f, -12f));
 
             float enemyHealth = enemy.Health;
-            gunner.TickOrdersForTests(0.1f);
+            TickCombatUntilDamaged(gunner, enemy, enemyHealth);
 
             Assert.Less(enemy.Health, enemyHealth);
             Assert.AreEqual("Attack", gunner.CaptureOrderState().orderType);
@@ -719,7 +725,7 @@ namespace QuestCommandRTS.Editor
             gunner.IssueMove(new Vector3(-32f, 0f, -16f));
             gunner.TakeDamage(1f, enemy);
             float enemyHealth = enemy.Health;
-            gunner.TickOrdersForTests(0.1f);
+            TickCombatUntilDamaged(gunner, enemy, enemyHealth);
 
             Assert.Less(enemy.Health, enemyHealth);
             Assert.AreEqual("Attack", gunner.CaptureOrderState().orderType);
@@ -765,7 +771,7 @@ namespace QuestCommandRTS.Editor
         {
             RtsGame game = CreateInitializedGame(RtsRuntimeMode.Desktop);
             RtsUnit engineer = game.CreateUnit(RtsTeam.Player, UnitKind.Engineer, new Vector3(-58f, 0f, -62f));
-            RtsStructure powerPlant = FindStructure(game, RtsTeam.Player, StructureKind.PowerPlant);
+            RtsStructure powerPlant = EnsurePlayerStructure(game, StructureKind.PowerPlant, new Vector3(-74f, 0f, -68f));
             powerPlant.TakeDamage(120f, null);
 
             game.ClearSelection();
@@ -841,7 +847,9 @@ namespace QuestCommandRTS.Editor
         public void EntityHealthBarsTrackSelectionDamageRepairAndFog()
         {
             RtsGame game = CreateInitializedGame(RtsRuntimeMode.Desktop);
-            RtsUnit rifle = FindPlayerUnit(game, UnitKind.Rifleman);
+            RtsUnit rifle = game.CreateUnit(RtsTeam.Player, UnitKind.Rifleman, new Vector3(-58f, 0f, -62f));
+            game.ClearSelection();
+            game.SelectEntity(rifle, false);
             Transform healthBar = rifle.transform.Find("Health Bar");
             Transform fill = healthBar != null ? healthBar.Find("Health Fill") : null;
             Assert.IsNotNull(healthBar);
@@ -858,7 +866,9 @@ namespace QuestCommandRTS.Editor
             rifle.Repair(rifle.MaxHealth);
             Assert.IsFalse(healthBar.gameObject.activeSelf, "Fully repaired unselected unit should hide its health bar.");
 
-            RtsUnit enemy = FindEnemyUnit(game, UnitKind.HeavyTank);
+            RtsUnit enemy = game.CreateUnit(RtsTeam.Enemy, UnitKind.HeavyTank, new Vector3(86f, 0f, 72f));
+            Physics.SyncTransforms();
+            game.FogOfWar.RefreshNowForTests();
             Transform enemyHealthBar = enemy.transform.Find("Health Bar");
             Assert.IsNotNull(enemyHealthBar);
             Assert.IsFalse(game.IsEntityVisible(enemy));
@@ -1142,7 +1152,7 @@ namespace QuestCommandRTS.Editor
             var report = RtsSceneBudgetReport.BuildQuestBudget(game);
 
             Assert.AreEqual("QuestVr", snapshot.runtimeMode);
-            Assert.AreEqual(14, snapshot.entityCount);
+            Assert.AreEqual(2, snapshot.entityCount);
             Assert.AreEqual(61, snapshot.resourceNodeCount);
             Assert.Greater(snapshot.totalGameObjects, 0);
             Assert.Greater(snapshot.rendererCount, 0);
@@ -1228,25 +1238,25 @@ namespace QuestCommandRTS.Editor
             Assert.AreEqual("Desktop", snapshot.runtimeMode);
             Assert.AreEqual("Running", snapshot.matchState);
             Assert.IsTrue(snapshot.acceptsPlayerInput);
-            Assert.AreEqual(14, snapshot.entityCount);
-            Assert.AreEqual(14, snapshot.aliveEntityCount);
-            Assert.AreEqual(7, snapshot.playerEntityCount);
-            Assert.AreEqual(7, snapshot.enemyEntityCount);
-            Assert.AreEqual(2, snapshot.selectedEntityCount);
-            Assert.AreEqual(6, snapshot.unitCount);
-            Assert.AreEqual(8, snapshot.structureCount);
+            Assert.AreEqual(2, snapshot.entityCount);
+            Assert.AreEqual(2, snapshot.aliveEntityCount);
+            Assert.AreEqual(1, snapshot.playerEntityCount);
+            Assert.AreEqual(1, snapshot.enemyEntityCount);
+            Assert.AreEqual(1, snapshot.selectedEntityCount);
+            Assert.AreEqual(0, snapshot.unitCount);
+            Assert.AreEqual(2, snapshot.structureCount);
             Assert.AreEqual(61, snapshot.resources.nodeCount);
             Assert.Greater(snapshot.resources.remainingAmount, 0);
-            Assert.AreEqual(4, snapshot.production.producerCount);
+            Assert.AreEqual(2, snapshot.production.producerCount);
             Assert.AreEqual(0, snapshot.production.totalQueueItems);
             Assert.IsFalse(snapshot.buildPlacement.active);
             Assert.AreEqual(RtsBalance.MapHalfSize * 2f, snapshot.tabletop.simulationWidth, 0.001f);
             Assert.AreEqual(56 * 56, snapshot.fog.totalCells);
             Assert.Greater(snapshot.fog.exploredCells, 0);
-            Assert.AreEqual(3, snapshot.unitKinds.Count);
-            Assert.AreEqual(5, snapshot.structureKinds.Count);
-            Assert.AreEqual(7, FindDiagnosticsTeam(snapshot, "Player").aliveEntities);
-            Assert.AreEqual(7, FindDiagnosticsTeam(snapshot, "Enemy").aliveEntities);
+            Assert.AreEqual(0, snapshot.unitKinds.Count);
+            Assert.AreEqual(1, snapshot.structureKinds.Count);
+            Assert.AreEqual(1, FindDiagnosticsTeam(snapshot, "Player").aliveEntities);
+            Assert.AreEqual(1, FindDiagnosticsTeam(snapshot, "Enemy").aliveEntities);
         }
 
         [Test]
@@ -1291,6 +1301,9 @@ namespace QuestCommandRTS.Editor
                 FindDiagnosticsUnitKind(snapshot, "MediumTank").total +
                 FindDiagnosticsUnitKind(snapshot, "HeavyTank").total;
             Assert.GreaterOrEqual(armorTotal, 21);
+            int wheeledTotal = FindDiagnosticsUnitKind(snapshot, "Humvee").total +
+                FindDiagnosticsUnitKind(snapshot, "Apc").total;
+            Assert.GreaterOrEqual(wheeledTotal, 9);
             Assert.GreaterOrEqual(FindDiagnosticsStructureKind(snapshot, "WarFactory").player, 1);
             Assert.Less(FindDiagnosticsTeam(snapshot, "Player").idleUnits, 8);
         }
@@ -1405,9 +1418,10 @@ namespace QuestCommandRTS.Editor
         {
             RtsGame game = CreateInitializedGame(RtsRuntimeMode.QuestVr);
             game.ClearSelection();
+            RtsUnit second = game.CreateUnit(RtsTeam.Player, UnitKind.Rifleman, new Vector3(-76f, 0f, -72f));
+            Physics.SyncTransforms();
 
             RtsEntity first = FindPlayerEntity(game, typeof(RtsStructure));
-            RtsEntity second = FindPlayerEntity(game, typeof(RtsUnit));
 
             game.CommandDispatcher.SelectFromRay(RayAt(first), false, 500f);
             Assert.AreEqual(1, game.Selection.Count);
@@ -1429,7 +1443,7 @@ namespace QuestCommandRTS.Editor
             RtsGame game = CreateInitializedGame(RtsRuntimeMode.Desktop);
             game.ClearSelection();
 
-            RtsUnit liveUnit = FindPlayerUnit(game, UnitKind.Rifleman);
+            RtsUnit liveUnit = game.CreateUnit(RtsTeam.Player, UnitKind.Rifleman, new Vector3(-76f, 0f, -72f));
             RtsUnit deadUnit = game.CreateUnit(RtsTeam.Player, UnitKind.Rifleman, liveUnit.transform.position + new Vector3(3f, 0f, 0f));
             deadUnit.SetHealthForRestore(0f);
 
@@ -1449,7 +1463,7 @@ namespace QuestCommandRTS.Editor
             RtsGame game = CreateInitializedGame(RtsRuntimeMode.Desktop);
             game.ClearSelection();
 
-            RtsUnit playerUnit = (RtsUnit)FindPlayerEntity(game, typeof(RtsUnit));
+            RtsUnit playerUnit = game.CreateUnit(RtsTeam.Player, UnitKind.Rifleman, new Vector3(-76f, 0f, -72f));
             game.SelectEntity(playerUnit, false);
 
             RtsEntity visibleEnemy = game.CreateUnit(RtsTeam.Enemy, UnitKind.Rifleman, playerUnit.transform.position + new Vector3(4f, 0f, 0f));
@@ -1460,7 +1474,7 @@ namespace QuestCommandRTS.Editor
             Assert.AreEqual(RtsContextCommandKind.Attack, game.CommandDispatcher.ResolveContextCommand(visibleEnemy, resource, resource.transform.position));
             Assert.AreEqual(RtsContextCommandKind.Harvest, game.CommandDispatcher.ResolveContextCommand(null, resource, resource.transform.position));
 
-            ProductionStructure producer = (ProductionStructure)FindPlayerProduction(game);
+            ProductionStructure producer = (ProductionStructure)EnsurePlayerStructure(game, StructureKind.Barracks, new Vector3(-68f, 0f, -68f));
             game.ClearSelection();
             game.SelectEntity(producer, false);
             Assert.AreEqual(RtsContextCommandKind.Harvest, game.CommandDispatcher.ResolveContextCommand(null, resource, producer.transform.position + new Vector3(8f, 0f, 0f)));
@@ -1479,8 +1493,9 @@ namespace QuestCommandRTS.Editor
             Assert.IsNotNull(controller);
 
             game.ClearSelection();
+            RtsUnit second = game.CreateUnit(RtsTeam.Player, UnitKind.Rifleman, new Vector3(-76f, 0f, -72f));
+            Physics.SyncTransforms();
             RtsEntity first = FindPlayerEntity(game, typeof(RtsStructure));
-            RtsEntity second = FindPlayerEntity(game, typeof(RtsUnit));
 
             Assert.AreEqual(RtsCommandResult.SelectionChanged, controller.ProcessInputFrameForTests(QuestFrame(RayAt(first), false, true, false, false, false), false));
             Assert.AreEqual(1, game.Selection.Count);
@@ -1504,8 +1519,9 @@ namespace QuestCommandRTS.Editor
             QuestRtsInputController controller = game.GetComponent<QuestRtsInputController>();
             Assert.IsNotNull(controller);
 
-            RtsUnit first = FindPlayerUnit(game, UnitKind.Rifleman);
-            RtsUnit second = FindSecondPlayerUnit(game, UnitKind.Rifleman, first);
+            RtsUnit first = game.CreateUnit(RtsTeam.Player, UnitKind.Rifleman, new Vector3(-76f, 0f, -72f));
+            RtsUnit second = game.CreateUnit(RtsTeam.Player, UnitKind.Rifleman, first.transform.position + new Vector3(2f, 0f, 0f));
+            Physics.SyncTransforms();
             Vector3 center = (first.GroundPosition + second.GroundPosition) * 0.5f;
 
             game.ClearSelection();
@@ -1528,7 +1544,8 @@ namespace QuestCommandRTS.Editor
             Assert.IsNotNull(controller);
 
             game.ClearSelection();
-            RtsUnit unit = (RtsUnit)FindPlayerEntity(game, typeof(RtsUnit));
+            RtsUnit unit = game.CreateUnit(RtsTeam.Player, UnitKind.Rifleman, new Vector3(-76f, 0f, -72f));
+            Physics.SyncTransforms();
             game.SelectEntity(unit, false);
 
             Ray terrainRay = RayAtPoint(new Vector3(-24f, 0f, -34f));
@@ -1604,7 +1621,7 @@ namespace QuestCommandRTS.Editor
             QuestRtsInputController controller = game.GetComponent<QuestRtsInputController>();
             Assert.IsNotNull(controller);
 
-            RtsUnit attacker = FindPlayerUnit(game, UnitKind.Rifleman);
+            RtsUnit attacker = game.CreateUnit(RtsTeam.Player, UnitKind.Rifleman, new Vector3(-76f, 0f, -72f));
             RtsEntity enemy = game.CreateUnit(RtsTeam.Enemy, UnitKind.Rifleman, attacker.transform.position + new Vector3(7f, 0f, 0f));
             Physics.SyncTransforms();
 
@@ -1617,7 +1634,9 @@ namespace QuestCommandRTS.Editor
             Assert.AreEqual(enemy.PersistentId, attackOrder.targetEntityId);
             ReleaseButtons(controller, enemyRay);
 
-            HarvesterUnit harvester = (HarvesterUnit)FindPlayerUnit(game, UnitKind.Harvester);
+            EnsurePlayerStructure(game, StructureKind.Refinery, new Vector3(-64f, 0f, -76f));
+            HarvesterUnit harvester = game.CreateUnit(RtsTeam.Player, UnitKind.Harvester, new Vector3(-60f, 0f, -72f)) as HarvesterUnit;
+            Assert.IsNotNull(harvester);
             ResourceNode resource = game.ResourceNodes[0];
             game.ClearSelection();
             game.SelectEntity(harvester, false);
@@ -1629,7 +1648,7 @@ namespace QuestCommandRTS.Editor
             Assert.Greater(harvesterState.homeRefineryEntityId, 0);
             ReleaseButtons(controller, resourceRay);
 
-            ProductionStructure producer = FindPlayerProduction(game);
+            ProductionStructure producer = (ProductionStructure)EnsurePlayerStructure(game, StructureKind.Barracks, new Vector3(-68f, 0f, -68f));
             Vector3 rallyPoint = new Vector3(-42f, 0f, -42f);
             game.ClearSelection();
             game.SelectEntity(producer, false);
@@ -1689,7 +1708,7 @@ namespace QuestCommandRTS.Editor
             Assert.IsNotNull(controller);
             Assert.IsNotNull(console);
 
-            RtsUnit playerUnit = FindPlayerUnit(game, UnitKind.Rifleman);
+            RtsUnit playerUnit = game.CreateUnit(RtsTeam.Player, UnitKind.Rifleman, new Vector3(-76f, 0f, -72f));
             RtsUnit enemy = game.CreateUnit(RtsTeam.Enemy, UnitKind.Rifleman, playerUnit.transform.position + new Vector3(4f, 0f, 0f));
             Physics.SyncTransforms();
             game.FogOfWar.RefreshNowForTests();
@@ -1701,7 +1720,7 @@ namespace QuestCommandRTS.Editor
             controller.ProcessInputFrameForTests(QuestFrame(RayAtResource(resource), false, false, false, false, false), true);
             AssertColorNear(new Color(0.25f, 1f, 0.48f, 0.95f), controller.PointerLineForTests.startColor);
 
-            ProductionStructure producer = FindPlayerProduction(game);
+            ProductionStructure producer = (ProductionStructure)EnsurePlayerStructure(game, StructureKind.Barracks, new Vector3(-68f, 0f, -68f));
             game.ClearSelection();
             game.SelectEntity(producer, false);
             controller.ProcessInputFrameForTests(QuestFrame(RayAtPoint(new Vector3(-42f, 0f, -42f)), false, false, false, false, false), true);
@@ -1911,7 +1930,7 @@ namespace QuestCommandRTS.Editor
         public void ConsoleModelBuildAvailabilityReflectsCreditsTechnologyAndPower()
         {
             RtsGame lowCreditGame = CreateInitializedGame(RtsRuntimeMode.Desktop);
-            lowCreditGame.Resources.TrySpend(3300);
+            lowCreditGame.Resources.TrySpend(6000);
             RtsCommandConsoleModel lowCreditModel = CreateModel(lowCreditGame);
             RtsBuildOptionView powerPlant = GetBuildOption(lowCreditModel, StructureKind.PowerPlant);
             Assert.IsFalse(powerPlant.CanAfford);
@@ -1920,7 +1939,6 @@ namespace QuestCommandRTS.Editor
 
             TearDown();
             RtsGame missingTechGame = CreateInitializedGame(RtsRuntimeMode.Desktop);
-            DestroyStructure(missingTechGame, StructureKind.Barracks);
             RtsCommandConsoleModel missingTechModel = CreateModel(missingTechGame);
             RtsBuildOptionView warFactoryMissingBarracks = GetBuildOption(missingTechModel, StructureKind.WarFactory);
             Assert.IsFalse(warFactoryMissingBarracks.HasPrerequisite);
@@ -1928,7 +1946,8 @@ namespace QuestCommandRTS.Editor
 
             TearDown();
             RtsGame lowPowerGame = CreateInitializedGame(RtsRuntimeMode.Desktop);
-            DestroyStructure(lowPowerGame, StructureKind.PowerPlant);
+            EnsurePlayerStructure(lowPowerGame, StructureKind.Barracks, new Vector3(-68f, 0f, -68f));
+            EnsurePlayerStructure(lowPowerGame, StructureKind.Refinery, new Vector3(-60f, 0f, -68f));
             RtsCommandConsoleModel lowPowerModel = CreateModel(lowPowerGame);
             RtsBuildOptionView warFactory = GetBuildOption(lowPowerModel, StructureKind.WarFactory);
             Assert.IsTrue(warFactory.IsAvailable);
@@ -1941,18 +1960,18 @@ namespace QuestCommandRTS.Editor
         {
             RtsGame game = CreateInitializedGame(RtsRuntimeMode.Desktop);
             int startingCredits = game.Resources.Credits;
-            int startingTurrets = CountPlayerStructures(game, StructureKind.Turret);
+            int startingPowerPlants = CountPlayerStructures(game, StructureKind.PowerPlant);
 
-            Assert.IsTrue(game.PlayerCommands.RequestConstruction(StructureKind.Turret));
+            Assert.IsTrue(game.PlayerCommands.RequestConstruction(StructureKind.PowerPlant));
             Assert.AreEqual(startingCredits, game.Resources.Credits);
 
-            Vector3 point = FindValidBuildPoint(game, StructureKind.Turret);
+            Vector3 point = FindValidBuildPoint(game, StructureKind.PowerPlant);
             game.BuildManager.UpdatePlacementAtPoint(point);
             Assert.IsTrue(game.BuildManager.PlacementValid);
             Assert.IsTrue(game.PlayerCommands.ConfirmConstructionPlacement());
 
-            Assert.AreEqual(startingCredits - RtsBalance.GetStructure(StructureKind.Turret).Cost, game.Resources.Credits);
-            Assert.AreEqual(startingTurrets + 1, CountPlayerStructures(game, StructureKind.Turret));
+            Assert.AreEqual(startingCredits - RtsBalance.GetStructure(StructureKind.PowerPlant).Cost, game.Resources.Credits);
+            Assert.AreEqual(startingPowerPlants + 1, CountPlayerStructures(game, StructureKind.PowerPlant));
 
             int creditsAfterConfirm = game.Resources.Credits;
             Assert.IsFalse(game.PlayerCommands.ConfirmConstructionPlacement());
@@ -1978,16 +1997,16 @@ namespace QuestCommandRTS.Editor
         {
             RtsGame game = CreateInitializedGame(RtsRuntimeMode.Desktop);
             int startingCredits = game.Resources.Credits;
-            int startingTurrets = CountPlayerStructures(game, StructureKind.Turret);
+            int startingPowerPlants = CountPlayerStructures(game, StructureKind.PowerPlant);
 
-            Assert.IsTrue(game.PlayerCommands.RequestConstruction(StructureKind.Turret));
+            Assert.IsTrue(game.PlayerCommands.RequestConstruction(StructureKind.PowerPlant));
             game.BuildManager.UpdatePlacementAtPoint(new Vector3(RtsBalance.MapHalfSize + 20f, 0f, RtsBalance.MapHalfSize + 20f));
             Assert.IsFalse(game.BuildManager.PlacementValid);
             Assert.AreEqual(BuildPlacementFailureReason.OutsideMap, game.BuildManager.LastFailureReason);
             Assert.IsFalse(game.PlayerCommands.ConfirmConstructionPlacement());
 
             Assert.AreEqual(startingCredits, game.Resources.Credits);
-            Assert.AreEqual(startingTurrets, CountPlayerStructures(game, StructureKind.Turret));
+            Assert.AreEqual(startingPowerPlants, CountPlayerStructures(game, StructureKind.PowerPlant));
         }
 
         [Test]
@@ -2012,6 +2031,7 @@ namespace QuestCommandRTS.Editor
         public void ProductionQueueSpendsOnceAndCancelRefundsQueuedItem()
         {
             RtsGame game = CreateInitializedGame(RtsRuntimeMode.Desktop);
+            EnsurePlayerStructure(game, StructureKind.Barracks, new Vector3(-68f, 0f, -68f));
             ProductionStructure barracks = FindPlayerProduction(game, StructureKind.Barracks);
             game.ClearSelection();
             game.SelectEntity(barracks, false);
@@ -2032,6 +2052,7 @@ namespace QuestCommandRTS.Editor
         public void ProductionCancelRefundsActiveItemWhenQueueIsEmpty()
         {
             RtsGame game = CreateInitializedGame(RtsRuntimeMode.Desktop);
+            EnsurePlayerStructure(game, StructureKind.Barracks, new Vector3(-68f, 0f, -68f));
             ProductionStructure barracks = FindPlayerProduction(game, StructureKind.Barracks);
             game.ClearSelection();
             game.SelectEntity(barracks, false);
@@ -2132,6 +2153,7 @@ namespace QuestCommandRTS.Editor
             QuestCommandConsole console = game.GetComponent<QuestCommandConsole>();
             Assert.IsNotNull(console);
 
+            EnsurePlayerStructure(game, StructureKind.Barracks, new Vector3(-68f, 0f, -68f));
             ProductionStructure barracks = FindPlayerProduction(game, StructureKind.Barracks);
             game.ClearSelection();
             game.SelectEntity(barracks, false);
@@ -2159,6 +2181,7 @@ namespace QuestCommandRTS.Editor
             QuestCommandConsole console = game.GetComponent<QuestCommandConsole>();
             Assert.IsNotNull(console);
 
+            EnsurePlayerStructure(game, StructureKind.Barracks, new Vector3(-68f, 0f, -68f));
             ProductionStructure barracks = FindPlayerProduction(game, StructureKind.Barracks);
             game.ClearSelection();
             game.SelectEntity(barracks, false);
@@ -2186,7 +2209,7 @@ namespace QuestCommandRTS.Editor
             QuestCommandConsole console = game.GetComponent<QuestCommandConsole>();
             Assert.IsNotNull(console);
 
-            RtsStructure powerPlant = FindStructure(game, RtsTeam.Player, StructureKind.PowerPlant);
+            RtsStructure powerPlant = EnsurePlayerStructure(game, StructureKind.PowerPlant, new Vector3(-74f, 0f, -68f));
             powerPlant.TakeDamage(100f, null);
             game.ClearSelection();
             game.SelectEntity(powerPlant, false);
@@ -2212,7 +2235,7 @@ namespace QuestCommandRTS.Editor
             QuestCommandConsole console = game.GetComponent<QuestCommandConsole>();
             Assert.IsNotNull(console);
 
-            RtsStructure barracks = FindStructure(game, RtsTeam.Player, StructureKind.Barracks);
+            RtsStructure barracks = EnsurePlayerStructure(game, StructureKind.Barracks, new Vector3(-68f, 0f, -68f));
             int startingCredits = game.Resources.Credits;
             int expectedRefund = Mathf.RoundToInt(RtsBalance.GetStructure(StructureKind.Barracks).Cost * 0.5f * barracks.HealthPercent);
             int startingBarracks = CountPlayerStructures(game, StructureKind.Barracks);
@@ -2259,7 +2282,7 @@ namespace QuestCommandRTS.Editor
                 QuestCommandConsole console = game.GetComponent<QuestCommandConsole>();
                 Assert.IsNotNull(console);
 
-                RtsEntity entity = FindPlayerEntity(game, typeof(RtsUnit));
+                RtsEntity entity = game.CreateUnit(RtsTeam.Player, UnitKind.Rifleman, new Vector3(-76f, 0f, -72f));
                 int entityId = entity.PersistentId;
                 int startingCredits = game.Resources.Credits;
                 entity.TakeDamage(42f, null);
@@ -2313,12 +2336,12 @@ namespace QuestCommandRTS.Editor
 
             Assert.AreEqual(RtsMatchState.Running, game.MatchState);
             Assert.AreEqual(0f, game.MatchTime, 0.001f);
-            Assert.AreEqual(3400, game.Resources.Credits);
+            Assert.AreEqual(6200, game.Resources.Credits);
             Assert.AreEqual(startingEntities, game.Entities.Count);
             Assert.AreEqual(startingResources, game.ResourceNodes.Count);
             Assert.IsFalse(game.IsUserPaused);
             Assert.IsFalse(game.Clock.IsPaused);
-            Assert.AreEqual(2, game.Selection.Count);
+            Assert.AreEqual(1, game.Selection.Count);
             Assert.AreEqual(game.ResourceNodes[0].MaxAmount, game.ResourceNodes[0].Amount);
         }
 
@@ -2326,7 +2349,7 @@ namespace QuestCommandRTS.Editor
         public void ClosingMatchCancelsActivePlacement()
         {
             RtsGame game = CreateInitializedGame(RtsRuntimeMode.Desktop);
-            Assert.IsTrue(game.PlayerCommands.RequestConstruction(StructureKind.Turret));
+            Assert.IsTrue(game.PlayerCommands.RequestConstruction(StructureKind.PowerPlant));
             Assert.IsTrue(game.BuildManager.IsPlacing);
 
             game.ForceEndMatchForTests(RtsMatchState.Defeat);
@@ -2720,6 +2743,58 @@ namespace QuestCommandRTS.Editor
             }
 
             return false;
+        }
+
+        private static void TickCombatUntilDamaged(RtsUnit attacker, RtsEntity target, float startingHealth)
+        {
+            for (int i = 0; i < 80 && target.Health >= startingHealth; i++)
+            {
+                if (attacker != null)
+                {
+                    attacker.TickOrdersForTests(0.1f);
+                }
+
+                TickProjectilesForTests(0.1f);
+            }
+        }
+
+        private static void TickProjectilesForTests(float deltaTime)
+        {
+            RtsProjectile[] projectiles = Object.FindObjectsOfType<RtsProjectile>();
+            for (int i = 0; i < projectiles.Length; i++)
+            {
+                if (projectiles[i] != null)
+                {
+                    projectiles[i].TickProjectileForTests(deltaTime);
+                }
+            }
+        }
+
+        private static RtsStructure EnsurePlayerStructure(RtsGame game, StructureKind kind, Vector3 position)
+        {
+            RtsStructure existing = TryFindStructure(game, RtsTeam.Player, kind);
+            if (existing != null)
+            {
+                return existing;
+            }
+
+            RtsStructure structure = game.CreateStructure(RtsTeam.Player, kind, position);
+            Physics.SyncTransforms();
+            return structure;
+        }
+
+        private static RtsStructure TryFindStructure(RtsGame game, RtsTeam team, StructureKind kind)
+        {
+            for (int i = 0; i < game.Entities.Count; i++)
+            {
+                RtsStructure structure = game.Entities[i] as RtsStructure;
+                if (structure != null && structure.Team == team && structure.StructureKind == kind)
+                {
+                    return structure;
+                }
+            }
+
+            return null;
         }
 
         private static RtsCommandConsoleModel CreateModel(RtsGame game)

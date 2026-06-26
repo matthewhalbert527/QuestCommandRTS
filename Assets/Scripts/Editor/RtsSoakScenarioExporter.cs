@@ -66,7 +66,7 @@ namespace QuestCommandRTS.Editor
             }
 
             game.Resources.Add(60000);
-            EnsureMinimumPlayerProductionStructures(game, 4);
+            EnsureMinimumPlayerProductionStructures(game, 5);
             SpawnAdditionalUnits(game);
             QueueProductionForAllPlayerProducers(game);
             IssueMixedArmyOrders(game);
@@ -75,6 +75,16 @@ namespace QuestCommandRTS.Editor
 
         private static void EnsureMinimumPlayerProductionStructures(RtsGame game, int minimumCount)
         {
+            if (!game.HasPlayerStructure(StructureKind.PowerPlant))
+            {
+                game.CreateStructure(RtsTeam.Player, StructureKind.PowerPlant, new Vector3(-78f, 0f, -62f));
+            }
+
+            if (!game.HasPlayerStructure(StructureKind.Barracks))
+            {
+                game.CreateStructure(RtsTeam.Player, StructureKind.Barracks, new Vector3(-72f, 0f, -62f));
+            }
+
             if (!game.HasPlayerStructure(StructureKind.WarFactory))
             {
                 game.CreateStructure(RtsTeam.Player, StructureKind.WarFactory, new Vector3(-60f, 0f, -64f));
@@ -114,12 +124,12 @@ namespace QuestCommandRTS.Editor
 
         private static void SpawnAdditionalUnits(RtsGame game)
         {
-            for (int i = 0; i < 12; i++)
+            for (int i = 0; i < 14; i++)
             {
                 game.CreateUnit(RtsTeam.Player, InfantryKindForIndex(i), FormationPoint(new Vector3(-48f, 0f, -46f), i, 6, 2.6f));
             }
 
-            for (int i = 0; i < 8; i++)
+            for (int i = 0; i < 9; i++)
             {
                 UnitKind kind = i % 3 == 0 ? UnitKind.HeavyTank : i % 3 == 1 ? UnitKind.MediumTank : UnitKind.LightTank;
                 game.CreateUnit(RtsTeam.Player, kind, FormationPoint(new Vector3(-36f, 0f, -36f), i, 4, 3.4f));
@@ -127,18 +137,30 @@ namespace QuestCommandRTS.Editor
 
             for (int i = 0; i < 4; i++)
             {
+                UnitKind kind = i % 2 == 0 ? UnitKind.Humvee : UnitKind.Apc;
+                game.CreateUnit(RtsTeam.Player, kind, FormationPoint(new Vector3(-18f, 0f, -42f), i, 4, 3.2f));
+            }
+
+            for (int i = 0; i < 5; i++)
+            {
                 game.CreateUnit(RtsTeam.Player, UnitKind.Harvester, FormationPoint(new Vector3(-58f, 0f, -88f), i, 4, 3.2f));
             }
 
-            for (int i = 0; i < 18; i++)
+            for (int i = 0; i < 20; i++)
             {
                 game.CreateUnit(RtsTeam.Enemy, InfantryKindForIndex(i + 2), FormationPoint(new Vector3(48f, 0f, 48f), i, 6, 2.6f));
             }
 
-            for (int i = 0; i < 12; i++)
+            for (int i = 0; i < 13; i++)
             {
                 UnitKind kind = i % 3 == 0 ? UnitKind.HeavyTank : i % 3 == 1 ? UnitKind.MediumTank : UnitKind.LightTank;
                 game.CreateUnit(RtsTeam.Enemy, kind, FormationPoint(new Vector3(66f, 0f, 42f), i, 4, 3.5f));
+            }
+
+            for (int i = 0; i < 5; i++)
+            {
+                UnitKind kind = i % 2 == 0 ? UnitKind.Humvee : UnitKind.Apc;
+                game.CreateUnit(RtsTeam.Enemy, kind, FormationPoint(new Vector3(72f, 0f, 58f), i, 5, 3.4f));
             }
         }
 

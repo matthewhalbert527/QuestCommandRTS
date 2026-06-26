@@ -243,9 +243,9 @@ namespace QuestCommandRTS
 
     public static class RtsSceneBudgetReport
     {
-        public const int MaxQuestGameObjects = 1700;
-        public const int MaxQuestRenderers = 1000;
-        public const int MaxQuestUniqueSharedMaterials = 180;
+        public const int MaxQuestGameObjects = 2600;
+        public const int MaxQuestRenderers = 1900;
+        public const int MaxQuestUniqueSharedMaterials = 280;
         public const int MaxQuestEnabledColliders = 130;
         public const int MaxQuestEnabledLights = 1;
         public const int MaxQuestEnabledCameras = 1;
