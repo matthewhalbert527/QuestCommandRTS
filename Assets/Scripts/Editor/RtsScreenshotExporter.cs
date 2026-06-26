@@ -104,6 +104,15 @@ namespace QuestCommandRTS.Editor
             }
 
             Camera camera = useGroundTextureCamera ? ConfigureGroundTextureCamera(game, mode) : ConfigureCamera(game, mode);
+            if (mode == RtsRuntimeMode.Desktop)
+            {
+                ConfigureDesktopScreenshotUi(camera);
+                RtsHud hud = game.GetComponent<RtsHud>();
+                if (hud != null)
+                {
+                    hud.RefreshForScreenshot();
+                }
+            }
 
             const int width = 1440;
             const int height = 900;
@@ -130,6 +139,30 @@ namespace QuestCommandRTS.Editor
 
             AssetDatabase.Refresh();
             Debug.Log("Command RTS screenshot exported to " + outputPath);
+        }
+
+        private static void ConfigureDesktopScreenshotUi(Camera camera)
+        {
+            if (camera == null)
+            {
+                return;
+            }
+
+            Canvas[] canvases = Object.FindObjectsOfType<Canvas>(true);
+            for (int i = 0; i < canvases.Length; i++)
+            {
+                Canvas canvas = canvases[i];
+                if (canvas == null || canvas.renderMode != RenderMode.ScreenSpaceOverlay)
+                {
+                    continue;
+                }
+
+                canvas.renderMode = RenderMode.ScreenSpaceCamera;
+                canvas.worldCamera = camera;
+                canvas.planeDistance = 1f;
+            }
+
+            Canvas.ForceUpdateCanvases();
         }
 
         private static RtsProfileSettings CreateRoomSizedScreenshotProfile()

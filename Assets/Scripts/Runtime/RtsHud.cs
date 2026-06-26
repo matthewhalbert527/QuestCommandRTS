@@ -84,36 +84,7 @@ namespace QuestCommandRTS
 
         private void Update()
         {
-            if (game == null || game.Resources == null)
-            {
-                return;
-            }
-
-            string powerColor = game.Resources.HasLowPower ? "LOW" : "OK";
-            string status = game.IsUserPaused ? "PAUSED" : game.StatusMessage;
-            resourcesText.text = "CREDITS $" + game.Resources.Credits.ToString("N0") +
-                "\nPOWER " + game.Resources.PowerUsed + "/" + game.Resources.PowerProvided + " " + powerColor +
-                "\nTIME " + FormatTime(game.MatchTime) + "    " + status;
-            selectionText.text = BuildSelectionText();
-            RefreshProductionProgress();
-            RefreshSidebarLayout();
-            RefreshMinimap();
-
-            for (int i = 0; i < buttons.Count; i++)
-            {
-                HudButton hudButton = buttons[i];
-                if (hudButton.Button != null && hudButton.IsEnabled != null)
-                {
-                    hudButton.Button.interactable = hudButton.IsEnabled();
-                }
-
-                if (hudButton.Label != null && hudButton.GetText != null)
-                {
-                    hudButton.Label.text = hudButton.GetText();
-                }
-            }
-
-            RefreshMenuPanels();
+            RefreshRuntimeHud();
         }
 
         private void OnGUI()
@@ -280,6 +251,16 @@ namespace QuestCommandRTS
             RefreshMenuPanels();
         }
 
+        public void RefreshForScreenshot()
+        {
+            RefreshRuntimeHud();
+            Canvas.ForceUpdateCanvases();
+            RefreshSidebarLayout();
+            Canvas.ForceUpdateCanvases();
+            RefreshMinimap();
+            Canvas.ForceUpdateCanvases();
+        }
+
         public void CycleSkirmishDifficultyForTests()
         {
             CycleDifficulty();
@@ -310,6 +291,40 @@ namespace QuestCommandRTS
             CycleStartingForces();
         }
 #endif
+
+        private void RefreshRuntimeHud()
+        {
+            if (game == null || game.Resources == null)
+            {
+                return;
+            }
+
+            string powerColor = game.Resources.HasLowPower ? "LOW" : "OK";
+            string status = game.IsUserPaused ? "PAUSED" : game.StatusMessage;
+            resourcesText.text = "CREDITS $" + game.Resources.Credits.ToString("N0") +
+                "\nPOWER " + game.Resources.PowerUsed + "/" + game.Resources.PowerProvided + " " + powerColor +
+                "\nTIME " + FormatTime(game.MatchTime) + "    " + status;
+            selectionText.text = BuildSelectionText();
+            RefreshProductionProgress();
+            RefreshSidebarLayout();
+            RefreshMinimap();
+
+            for (int i = 0; i < buttons.Count; i++)
+            {
+                HudButton hudButton = buttons[i];
+                if (hudButton.Button != null && hudButton.IsEnabled != null)
+                {
+                    hudButton.Button.interactable = hudButton.IsEnabled();
+                }
+
+                if (hudButton.Label != null && hudButton.GetText != null)
+                {
+                    hudButton.Label.text = hudButton.GetText();
+                }
+            }
+
+            RefreshMenuPanels();
+        }
 
         private void StartSkirmishFromMainMenu()
         {
