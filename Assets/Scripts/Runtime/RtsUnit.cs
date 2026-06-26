@@ -26,9 +26,14 @@ namespace QuestCommandRTS
 
         private readonly List<Vector3> queuedMoveWaypoints = new List<Vector3>();
         private RtsUnitVisualAnimator visualAnimator;
+        private float currentMoveSpeed;
         private float nextAttackTime;
         private float nextAwarenessScanTime;
         private const float AwarenessScanInterval = 0.35f;
+        private const float VehicleMoveAlignmentStart = 0.18f;
+        private const float VehicleMoveAlignmentFull = 0.88f;
+        private const float VehicleReverseAngleDegrees = 112f;
+        private const float VehicleReverseDistance = 7.25f;
 
         protected override void Awake()
         {
@@ -51,6 +56,7 @@ namespace QuestCommandRTS
             UnitKind = RtsBalance.NormalizeUnitKind(kind);
             UnitStats stats = RtsBalance.GetUnit(kind);
             MoveSpeed = stats.MoveSpeed;
+            TurnSpeed = GetTurnSpeed(UnitKind);
             AttackRange = stats.AttackRange;
             Damage = stats.Damage;
             AttackCooldown = stats.AttackCooldown;
@@ -71,6 +77,7 @@ namespace QuestCommandRTS
                 attackTarget = null;
             }
 
+            PrepareTrackedVehicleForNewDestination(worldPosition);
             hasDestination = true;
             hasAttackMoveDestination = false;
             destination = ClampToMap(worldPosition);
@@ -91,9 +98,11 @@ namespace QuestCommandRTS
             if (worldPositions == null || worldPositions.Count == 0)
             {
                 destination = transform.position;
+                currentMoveSpeed = 0f;
                 return;
             }
 
+            PrepareTrackedVehicleForNewDestination(worldPositions[0]);
             destination = ClampToMap(worldPositions[0]);
             hasDestination = true;
             for (int i = 1; i < worldPositions.Count; i++)
@@ -125,6 +134,7 @@ namespace QuestCommandRTS
             attackTarget = null;
             hasDestination = false;
             hasAttackMoveDestination = true;
+            PrepareTrackedVehicleForNewDestination(worldPosition);
             attackMoveDestination = ClampToMap(worldPosition);
         }
 
@@ -176,6 +186,7 @@ namespace QuestCommandRTS
             attackTarget = null;
             hasDestination = false;
             hasAttackMoveDestination = false;
+            currentMoveSpeed = 0f;
             destination = transform.position;
             attackMoveDestination = transform.position;
         }
@@ -193,6 +204,7 @@ namespace QuestCommandRTS
 
         public int QueuedMoveWaypointCountForTests => queuedMoveWaypoints.Count;
         public Vector3 DestinationForTests => destination;
+        public float CurrentMoveSpeedForTests => currentMoveSpeed;
 #endif
 
         public RtsUnitOrderSaveData CaptureOrderState()
@@ -509,10 +521,16 @@ namespace QuestCommandRTS
 
             if (distance <= Mathf.Max(0.05f, stoppingDistance))
             {
+                currentMoveSpeed = 0f;
                 return true;
             }
 
             Vector3 direction = flatDelta / distance;
+            if (UsesTrackedVehicleMovement(UnitKind))
+            {
+                return MoveTrackedVehicleToward(current, direction, distance, deltaTime, stoppingDistance);
+            }
+
             Quaternion lookRotation = Quaternion.LookRotation(direction, Vector3.up);
             transform.rotation = Quaternion.RotateTowards(transform.rotation, lookRotation, TurnSpeed * deltaTime);
 
@@ -520,6 +538,81 @@ namespace QuestCommandRTS
             Vector3 desiredPosition = current + direction * Mathf.Max(0f, step);
             transform.position = ResolveUnitBlockedPosition(current, desiredPosition, direction);
             return false;
+        }
+
+        private bool MoveTrackedVehicleToward(Vector3 current, Vector3 direction, float distance, float deltaTime, float stoppingDistance)
+        {
+            float safeDelta = Mathf.Max(0.0001f, deltaTime);
+            float angleToTarget = Vector3.Angle(transform.forward, direction);
+            bool reversing = ShouldReverseTrackedVehicle(angleToTarget, distance, stoppingDistance);
+            Vector3 facingDirection = reversing ? -direction : direction;
+            Quaternion lookRotation = Quaternion.LookRotation(facingDirection, Vector3.up);
+            transform.rotation = Quaternion.RotateTowards(transform.rotation, lookRotation, TurnSpeed * safeDelta);
+
+            Vector3 travelDirection = reversing ? -transform.forward : transform.forward;
+            float alignment = Mathf.Clamp01(Vector3.Dot(travelDirection.normalized, direction));
+            float alignmentBlend = Mathf.Clamp01(Mathf.InverseLerp(VehicleMoveAlignmentStart, VehicleMoveAlignmentFull, alignment));
+            float approachBlend = Mathf.Clamp01((distance - stoppingDistance) / Mathf.Max(0.6f, MoveSpeed * 0.55f));
+            float targetSpeed = MoveSpeed * alignmentBlend * approachBlend;
+            if (reversing)
+            {
+                targetSpeed *= GetTrackedVehicleReverseScale(UnitKind);
+            }
+
+            float signedTargetSpeed = reversing ? -targetSpeed : targetSpeed;
+            float rate = IsChangingMoveDirection(currentMoveSpeed, signedTargetSpeed) ? GetTrackedVehicleBrakeRate(UnitKind) : GetTrackedVehicleAcceleration(UnitKind);
+            currentMoveSpeed = Mathf.MoveTowards(currentMoveSpeed, signedTargetSpeed, rate * safeDelta);
+
+            float step = Mathf.Min(distance - stoppingDistance, Mathf.Abs(currentMoveSpeed) * safeDelta);
+            if (step <= 0.0001f || alignment < VehicleMoveAlignmentStart * 0.5f)
+            {
+                return false;
+            }
+
+            Vector3 moveDirection = currentMoveSpeed < 0f ? -transform.forward : transform.forward;
+            Vector3 desiredPosition = current + moveDirection.normalized * step;
+            Vector3 resolvedPosition = ResolveUnitBlockedPosition(current, desiredPosition, moveDirection);
+            if ((resolvedPosition - current).sqrMagnitude < 0.00001f)
+            {
+                currentMoveSpeed = Mathf.MoveTowards(currentMoveSpeed, 0f, GetTrackedVehicleBrakeRate(UnitKind) * safeDelta);
+            }
+
+            transform.position = resolvedPosition;
+            return false;
+        }
+
+        private bool ShouldReverseTrackedVehicle(float angleToTarget, float distance, float stoppingDistance)
+        {
+            return angleToTarget >= VehicleReverseAngleDegrees && distance <= Mathf.Max(VehicleReverseDistance, stoppingDistance + 2.5f);
+        }
+
+        private void PrepareTrackedVehicleForNewDestination(Vector3 worldPosition)
+        {
+            if (!UsesTrackedVehicleMovement(UnitKind))
+            {
+                return;
+            }
+
+            Vector3 target = ClampToMap(worldPosition);
+            Vector3 flatDelta = new Vector3(target.x - transform.position.x, 0f, target.z - transform.position.z);
+            float distance = flatDelta.magnitude;
+            if (distance < 0.05f)
+            {
+                currentMoveSpeed = 0f;
+                return;
+            }
+
+            Vector3 direction = flatDelta / distance;
+            float angleToTarget = Vector3.Angle(transform.forward, direction);
+            if (ShouldReverseTrackedVehicle(angleToTarget, distance, StopDistance) || angleToTarget > 86f)
+            {
+                currentMoveSpeed = 0f;
+            }
+        }
+
+        private static bool IsChangingMoveDirection(float currentSpeed, float targetSpeed)
+        {
+            return Mathf.Abs(currentSpeed) > 0.01f && Mathf.Abs(targetSpeed) > 0.01f && Mathf.Sign(currentSpeed) != Mathf.Sign(targetSpeed);
         }
 
         private Vector3 ResolveUnitBlockedPosition(Vector3 current, Vector3 desired, Vector3 moveDirection)
@@ -875,6 +968,74 @@ namespace QuestCommandRTS
                     return 1.45f;
                 default:
                     return 0.72f;
+            }
+        }
+
+        private static bool UsesTrackedVehicleMovement(UnitKind kind)
+        {
+            UnitKind normalized = RtsBalance.NormalizeUnitKind(kind);
+            return RtsBalance.IsTank(normalized) || normalized == UnitKind.Harvester;
+        }
+
+        private static float GetTurnSpeed(UnitKind kind)
+        {
+            switch (RtsBalance.NormalizeUnitKind(kind))
+            {
+                case UnitKind.LightTank:
+                    return 330f;
+                case UnitKind.MediumTank:
+                    return 270f;
+                case UnitKind.HeavyTank:
+                    return 220f;
+                case UnitKind.Harvester:
+                    return 235f;
+                default:
+                    return 620f;
+            }
+        }
+
+        private static float GetTrackedVehicleAcceleration(UnitKind kind)
+        {
+            switch (RtsBalance.NormalizeUnitKind(kind))
+            {
+                case UnitKind.LightTank:
+                    return 9.5f;
+                case UnitKind.HeavyTank:
+                    return 5.8f;
+                case UnitKind.Harvester:
+                    return 6.6f;
+                default:
+                    return 7.2f;
+            }
+        }
+
+        private static float GetTrackedVehicleBrakeRate(UnitKind kind)
+        {
+            switch (RtsBalance.NormalizeUnitKind(kind))
+            {
+                case UnitKind.LightTank:
+                    return 15f;
+                case UnitKind.HeavyTank:
+                    return 10f;
+                case UnitKind.Harvester:
+                    return 11.5f;
+                default:
+                    return 12.5f;
+            }
+        }
+
+        private static float GetTrackedVehicleReverseScale(UnitKind kind)
+        {
+            switch (RtsBalance.NormalizeUnitKind(kind))
+            {
+                case UnitKind.LightTank:
+                    return 0.58f;
+                case UnitKind.HeavyTank:
+                    return 0.42f;
+                case UnitKind.Harvester:
+                    return 0.45f;
+                default:
+                    return 0.5f;
             }
         }
 

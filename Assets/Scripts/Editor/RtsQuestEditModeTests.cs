@@ -486,6 +486,43 @@ namespace QuestCommandRTS.Editor
         }
 
         [Test]
+        public void TrackedVehiclesTurnAccelerateAndReverseWithoutSliding()
+        {
+            RtsGame game = CreateInitializedGame(RtsRuntimeMode.Desktop);
+            RtsUnit tank = game.CreateUnit(RtsTeam.Player, UnitKind.MediumTank, new Vector3(-52f, 0f, -58f));
+
+            Vector3 start = tank.transform.position;
+            Vector3 sideDirection = tank.transform.right;
+            Vector3 sideDestination = start + sideDirection * 8f;
+            tank.IssueMove(sideDestination);
+            tank.TickOrdersForTests(0.1f);
+
+            Vector3 firstDelta = tank.transform.position - start;
+            firstDelta.y = 0f;
+            Assert.Greater(firstDelta.magnitude, 0.01f, "Tracked vehicles should begin moving after a short turn-in.");
+            Assert.Less(firstDelta.magnitude, tank.MoveSpeed * 0.1f, "Tracked vehicles should accelerate instead of instantly moving at top speed.");
+            Assert.Greater(Vector3.Dot(firstDelta.normalized, tank.transform.forward), 0.8f, "Vehicle movement should follow the hull facing rather than sliding sideways.");
+
+            for (int i = 0; i < 18; i++)
+            {
+                tank.TickOrdersForTests(0.1f);
+            }
+
+            Assert.Greater(Mathf.Abs(tank.CurrentMoveSpeedForTests), tank.MoveSpeed * 0.45f, "Tracked vehicles should build up speed over sustained movement.");
+            Assert.Greater(Vector3.Dot(tank.transform.forward, sideDirection), 0.65f, "Tracked vehicles should rotate into a lateral destination.");
+
+            Vector3 reverseStart = tank.transform.position;
+            Vector3 reverseFacing = tank.transform.forward;
+            tank.IssueMove(reverseStart - reverseFacing * 4f);
+            tank.TickOrdersForTests(0.2f);
+
+            Vector3 reverseDelta = tank.transform.position - reverseStart;
+            reverseDelta.y = 0f;
+            Assert.Greater(reverseDelta.magnitude, 0.05f, "Tracked vehicles should be able to back away on short reverse orders.");
+            Assert.Greater(Vector3.Dot(reverseDelta.normalized, -reverseFacing), 0.7f, "Reverse orders should move backward along the tracks.");
+        }
+
+        [Test]
         public void ImportedModelPalettesAreNotOverriddenByTeamTint()
         {
             RtsGame game = CreateInitializedGame(RtsRuntimeMode.Desktop);

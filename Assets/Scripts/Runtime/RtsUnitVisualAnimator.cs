@@ -199,14 +199,16 @@ namespace QuestCommandRTS
             delta.y = 0f;
 
             float moved = delta.magnitude;
+            float signedVehicleMove = Vector3.Dot(delta, transform.forward);
             float speed = moved / safeDelta;
             float movementBlend = Mathf.Clamp01(speed / 0.35f);
 
             if (movementBlend > 0.01f)
             {
                 stridePhase += moved * InfantryStrideFrequency;
-                wheelRollDegrees += moved * WheelRollDegreesPerUnit;
-                trackScroll += moved * TrackScrollUnitsPerWorldUnit;
+                float treadMove = UsesTrackedVisuals() ? signedVehicleMove : moved;
+                wheelRollDegrees += treadMove * WheelRollDegreesPerUnit;
+                trackScroll += treadMove * TrackScrollUnitsPerWorldUnit;
             }
 
             AnimateLegs(movementBlend);
@@ -270,11 +272,15 @@ namespace QuestCommandRTS
                 }
 
                 Vector3 basePosition = trackBasePositions[i];
-                float sideDirection = basePosition.x < 0f ? -1f : 1f;
                 float phase = Mathf.Repeat(trackScroll + i * 0.135f, 1f);
                 float loopOffset = (phase - 0.5f) * 0.34f;
-                pad.localPosition = basePosition + new Vector3(0f, Mathf.Sin(phase * Mathf.PI * 2f) * 0.015f, loopOffset * sideDirection);
+                pad.localPosition = basePosition + new Vector3(0f, Mathf.Sin(phase * Mathf.PI * 2f) * 0.015f, loopOffset);
             }
+        }
+
+        private bool UsesTrackedVisuals()
+        {
+            return RtsBalance.IsTank(unitKind) || unitKind == UnitKind.Harvester;
         }
 
         private void AnimateTurret(float deltaTime)
