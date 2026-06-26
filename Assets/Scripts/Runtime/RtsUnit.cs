@@ -16,6 +16,7 @@ namespace QuestCommandRTS
         protected bool hasDestination;
         protected RtsEntity attackTarget;
 
+        private readonly Collider[] avoidanceHits = new Collider[18];
         private float nextAttackTime;
 
         protected override void Awake()
@@ -99,12 +100,113 @@ namespace QuestCommandRTS
                 return true;
             }
 
-            Vector3 direction = flatDelta / distance;
-            Quaternion lookRotation = Quaternion.LookRotation(direction, Vector3.up);
+            Vector3 desiredDirection = flatDelta / distance;
+            Vector3 moveDirection = GetAvoidedMoveDirection(desiredDirection, target, stoppingDistance);
+            Quaternion lookRotation = Quaternion.LookRotation(moveDirection, Vector3.up);
             transform.rotation = Quaternion.RotateTowards(transform.rotation, lookRotation, TurnSpeed * deltaTime);
 
             float step = Mathf.Min(distance - stoppingDistance, MoveSpeed * deltaTime);
-            transform.position = current + direction * Mathf.Max(0f, step);
+            transform.position = ClampToMap(current + moveDirection * Mathf.Max(0f, step));
+            return false;
+        }
+
+        private Vector3 GetAvoidedMoveDirection(Vector3 desiredDirection, Vector3 targetPosition, float stoppingDistance)
+        {
+            if (!RtsGame.HasInstance)
+            {
+                return desiredDirection;
+            }
+
+            float scanRadius = Mathf.Max(1.6f, SelectionRadius + 1.35f);
+            Vector3 scanCenter = transform.position + desiredDirection * Mathf.Min(0.9f, scanRadius * 0.45f) + Vector3.up * 0.6f;
+            int hitCount = Physics.OverlapSphereNonAlloc(scanCenter, scanRadius, avoidanceHits);
+            Vector3 avoidance = Vector3.zero;
+
+            for (int i = 0; i < hitCount; i++)
+            {
+                Collider hit = avoidanceHits[i];
+                avoidanceHits[i] = null;
+
+                if (hit == null || hit.isTrigger || hit.transform.IsChildOf(transform))
+                {
+                    continue;
+                }
+
+                if (!TryGetAvoidanceObstacle(hit, targetPosition, stoppingDistance, out Vector3 obstaclePosition, out float obstacleRadius))
+                {
+                    continue;
+                }
+
+                Vector3 away = transform.position - obstaclePosition;
+                away.y = 0f;
+                float distanceSqr = away.sqrMagnitude;
+                if (distanceSqr < 0.0001f)
+                {
+                    away = Vector3.Cross(Vector3.up, desiredDirection);
+                    distanceSqr = away.sqrMagnitude;
+                }
+
+                Vector3 toObstacle = obstaclePosition - transform.position;
+                toObstacle.y = 0f;
+                if (toObstacle.sqrMagnitude > 0.0001f && Vector3.Dot(desiredDirection, toObstacle.normalized) < -0.2f)
+                {
+                    continue;
+                }
+
+                float desiredClearance = SelectionRadius + obstacleRadius + 0.35f;
+                float distance = Mathf.Sqrt(distanceSqr);
+                if (distance >= desiredClearance)
+                {
+                    continue;
+                }
+
+                float strength = 1f - Mathf.Clamp01(distance / desiredClearance);
+                avoidance += away.normalized * strength;
+            }
+
+            if (avoidance.sqrMagnitude < 0.0001f)
+            {
+                return desiredDirection;
+            }
+
+            Vector3 blended = desiredDirection + avoidance.normalized * 1.15f;
+            if (Vector3.Dot(blended.normalized, desiredDirection) < 0.2f)
+            {
+                Vector3 side = Vector3.Cross(Vector3.up, desiredDirection).normalized;
+                blended = desiredDirection + side * Mathf.Sign(Vector3.Dot(side, avoidance));
+            }
+
+            return blended.normalized;
+        }
+
+        private bool TryGetAvoidanceObstacle(Collider hit, Vector3 targetPosition, float stoppingDistance, out Vector3 obstaclePosition, out float obstacleRadius)
+        {
+            RtsEntity entity = hit.GetComponentInParent<RtsEntity>();
+            if (entity != null)
+            {
+                if (entity == this || entity == attackTarget || !entity.IsAlive)
+                {
+                    obstaclePosition = Vector3.zero;
+                    obstacleRadius = 0f;
+                    return false;
+                }
+
+                obstaclePosition = entity.GroundPosition;
+                obstacleRadius = Mathf.Max(0.55f, entity.SelectionRadius);
+                return stoppingDistance <= 1f || PlanarDistance(targetPosition, obstaclePosition) > stoppingDistance + obstacleRadius * 0.45f;
+            }
+
+            ResourceNode resource = hit.GetComponentInParent<ResourceNode>();
+            if (resource != null && !resource.IsDepleted)
+            {
+                obstaclePosition = resource.transform.position;
+                obstaclePosition.y = 0f;
+                obstacleRadius = 2.4f;
+                return stoppingDistance <= 1f || PlanarDistance(targetPosition, obstaclePosition) > stoppingDistance + 0.9f;
+            }
+
+            obstaclePosition = Vector3.zero;
+            obstacleRadius = 0f;
             return false;
         }
 

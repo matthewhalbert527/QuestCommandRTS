@@ -15,6 +15,7 @@ Last updated: 2026-06-26
 - Main scene: `Assets\Scenes\Battlefield.unity`
 - Runtime bootstrap: `Assets\Scripts\Runtime\RtsGame.cs`
 - Gameplay currently includes unit selection, mouse/XR controller command input, construction placement, production queues, resource harvesting, health/combat, HUD controls, and basic enemy waves.
+- Units now use lightweight local avoidance while moving, so direct-line orders steer around nearby units, structures, and resource fields without requiring a baked NavMesh.
 - Editor helper menu: `Quest RTS > Apply Quest Android Settings`
 
 ## Known decisions
@@ -30,7 +31,7 @@ Last updated: 2026-06-26
 
 ## Next likely development steps
 
-- Add stronger pathfinding/avoidance for units.
+- Upgrade local avoidance into full pathfinding if maps gain hard chokepoints or complex base layouts.
 - Add fog of war and a minimap.
 - Add save/load and skirmish setup.
 - Add audio and replace primitive placeholder visuals.
