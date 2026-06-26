@@ -40,7 +40,7 @@ namespace QuestCommandRTS.Editor
 
         public static void ExportForCodex()
         {
-            Export(DefaultOutputPath, RtsRuntimeMode.Desktop);
+            Export(DefaultOutputPath, RtsRuntimeMode.Desktop, null, true, false);
         }
 
         public static void ExportQuestForCodex()
@@ -85,6 +85,11 @@ namespace QuestCommandRTS.Editor
                 game.Initialize();
                 Physics.SyncTransforms();
                 RtsSoakScenarioExporter.PopulateGeneratedMatchForSoak(game);
+                if (mode == RtsRuntimeMode.Desktop && !useGroundTextureCamera && game.BuildManager != null)
+                {
+                    game.BuildManager.CancelPlacement();
+                }
+
                 if (revealTerrain)
                 {
                     DisableFogForScreenshot();

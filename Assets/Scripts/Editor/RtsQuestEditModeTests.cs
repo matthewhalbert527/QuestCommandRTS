@@ -922,6 +922,19 @@ namespace QuestCommandRTS.Editor
         }
 
         [Test]
+        public void GeneratedBattlefieldUsesIrregularTerrainMeshes()
+        {
+            CreateInitializedGame(RtsRuntimeMode.Desktop);
+
+            AssertSceneObjectUsesDetailedMesh("Battlefield", 1000);
+            AssertSceneObjectUsesDetailedMesh("Projected Water Channel A", 80);
+            AssertSceneObjectUsesDetailedMesh("West Dune Shelf", 80);
+            AssertSceneObjectUsesDetailedMesh("West Mesa Ridge", 24);
+            AssertSceneObjectUsesDetailedMesh("South Canyon Cliff Face", 24);
+            AssertSceneObjectUsesDetailedMesh("Northwest Mountain Peak 1", 64);
+        }
+
+        [Test]
         public void FogOfWarUsesSingleTextureOverlayMappedToWorldCells()
         {
             RtsGame game = CreateInitializedGame(RtsRuntimeMode.QuestVr);
@@ -2483,6 +2496,16 @@ namespace QuestCommandRTS.Editor
             Texture texture = renderer.sharedMaterial.mainTexture;
             Assert.IsNotNull(texture, objectName + " should use a procedural terrain texture.");
             StringAssert.Contains(expectedTextureName, texture.name);
+        }
+
+        private static void AssertSceneObjectUsesDetailedMesh(string objectName, int minimumVertexCount)
+        {
+            GameObject sceneObject = GameObject.Find(objectName);
+            Assert.IsNotNull(sceneObject, "Missing generated scene object " + objectName);
+            MeshFilter filter = sceneObject.GetComponent<MeshFilter>();
+            Assert.IsNotNull(filter, objectName + " should use a generated MeshFilter.");
+            Assert.IsNotNull(filter.sharedMesh, objectName + " should have a generated mesh.");
+            Assert.GreaterOrEqual(filter.sharedMesh.vertexCount, minimumVertexCount, objectName + " should have enough geometry to avoid primitive silhouettes.");
         }
 
         private static void AssertPbrPart(Transform root, string partName, string expectedTextureName, float minimumMetallic, float minimumSmoothness, bool requiresNormalMap)

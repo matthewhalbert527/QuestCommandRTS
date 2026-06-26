@@ -114,6 +114,9 @@ namespace QuestCommandRTS
             9
         };
 
+        private const int BattlefieldMeshSegments = 72;
+        private const int TerrainPatchSegments = 34;
+
         private void Awake()
         {
             if (Instance != null && Instance != this)
@@ -375,6 +378,52 @@ namespace QuestCommandRTS
             texture.SetPixels(pixels);
             texture.Apply(true, false);
             return texture;
+        }
+
+        private static Texture2D CreateTerrainNormalTexture(string name, int seed, float heightStrength, float crackStrength, float stripeStrength)
+        {
+            const int size = 128;
+            Texture2D texture = new Texture2D(size, size, TextureFormat.RGBA32, true);
+            texture.name = name;
+            texture.hideFlags = HideFlags.DontSave;
+
+            Color[] pixels = new Color[size * size];
+            float texel = 1f / size;
+            for (int y = 0; y < size; y++)
+            {
+                for (int x = 0; x < size; x++)
+                {
+                    float u = x / (float)(size - 1);
+                    float v = y / (float)(size - 1);
+                    float hL = SampleTerrainHeight(u - texel, v, seed, crackStrength, stripeStrength);
+                    float hR = SampleTerrainHeight(u + texel, v, seed, crackStrength, stripeStrength);
+                    float hD = SampleTerrainHeight(u, v - texel, seed, crackStrength, stripeStrength);
+                    float hU = SampleTerrainHeight(u, v + texel, seed, crackStrength, stripeStrength);
+                    Vector3 normal = new Vector3((hL - hR) * heightStrength, (hD - hU) * heightStrength, 1f).normalized;
+                    pixels[y * size + x] = new Color(normal.x * 0.5f + 0.5f, normal.y * 0.5f + 0.5f, normal.z * 0.5f + 0.5f, 1f);
+                }
+            }
+
+            texture.SetPixels(pixels);
+            texture.Apply(true, false);
+            return texture;
+        }
+
+        private static float SampleTerrainHeight(float u, float v, int seed, float crackStrength, float stripeStrength)
+        {
+            u = Mathf.Repeat(u, 1f);
+            v = Mathf.Repeat(v, 1f);
+            float x = u * 128f;
+            float y = v * 128f;
+            float broad = Mathf.PerlinNoise((x + seed * 29) * 0.022f, (y + seed * 17) * 0.022f);
+            float detail = Mathf.PerlinNoise((x - seed * 5) * 0.15f, (y + seed * 11) * 0.15f);
+            float mineral = Mathf.PerlinNoise((x + seed * 19) * 0.36f, (y - seed * 23) * 0.36f);
+            float stripeNoise = Mathf.PerlinNoise((x + seed) * 0.036f, (y - seed) * 0.036f);
+            float stripe = Mathf.Abs(Mathf.Sin((u * 18f + v * 5.5f + stripeNoise * 1.7f) * Mathf.PI * 2f));
+            float crackNoise = Mathf.PerlinNoise((x + seed * 3) * 0.095f, (y - seed * 2) * 0.095f);
+            float crackGuide = Mathf.PerlinNoise((x - seed) * 0.031f, (y + seed) * 0.031f);
+            float crack = Mathf.SmoothStep(0.76f, 0.94f, crackNoise) * Mathf.SmoothStep(0.38f, 0.88f, crackGuide);
+            return broad * 0.42f + detail * 0.28f + mineral * 0.12f + Mathf.SmoothStep(0.7f, 0.985f, stripe) * stripeStrength - crack * crackStrength;
         }
 
         private static Texture2D CreatePanelTexture(string name, Color baseColor, Color lowColor, Color highColor, Color seamColor, Color accentColor, int seed, int columns, int rows, float grimeStrength, float scratchStrength, float rivetStrength)
@@ -2055,24 +2104,36 @@ namespace QuestCommandRTS
 
             Texture2D sandGroundTexture = CreateTerrainTexture(
                 "Command RTS Sand Ground Texture",
-                new Color(0.54f, 0.43f, 0.27f),
-                new Color(0.37f, 0.29f, 0.18f),
-                new Color(0.74f, 0.61f, 0.39f),
-                new Color(0.18f, 0.14f, 0.1f),
+                new Color(0.62f, 0.5f, 0.32f),
+                new Color(0.42f, 0.33f, 0.21f),
+                new Color(0.86f, 0.72f, 0.47f),
+                new Color(0.24f, 0.18f, 0.12f),
                 17,
                 0.16f,
-                0.74f,
-                0.08f);
+                0f,
+                0f);
+            Texture2D sandGroundNormal = CreateTerrainNormalTexture(
+                "Command RTS Sand Ground Normal",
+                17,
+                2.4f,
+                0f,
+                0f);
             Texture2D duneAccentTexture = CreateTerrainTexture(
                 "Command RTS Dune Accent Texture",
-                new Color(0.34f, 0.27f, 0.19f),
-                new Color(0.24f, 0.18f, 0.12f),
-                new Color(0.58f, 0.46f, 0.29f),
-                new Color(0.2f, 0.15f, 0.09f),
+                new Color(0.48f, 0.38f, 0.25f),
+                new Color(0.32f, 0.24f, 0.16f),
+                new Color(0.72f, 0.57f, 0.36f),
+                new Color(0.25f, 0.18f, 0.11f),
                 31,
                 0.18f,
                 0.34f,
                 0.28f);
+            Texture2D duneAccentNormal = CreateTerrainNormalTexture(
+                "Command RTS Dune Accent Normal",
+                31,
+                2.15f,
+                0.3f,
+                0.34f);
             Texture2D waterRippleTexture = CreateTerrainTexture(
                 "Command RTS Water Ripple Texture",
                 new Color(0.08f, 0.42f, 0.54f, 0.72f),
@@ -2083,46 +2144,76 @@ namespace QuestCommandRTS
                 0.06f,
                 0f,
                 0.48f);
+            Texture2D waterRippleNormal = CreateTerrainNormalTexture(
+                "Command RTS Water Ripple Normal",
+                47,
+                1.55f,
+                0f,
+                0.55f);
             Texture2D ridgeRockTexture = CreateTerrainTexture(
                 "Command RTS Ridge Rock Texture",
-                new Color(0.44f, 0.36f, 0.27f),
-                new Color(0.25f, 0.21f, 0.17f),
-                new Color(0.61f, 0.52f, 0.41f),
+                new Color(0.5f, 0.41f, 0.3f),
+                new Color(0.3f, 0.25f, 0.19f),
+                new Color(0.72f, 0.62f, 0.47f),
                 new Color(0.16f, 0.13f, 0.11f),
                 59,
                 0.22f,
                 0.52f,
                 0.18f);
+            Texture2D ridgeRockNormal = CreateTerrainNormalTexture(
+                "Command RTS Ridge Rock Normal",
+                59,
+                3.1f,
+                0.54f,
+                0.22f);
             Texture2D cliffFaceTexture = CreateTerrainTexture(
                 "Command RTS Cliff Face Texture",
-                new Color(0.49f, 0.39f, 0.29f),
-                new Color(0.22f, 0.18f, 0.14f),
-                new Color(0.68f, 0.56f, 0.42f),
-                new Color(0.12f, 0.095f, 0.075f),
+                new Color(0.56f, 0.45f, 0.33f),
+                new Color(0.28f, 0.22f, 0.17f),
+                new Color(0.78f, 0.64f, 0.48f),
+                new Color(0.15f, 0.12f, 0.09f),
                 61,
                 0.26f,
                 0.88f,
                 0.42f);
+            Texture2D cliffFaceNormal = CreateTerrainNormalTexture(
+                "Command RTS Cliff Face Normal",
+                61,
+                3.8f,
+                0.9f,
+                0.48f);
             Texture2D mountainStoneTexture = CreateTerrainTexture(
                 "Command RTS Mountain Stone Texture",
-                new Color(0.38f, 0.36f, 0.32f),
-                new Color(0.18f, 0.18f, 0.16f),
-                new Color(0.62f, 0.58f, 0.49f),
-                new Color(0.09f, 0.085f, 0.075f),
+                new Color(0.44f, 0.41f, 0.35f),
+                new Color(0.23f, 0.22f, 0.19f),
+                new Color(0.72f, 0.67f, 0.55f),
+                new Color(0.12f, 0.11f, 0.095f),
                 67,
                 0.24f,
                 0.66f,
                 0.28f);
+            Texture2D mountainStoneNormal = CreateTerrainNormalTexture(
+                "Command RTS Mountain Stone Normal",
+                67,
+                3.35f,
+                0.64f,
+                0.32f);
             Texture2D talusTexture = CreateTerrainTexture(
                 "Command RTS Talus Texture",
-                new Color(0.4f, 0.33f, 0.24f),
-                new Color(0.22f, 0.18f, 0.13f),
-                new Color(0.65f, 0.55f, 0.39f),
-                new Color(0.14f, 0.105f, 0.075f),
+                new Color(0.48f, 0.39f, 0.27f),
+                new Color(0.28f, 0.22f, 0.15f),
+                new Color(0.74f, 0.62f, 0.43f),
+                new Color(0.17f, 0.13f, 0.09f),
                 69,
                 0.32f,
                 0.38f,
                 0.12f);
+            Texture2D talusNormal = CreateTerrainNormalTexture(
+                "Command RTS Talus Normal",
+                69,
+                2.8f,
+                0.42f,
+                0.16f);
             Texture2D dryWashTexture = CreateTerrainTexture(
                 "Command RTS Dry Wash Texture",
                 new Color(0.61f, 0.51f, 0.35f),
@@ -2133,6 +2224,12 @@ namespace QuestCommandRTS
                 0.2f,
                 0.5f,
                 0.34f);
+            Texture2D dryWashNormal = CreateTerrainNormalTexture(
+                "Command RTS Dry Wash Normal",
+                71,
+                2.0f,
+                0.46f,
+                0.42f);
             Texture2D vehicleArmorTexture = CreatePanelTexture(
                 "Command RTS Vehicle Armor Panel Texture",
                 new Color(0.43f, 0.48f, 0.4f),
@@ -2219,49 +2316,79 @@ namespace QuestCommandRTS
                 0.08f);
             Texture2D scorchTexture = CreateTerrainTexture(
                 "Command RTS Scorch Texture",
-                new Color(0.055f, 0.047f, 0.04f, 0.58f),
-                new Color(0.018f, 0.016f, 0.014f, 0.58f),
-                new Color(0.19f, 0.14f, 0.09f, 0.58f),
-                new Color(0.01f, 0.009f, 0.008f, 0.58f),
+                new Color(0.15f, 0.12f, 0.08f, 0.34f),
+                new Color(0.06f, 0.048f, 0.038f, 0.34f),
+                new Color(0.3f, 0.22f, 0.13f, 0.34f),
+                new Color(0.035f, 0.028f, 0.024f, 0.34f),
                 73,
                 0.2f,
                 0.85f,
                 0.12f);
 
-            groundMaterial = CreateTexturedMaterial(
-                new Color(0.54f, 0.43f, 0.27f),
+            groundMaterial = CreateTexturedPbrMaterial(
+                new Color(0.62f, 0.5f, 0.32f),
                 sandGroundTexture,
-                new Vector2(13f, 13f));
-            terrainAccentMaterial = CreateTexturedMaterial(
-                new Color(0.34f, 0.27f, 0.19f),
+                new Vector2(1.15f, 1.15f),
+                0.01f,
+                0.32f,
+                sandGroundNormal,
+                0.68f);
+            terrainAccentMaterial = CreateTexturedPbrMaterial(
+                new Color(0.48f, 0.38f, 0.25f),
                 duneAccentTexture,
-                new Vector2(4f, 4f));
+                new Vector2(4f, 4f),
+                0.01f,
+                0.26f,
+                duneAccentNormal,
+                0.58f);
             waterMaterial = CreateTexturedTransparentMaterial(
                 new Color(0.08f, 0.42f, 0.54f, 0.72f),
                 waterRippleTexture,
                 new Vector2(3f, 2f));
-            ridgeMaterial = CreateTexturedMaterial(
-                new Color(0.44f, 0.36f, 0.27f),
+            ConfigurePbr(waterMaterial, 0f, 0.82f);
+            ApplyNormalMap(waterMaterial, waterRippleNormal, 0.34f, new Vector2(3f, 2f));
+            ridgeMaterial = CreateTexturedPbrMaterial(
+                new Color(0.5f, 0.41f, 0.3f),
                 ridgeRockTexture,
-                new Vector2(2.4f, 2.4f));
-            cliffMaterial = CreateTexturedMaterial(
-                new Color(0.49f, 0.39f, 0.29f),
+                new Vector2(2.4f, 2.4f),
+                0.02f,
+                0.28f,
+                ridgeRockNormal,
+                0.72f);
+            cliffMaterial = CreateTexturedPbrMaterial(
+                new Color(0.56f, 0.45f, 0.33f),
                 cliffFaceTexture,
-                new Vector2(2.8f, 3.6f));
-            mountainMaterial = CreateTexturedMaterial(
-                new Color(0.38f, 0.36f, 0.32f),
+                new Vector2(2.8f, 3.6f),
+                0.02f,
+                0.24f,
+                cliffFaceNormal,
+                0.94f);
+            mountainMaterial = CreateTexturedPbrMaterial(
+                new Color(0.44f, 0.41f, 0.35f),
                 mountainStoneTexture,
-                new Vector2(2.2f, 2.2f));
-            talusMaterial = CreateTexturedMaterial(
-                new Color(0.4f, 0.33f, 0.24f),
+                new Vector2(2.2f, 2.2f),
+                0.02f,
+                0.2f,
+                mountainStoneNormal,
+                0.8f);
+            talusMaterial = CreateTexturedPbrMaterial(
+                new Color(0.48f, 0.39f, 0.27f),
                 talusTexture,
-                new Vector2(3.4f, 2.1f));
-            dryWashMaterial = CreateTexturedMaterial(
+                new Vector2(3.4f, 2.1f),
+                0.01f,
+                0.22f,
+                talusNormal,
+                0.62f);
+            dryWashMaterial = CreateTexturedPbrMaterial(
                 new Color(0.61f, 0.51f, 0.35f),
                 dryWashTexture,
-                new Vector2(4.5f, 1.8f));
+                new Vector2(4.5f, 1.8f),
+                0f,
+                0.28f,
+                dryWashNormal,
+                0.5f);
             craterMaterial = CreateTexturedTransparentMaterial(
-                new Color(0.055f, 0.047f, 0.04f, 0.58f),
+                new Color(0.15f, 0.12f, 0.08f, 0.34f),
                 scorchTexture,
                 new Vector2(1.6f, 1.6f));
             resourceMaterial = CreateMaterial(new Color(0.2f, 0.95f, 0.62f));
@@ -2385,8 +2512,8 @@ namespace QuestCommandRTS
         private void SetupLight()
         {
             RenderSettings.ambientMode = UnityEngine.Rendering.AmbientMode.Flat;
-            RenderSettings.ambientLight = new Color(0.54f, 0.56f, 0.58f);
-            RenderSettings.reflectionIntensity = 0.42f;
+            RenderSettings.ambientLight = new Color(0.62f, 0.63f, 0.6f);
+            RenderSettings.reflectionIntensity = 0.5f;
 
             if (Object.FindObjectOfType<Light>() == null)
             {
@@ -2394,27 +2521,29 @@ namespace QuestCommandRTS
                 lightObject.transform.SetParent(transform, false);
                 Light light = lightObject.AddComponent<Light>();
                 light.type = LightType.Directional;
-                light.intensity = 1.58f;
+                light.intensity = 1.72f;
                 lightObject.transform.rotation = Quaternion.Euler(58f, -32f, 0f);
             }
         }
 
         private void CreateGround()
         {
-            GameObject ground = GameObject.CreatePrimitive(PrimitiveType.Plane);
+            GameObject ground = new GameObject("Battlefield");
             ground.name = "Battlefield";
             ground.transform.SetParent(transform, true);
             ground.transform.position = Vector3.zero;
-            ground.transform.localScale = Vector3.one * (RtsBalance.MapHalfSize * 2f / 10f);
-            ground.GetComponent<Renderer>().sharedMaterial = groundMaterial;
+            MeshFilter groundFilter = ground.AddComponent<MeshFilter>();
+            groundFilter.sharedMesh = CreateBattlefieldArtMesh();
+            MeshRenderer groundRenderer = ground.AddComponent<MeshRenderer>();
+            groundRenderer.sharedMaterial = groundMaterial;
+            BoxCollider groundCollider = ground.AddComponent<BoxCollider>();
+            float battlefieldSize = RtsBalance.MapHalfSize * 2f;
+            groundCollider.center = new Vector3(0f, -0.04f, 0f);
+            groundCollider.size = new Vector3(battlefieldSize, 0.08f, battlefieldSize);
 
             CreateTerrainSetDressing();
 
-            for (int i = -5; i <= 5; i++)
-            {
-                CreateGridLine(new Vector3(i * 20f, 0.025f, -RtsBalance.MapHalfSize), new Vector3(i * 20f, 0.025f, RtsBalance.MapHalfSize));
-                CreateGridLine(new Vector3(-RtsBalance.MapHalfSize, 0.026f, i * 20f), new Vector3(RtsBalance.MapHalfSize, 0.026f, i * 20f));
-            }
+            CreateSectorEdgeTicks();
 
             CreateBoardFrame();
         }
@@ -2427,8 +2556,80 @@ namespace QuestCommandRTS
             line.positionCount = 2;
             line.SetPosition(0, a);
             line.SetPosition(1, b);
-            line.widthMultiplier = 0.025f;
-            line.material = CreateMaterial(new Color(0.35f, 0.42f, 0.36f, 0.55f));
+            line.widthMultiplier = 0.018f;
+            line.material = CreateTransparentMaterial(new Color(0.44f, 0.56f, 0.48f, 0.28f));
+        }
+
+        private Mesh CreateBattlefieldArtMesh()
+        {
+            int segmentCount = BattlefieldMeshSegments;
+            int vertexCount = (segmentCount + 1) * (segmentCount + 1);
+            float size = RtsBalance.MapHalfSize * 2f;
+            float origin = -RtsBalance.MapHalfSize;
+            Vector3[] vertices = new Vector3[vertexCount];
+            Vector2[] uv = new Vector2[vertexCount];
+            int[] triangles = new int[segmentCount * segmentCount * 6];
+
+            int vertexIndex = 0;
+            for (int z = 0; z <= segmentCount; z++)
+            {
+                for (int x = 0; x <= segmentCount; x++)
+                {
+                    float u = x / (float)segmentCount;
+                    float v = z / (float)segmentCount;
+                    float worldX = origin + u * size;
+                    float worldZ = origin + v * size;
+                    float edgeFade = Mathf.SmoothStep(0f, 0.16f, Mathf.Min(Mathf.Min(u, 1f - u), Mathf.Min(v, 1f - v)));
+                    float dunes = Mathf.PerlinNoise(worldX * 0.026f + 2.8f, worldZ * 0.026f - 4.1f);
+                    float pebble = Mathf.PerlinNoise(worldX * 0.17f - 8.4f, worldZ * 0.17f + 9.2f);
+                    float height = (dunes - 0.5f) * 0.034f + (pebble - 0.5f) * 0.008f;
+                    vertices[vertexIndex] = new Vector3(worldX, height * edgeFade, worldZ);
+                    uv[vertexIndex] = new Vector2(u, v);
+                    vertexIndex++;
+                }
+            }
+
+            int triangleIndex = 0;
+            for (int z = 0; z < segmentCount; z++)
+            {
+                for (int x = 0; x < segmentCount; x++)
+                {
+                    int a = z * (segmentCount + 1) + x;
+                    int b = a + 1;
+                    int c = a + segmentCount + 1;
+                    int d = c + 1;
+                    triangles[triangleIndex++] = a;
+                    triangles[triangleIndex++] = c;
+                    triangles[triangleIndex++] = b;
+                    triangles[triangleIndex++] = b;
+                    triangles[triangleIndex++] = c;
+                    triangles[triangleIndex++] = d;
+                }
+            }
+
+            Mesh mesh = new Mesh();
+            mesh.name = "Command RTS Subdivided Battlefield Mesh";
+            mesh.hideFlags = HideFlags.DontSave;
+            mesh.vertices = vertices;
+            mesh.uv = uv;
+            mesh.triangles = triangles;
+            mesh.RecalculateNormals();
+            mesh.RecalculateBounds();
+            return mesh;
+        }
+
+        private void CreateSectorEdgeTicks()
+        {
+            float edge = RtsBalance.MapHalfSize;
+            const float tickLength = 4.2f;
+            for (int i = -5; i <= 5; i++)
+            {
+                float coordinate = i * 20f;
+                CreateGridLine(new Vector3(coordinate, 0.05f, -edge), new Vector3(coordinate, 0.05f, -edge + tickLength));
+                CreateGridLine(new Vector3(coordinate, 0.05f, edge), new Vector3(coordinate, 0.05f, edge - tickLength));
+                CreateGridLine(new Vector3(-edge, 0.051f, coordinate), new Vector3(-edge + tickLength, 0.051f, coordinate));
+                CreateGridLine(new Vector3(edge, 0.051f, coordinate), new Vector3(edge - tickLength, 0.051f, coordinate));
+            }
         }
 
         private void CreateTerrainSetDressing()
@@ -2441,9 +2642,9 @@ namespace QuestCommandRTS
             CreateTerrainDisk("North Dune Shelf", new Vector3(-24f, 0.031f, 76f), new Vector3(38f, 0.02f, 13f), -12f, terrainAccentMaterial);
             CreateTerrainDisk("East Dune Shelf", new Vector3(78f, 0.031f, 54f), new Vector3(24f, 0.02f, 18f), 34f, terrainAccentMaterial);
 
-            CreateTerrainDisk("Central Dry Wash", new Vector3(-12f, 0.029f, 8f), new Vector3(58f, 0.014f, 6.4f), -18f, dryWashMaterial);
-            CreateTerrainDisk("South Dry Wash Delta", new Vector3(-50f, 0.028f, -74f), new Vector3(32f, 0.014f, 8.6f), 12f, dryWashMaterial);
-            CreateTerrainDisk("East Dry Wash Fork", new Vector3(54f, 0.028f, 26f), new Vector3(28f, 0.014f, 5.4f), 32f, dryWashMaterial);
+            CreateDryWashTrail("Central Dry Wash", new Vector3(-12f, 0.029f, 8f), new Vector3(16f, 0.014f, 5.6f), -18f, 5, 11.2f);
+            CreateDryWashTrail("South Dry Wash Delta", new Vector3(-50f, 0.028f, -74f), new Vector3(12f, 0.014f, 7.8f), 12f, 4, 8.2f);
+            CreateDryWashTrail("East Dry Wash Fork", new Vector3(54f, 0.028f, 26f), new Vector3(10.5f, 0.014f, 4.8f), 32f, 4, 7.6f);
 
             CreateTerrainBlock("West Mesa Ridge", new Vector3(-101f, 0.72f, 6f), new Vector3(9f, 1.45f, 34f), -12f, ridgeMaterial);
             CreateTerrainBlock("North Mesa Ridge", new Vector3(-12f, 0.64f, 102f), new Vector3(48f, 1.28f, 7f), 7f, ridgeMaterial);
@@ -2465,6 +2666,22 @@ namespace QuestCommandRTS
             CreateTerrainPebbleField("South Canyon", new Vector3(-18f, 0f, -96f), 6, 48f, 4.8f, -3f);
             CreateTerrainPebbleField("West Rim", new Vector3(-97f, 0f, -34f), 5, 30f, 4.4f, 82f);
             CreateTerrainPebbleField("Northeast Escarpment", new Vector3(86f, 0f, 65f), 5, 28f, 4.2f, 48f);
+        }
+
+        private void CreateDryWashTrail(string trailName, Vector3 center, Vector3 segmentScale, float yawDegrees, int segmentCount, float step)
+        {
+            Quaternion rotation = Quaternion.Euler(0f, yawDegrees, 0f);
+            int namedSegment = Mathf.Max(0, segmentCount / 2);
+            for (int i = 0; i < segmentCount; i++)
+            {
+                float signedIndex = i - namedSegment;
+                float meander = Mathf.Sin((i + GetStableSeed(trailName) * 0.01f) * 1.37f) * segmentScale.z * 0.34f;
+                Vector3 offset = rotation * new Vector3(signedIndex * step, 0f, meander);
+                float width = segmentScale.x * (0.82f + Hash01(i * 17, segmentCount, GetStableSeed(trailName)) * 0.36f);
+                float depth = segmentScale.z * (0.76f + Hash01(i * 23, segmentCount + 3, GetStableSeed(trailName)) * 0.34f);
+                string segmentName = i == namedSegment ? trailName : trailName + " Braid " + (i + 1);
+                CreateTerrainDisk(segmentName, center + offset + Vector3.up * (i * 0.0007f), new Vector3(width, segmentScale.y, depth), yawDegrees + Mathf.Sin(i * 1.9f) * 9f, dryWashMaterial);
+            }
         }
 
         private void CreateCliffBand(string cliffName, Vector3 center, Vector3 scale, float yawDegrees, int strataCount)
@@ -2539,14 +2756,294 @@ namespace QuestCommandRTS
 
         private void CreateTerrainDisk(string name, Vector3 position, Vector3 scale, float yawDegrees, Material material)
         {
-            GameObject disk = CreatePrimitive(PrimitiveType.Cylinder, transform, name, position, scale, material);
-            disk.transform.localRotation = Quaternion.Euler(0f, yawDegrees, 0f);
+            if (scale.y <= 0.05f)
+            {
+                CreateTerrainPatchMesh(name, position, scale, yawDegrees, material);
+                return;
+            }
+
+            CreateTerrainMoundMesh(name, position, scale, yawDegrees, material);
         }
 
         private void CreateTerrainBlock(string name, Vector3 position, Vector3 scale, float yawDegrees, Material material)
         {
-            GameObject block = CreatePrimitive(PrimitiveType.Cube, transform, name, position, scale, material);
-            block.transform.localRotation = Quaternion.Euler(0f, yawDegrees, 0f);
+            CreateTerrainPrismMesh(name, position, scale, yawDegrees, material);
+        }
+
+        private GameObject CreateTerrainMeshObject(string name, Vector3 position, float yawDegrees, Material material, Mesh mesh)
+        {
+            GameObject terrainObject = new GameObject(name);
+            terrainObject.transform.SetParent(transform, false);
+            terrainObject.transform.localPosition = position;
+            terrainObject.transform.localRotation = Quaternion.Euler(0f, yawDegrees, 0f);
+            MeshFilter filter = terrainObject.AddComponent<MeshFilter>();
+            filter.sharedMesh = mesh;
+            MeshRenderer renderer = terrainObject.AddComponent<MeshRenderer>();
+            renderer.sharedMaterial = material;
+            return terrainObject;
+        }
+
+        private GameObject CreateTerrainPatchMesh(string name, Vector3 position, Vector3 scale, float yawDegrees, Material material)
+        {
+            int segments = TerrainPatchSegments;
+            int rings = 3;
+            int vertexCount = 1 + rings * segments;
+            Vector3[] vertices = new Vector3[vertexCount];
+            Vector2[] uv = new Vector2[vertexCount];
+            int[] triangles = new int[segments * 3 + (rings - 1) * segments * 6];
+            float halfX = Mathf.Max(0.01f, scale.x * 0.5f);
+            float halfZ = Mathf.Max(0.01f, scale.z * 0.5f);
+            int seed = GetStableSeed(name);
+
+            vertices[0] = Vector3.zero;
+            uv[0] = new Vector2(0.5f, 0.5f);
+
+            int vertexIndex = 1;
+            for (int ring = 1; ring <= rings; ring++)
+            {
+                float radius = ring / (float)rings;
+                for (int i = 0; i < segments; i++)
+                {
+                    float angle = (Mathf.PI * 2f * i) / segments;
+                    float wobble = GetPerimeterWobble(i, ring, seed, ring == rings ? 0.22f : 0.09f);
+                    float x = Mathf.Cos(angle) * halfX * radius * wobble;
+                    float z = Mathf.Sin(angle) * halfZ * radius * wobble;
+                    float height = Mathf.Sin(angle * 2.1f + seed * 0.03f) * scale.y * 0.14f;
+                    vertices[vertexIndex] = new Vector3(x, height, z);
+                    uv[vertexIndex] = new Vector2(0.5f + x / Mathf.Max(halfX * 2f, 0.01f), 0.5f + z / Mathf.Max(halfZ * 2f, 0.01f));
+                    vertexIndex++;
+                }
+            }
+
+            int triangleIndex = 0;
+            for (int i = 0; i < segments; i++)
+            {
+                int next = (i + 1) % segments;
+                triangles[triangleIndex++] = 0;
+                triangles[triangleIndex++] = 1 + next;
+                triangles[triangleIndex++] = 1 + i;
+            }
+
+            for (int ring = 1; ring < rings; ring++)
+            {
+                int innerStart = 1 + (ring - 1) * segments;
+                int outerStart = 1 + ring * segments;
+                for (int i = 0; i < segments; i++)
+                {
+                    int next = (i + 1) % segments;
+                    int a = innerStart + i;
+                    int b = innerStart + next;
+                    int c = outerStart + i;
+                    int d = outerStart + next;
+                    triangles[triangleIndex++] = a;
+                    triangles[triangleIndex++] = b;
+                    triangles[triangleIndex++] = c;
+                    triangles[triangleIndex++] = b;
+                    triangles[triangleIndex++] = d;
+                    triangles[triangleIndex++] = c;
+                }
+            }
+
+            Mesh mesh = CreateConfiguredMesh(name + " Mesh", vertices, uv, triangles);
+            return CreateTerrainMeshObject(name, position, yawDegrees, material, mesh);
+        }
+
+        private GameObject CreateTerrainMoundMesh(string name, Vector3 position, Vector3 scale, float yawDegrees, Material material)
+        {
+            const int segments = 18;
+            const int rings = 4;
+            int vertexCount = rings * segments + 1;
+            Vector3[] vertices = new Vector3[vertexCount];
+            Vector2[] uv = new Vector2[vertexCount];
+            int[] triangles = new int[(rings - 1) * segments * 6 + segments * 3];
+            float halfX = Mathf.Max(0.01f, scale.x * 0.5f);
+            float halfY = Mathf.Max(0.01f, scale.y);
+            float halfZ = Mathf.Max(0.01f, scale.z * 0.5f);
+            int seed = GetStableSeed(name);
+
+            int vertexIndex = 0;
+            for (int ring = 0; ring < rings; ring++)
+            {
+                float t = ring / (float)(rings - 1);
+                float radius = Mathf.Lerp(1f, 0.24f, Mathf.SmoothStep(0f, 1f, t));
+                float y = Mathf.Lerp(-halfY, halfY * 0.78f, t);
+                for (int i = 0; i < segments; i++)
+                {
+                    float angle = (Mathf.PI * 2f * i) / segments;
+                    float wobble = GetPerimeterWobble(i, ring + 4, seed, 0.2f);
+                    float x = Mathf.Cos(angle) * halfX * radius * wobble;
+                    float z = Mathf.Sin(angle) * halfZ * radius * wobble;
+                    float shoulder = Mathf.PerlinNoise(i * 0.23f + seed * 0.017f, ring * 0.37f + seed * 0.011f) - 0.5f;
+                    vertices[vertexIndex] = new Vector3(x, y + shoulder * halfY * 0.18f, z);
+                    uv[vertexIndex] = new Vector2(0.5f + x / Mathf.Max(halfX * 2f, 0.01f), t);
+                    vertexIndex++;
+                }
+            }
+
+            int topIndex = vertexIndex;
+            vertices[topIndex] = new Vector3(0f, halfY * 1.12f, 0f);
+            uv[topIndex] = new Vector2(0.5f, 1f);
+
+            int triangleIndex = 0;
+            for (int ring = 0; ring < rings - 1; ring++)
+            {
+                int innerStart = ring * segments;
+                int outerStart = (ring + 1) * segments;
+                for (int i = 0; i < segments; i++)
+                {
+                    int next = (i + 1) % segments;
+                    int a = innerStart + i;
+                    int b = innerStart + next;
+                    int c = outerStart + i;
+                    int d = outerStart + next;
+                    triangles[triangleIndex++] = a;
+                    triangles[triangleIndex++] = c;
+                    triangles[triangleIndex++] = b;
+                    triangles[triangleIndex++] = b;
+                    triangles[triangleIndex++] = c;
+                    triangles[triangleIndex++] = d;
+                }
+            }
+
+            int lastRingStart = (rings - 1) * segments;
+            for (int i = 0; i < segments; i++)
+            {
+                int next = (i + 1) % segments;
+                triangles[triangleIndex++] = lastRingStart + i;
+                triangles[triangleIndex++] = topIndex;
+                triangles[triangleIndex++] = lastRingStart + next;
+            }
+
+            Mesh mesh = CreateConfiguredMesh(name + " Mesh", vertices, uv, triangles);
+            return CreateTerrainMeshObject(name, position, yawDegrees, material, mesh);
+        }
+
+        private GameObject CreateTerrainPrismMesh(string name, Vector3 position, Vector3 scale, float yawDegrees, Material material)
+        {
+            int perimeterCount = Mathf.Clamp(Mathf.CeilToInt((scale.x + scale.z) * 0.55f), 12, 34);
+            Vector2[] perimeter = CreateWobblyRectanglePerimeter(scale.x, scale.z, perimeterCount, GetStableSeed(name));
+            Vector3[] vertices = new Vector3[perimeter.Length * 2 + 1];
+            Vector2[] uv = new Vector2[vertices.Length];
+            int[] triangles = new int[perimeter.Length * 6 + perimeter.Length * 3];
+            float halfY = Mathf.Max(0.01f, scale.y * 0.5f);
+            int seed = GetStableSeed(name);
+
+            for (int i = 0; i < perimeter.Length; i++)
+            {
+                Vector2 point = perimeter[i];
+                float topLift = (Hash01(i * 17, seed, i + seed) - 0.5f) * halfY * 0.26f;
+                vertices[i * 2] = new Vector3(point.x, -halfY, point.y);
+                vertices[i * 2 + 1] = new Vector3(point.x, halfY + topLift, point.y);
+                uv[i * 2] = new Vector2(point.x / Mathf.Max(scale.x, 0.01f) + 0.5f, point.y / Mathf.Max(scale.z, 0.01f) + 0.5f);
+                uv[i * 2 + 1] = uv[i * 2] + new Vector2(0f, 0.35f);
+            }
+
+            int topCenterIndex = perimeter.Length * 2;
+            vertices[topCenterIndex] = new Vector3(0f, halfY * 1.08f, 0f);
+            uv[topCenterIndex] = new Vector2(0.5f, 0.5f);
+
+            int triangleIndex = 0;
+            for (int i = 0; i < perimeter.Length; i++)
+            {
+                int next = (i + 1) % perimeter.Length;
+                int bottom = i * 2;
+                int top = bottom + 1;
+                int nextBottom = next * 2;
+                int nextTop = nextBottom + 1;
+                triangles[triangleIndex++] = bottom;
+                triangles[triangleIndex++] = top;
+                triangles[triangleIndex++] = nextBottom;
+                triangles[triangleIndex++] = nextBottom;
+                triangles[triangleIndex++] = top;
+                triangles[triangleIndex++] = nextTop;
+            }
+
+            for (int i = 0; i < perimeter.Length; i++)
+            {
+                int next = (i + 1) % perimeter.Length;
+                triangles[triangleIndex++] = topCenterIndex;
+                triangles[triangleIndex++] = i * 2 + 1;
+                triangles[triangleIndex++] = next * 2 + 1;
+            }
+
+            Mesh mesh = CreateConfiguredMesh(name + " Mesh", vertices, uv, triangles);
+            return CreateTerrainMeshObject(name, position, yawDegrees, material, mesh);
+        }
+
+        private static Mesh CreateConfiguredMesh(string name, Vector3[] vertices, Vector2[] uv, int[] triangles)
+        {
+            Mesh mesh = new Mesh();
+            mesh.name = name;
+            mesh.hideFlags = HideFlags.DontSave;
+            mesh.vertices = vertices;
+            mesh.uv = uv;
+            mesh.triangles = triangles;
+            mesh.RecalculateNormals();
+            mesh.RecalculateBounds();
+            return mesh;
+        }
+
+        private static Vector2[] CreateWobblyRectanglePerimeter(float width, float depth, int count, int seed)
+        {
+            Vector2[] perimeter = new Vector2[count];
+            float halfX = Mathf.Max(0.01f, width * 0.5f);
+            float halfZ = Mathf.Max(0.01f, depth * 0.5f);
+            for (int i = 0; i < count; i++)
+            {
+                float t = i / (float)count;
+                float side = t * 4f;
+                float x;
+                float z;
+                if (side < 1f)
+                {
+                    x = Mathf.Lerp(-halfX, halfX, side);
+                    z = halfZ;
+                }
+                else if (side < 2f)
+                {
+                    x = halfX;
+                    z = Mathf.Lerp(halfZ, -halfZ, side - 1f);
+                }
+                else if (side < 3f)
+                {
+                    x = Mathf.Lerp(halfX, -halfX, side - 2f);
+                    z = -halfZ;
+                }
+                else
+                {
+                    x = -halfX;
+                    z = Mathf.Lerp(-halfZ, halfZ, side - 3f);
+                }
+
+                float edgeNoise = Hash01(i * 13 + seed, seed - i * 7, seed);
+                float inset = Mathf.Lerp(-0.16f, 0.08f, edgeNoise);
+                Vector2 point = new Vector2(x, z);
+                Vector2 normal = point.sqrMagnitude > 0.001f ? point.normalized : Vector2.up;
+                perimeter[i] = point + normal * Mathf.Min(halfX, halfZ) * inset;
+            }
+
+            return perimeter;
+        }
+
+        private static float GetPerimeterWobble(int index, int ring, int seed, float strength)
+        {
+            float broad = Mathf.PerlinNoise(index * 0.18f + seed * 0.011f, ring * 0.37f + seed * 0.017f);
+            float sharp = Hash01(index * 19 + ring, seed - index * 11, seed);
+            return 1f + (broad - 0.5f) * strength + (sharp - 0.5f) * strength * 0.45f;
+        }
+
+        private static int GetStableSeed(string text)
+        {
+            unchecked
+            {
+                int hash = 5381;
+                for (int i = 0; i < text.Length; i++)
+                {
+                    hash = ((hash << 5) + hash) ^ text[i];
+                }
+
+                return hash;
+            }
         }
 
         private void CreateRockCluster(string clusterName, Vector3 center, int count)
