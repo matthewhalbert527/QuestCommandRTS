@@ -20,6 +20,7 @@ namespace QuestCommandRTS.Editor
                 Physics.SyncTransforms();
 
                 ValidateOpeningState(game);
+                ValidateOreFieldDepletionAndRegrowth(game);
                 ValidateProducerRouting(game);
                 ValidateWarFactoryHarvesterAutoHarvest(game);
                 ValidateTankTracks(game);
@@ -93,6 +94,26 @@ namespace QuestCommandRTS.Editor
             Require(CountStructures(game, RtsTeam.Enemy, StructureKind.CommandCenter) == 1, "Enemy fabrication start", "Enemy should also begin from a fabrication/command structure.");
             Require(CountUnits(game, RtsTeam.Enemy) == 0, "No starting enemy units", "Enemy attacks should not begin immediately.");
             Require(game.Resources.Credits >= 6000, "Bootstrap credits", "Opening credits should support a first build order from fabrication only.");
+        }
+
+        private static void ValidateOreFieldDepletionAndRegrowth(RtsGame game)
+        {
+            Require(game.ResourceNodes.Count > 0, "Resource nodes present", "Skirmish should spawn harvestable ore fields.");
+            ResourceNode node = game.ResourceNodes[0];
+            int startingVisiblePieces = node.VisibleOrePieceCountForTests;
+            Require(node.OrePieceCountForTests >= 14 && startingVisiblePieces >= 12, "Detailed ore cluster", "Ore should be made from layered crystal chunks instead of one simple blob.");
+
+            node.Harvest(node.MaxAmount / 2);
+            Require(node.Amount > 0 && node.FullnessForTests < 0.55f, "Ore amount depletes", "Harvesting should lower the stored ore amount.");
+            Require(node.VisibleOrePieceCountForTests < startingVisiblePieces, "Ore chunks disappear", "Harvesting should remove visible ore chunks as the node empties.");
+
+            node.Harvest(node.Amount);
+            Require(node.IsDepleted && node.VisibleOrePieceCountForTests == 0, "Ore visually depleted", "A fully harvested node should hide its collectible ore chunks.");
+
+            ResourceFieldRegenerator miner = FindRegeneratorFor(node);
+            Require(miner != null && miner.LinkedNodeCountForTests > 0, "Ore field miner linked", "Each field should have a central miner that feeds its ore nodes.");
+            miner.TickRegenerationForTests(30f);
+            Require(node.Amount > 0 && node.VisibleOrePieceCountForTests > 0, "Ore field miner replenishes", "The center miner should slowly regrow depleted ore.");
         }
 
         private static void ValidateProducerRouting(RtsGame game)
@@ -262,6 +283,20 @@ namespace QuestCommandRTS.Editor
                 if (unit != null && unit.Team == RtsTeam.Enemy)
                 {
                     return unit;
+                }
+            }
+
+            return null;
+        }
+
+        private static ResourceFieldRegenerator FindRegeneratorFor(ResourceNode node)
+        {
+            ResourceFieldRegenerator[] regenerators = Object.FindObjectsOfType<ResourceFieldRegenerator>();
+            for (int i = 0; i < regenerators.Length; i++)
+            {
+                if (regenerators[i] != null && regenerators[i].ContainsNodeForTests(node))
+                {
+                    return regenerators[i];
                 }
             }
 

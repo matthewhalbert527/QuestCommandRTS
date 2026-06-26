@@ -68,6 +68,8 @@ namespace QuestCommandRTS
         private Material craterMaterial;
         private Material resourceMaterial;
         private Material depletedResourceMaterial;
+        private Material resourceGlowMaterial;
+        private Material resourceMinerMaterial;
         private Material darkMaterial;
         private Material vehicleDetailMaterial;
         private Material structureDetailMaterial;
@@ -78,6 +80,30 @@ namespace QuestCommandRTS
         private float nextObjectiveCheckTime;
         private int nextEntityId = 1;
         private int nextResourceNodeId = 1;
+
+        private static readonly Vector3[] ResourceFieldCenters =
+        {
+            new Vector3(-58f, 0f, -82f),
+            new Vector3(-18f, 0f, -64f),
+            new Vector3(-70f, 0f, -18f),
+            new Vector3(0f, 0f, -18f),
+            new Vector3(34f, 0f, 18f),
+            new Vector3(-16f, 0f, 54f),
+            new Vector3(62f, 0f, 42f),
+            new Vector3(74f, 0f, 84f)
+        };
+
+        private static readonly int[] ResourceFieldNodeCounts =
+        {
+            9,
+            7,
+            6,
+            8,
+            8,
+            7,
+            7,
+            9
+        };
 
         private void Awake()
         {
@@ -1470,6 +1496,8 @@ namespace QuestCommandRTS
                     }
                 }
 
+                CreateResourceFieldMinersForExistingNodes();
+
                 Dictionary<int, RtsEntity> entityById = new Dictionary<int, RtsEntity>();
                 List<RtsEntitySaveData> unitSaves = new List<RtsEntitySaveData>();
 
@@ -1890,6 +1918,10 @@ namespace QuestCommandRTS
                 new Vector2(1.6f, 1.6f));
             resourceMaterial = CreateMaterial(new Color(0.2f, 0.95f, 0.62f));
             depletedResourceMaterial = CreateMaterial(new Color(0.11f, 0.18f, 0.14f));
+            resourceGlowMaterial = CreateMaterial(new Color(0.55f, 1f, 0.78f));
+            resourceGlowMaterial.EnableKeyword("_EMISSION");
+            resourceGlowMaterial.SetColor("_EmissionColor", new Color(0.32f, 1f, 0.64f));
+            resourceMinerMaterial = CreateMaterial(new Color(0.2f, 0.32f, 0.24f));
             darkMaterial = CreateMaterial(new Color(0.16f, 0.18f, 0.17f));
             shadowPanelMaterial = CreateMaterial(new Color(0.055f, 0.065f, 0.06f));
             edgeHighlightMaterial = CreateMaterial(new Color(0.76f, 0.8f, 0.68f));
@@ -2033,25 +2065,24 @@ namespace QuestCommandRTS
 
         private void CreateResourceFields()
         {
-            CreateResourceField(new Vector3(-58f, 0f, -82f), 9);
-            CreateResourceField(new Vector3(-18f, 0f, -64f), 7);
-            CreateResourceField(new Vector3(-70f, 0f, -18f), 6);
-            CreateResourceField(new Vector3(0f, 0f, -18f), 8);
-            CreateResourceField(new Vector3(34f, 0f, 18f), 8);
-            CreateResourceField(new Vector3(-16f, 0f, 54f), 7);
-            CreateResourceField(new Vector3(62f, 0f, 42f), 7);
-            CreateResourceField(new Vector3(74f, 0f, 84f), 9);
+            for (int i = 0; i < ResourceFieldCenters.Length; i++)
+            {
+                CreateResourceField(ResourceFieldCenters[i], ResourceFieldNodeCounts[i]);
+            }
         }
 
         private void CreateResourceField(Vector3 center, int count)
         {
+            List<ResourceNode> fieldNodes = new List<ResourceNode>(count);
             for (int i = 0; i < count; i++)
             {
                 float angle = (Mathf.PI * 2f * i) / count;
                 float radius = 3.2f + (i % 4) * 1.8f;
                 Vector3 position = center + new Vector3(Mathf.Cos(angle) * radius, 0f, Mathf.Sin(angle) * radius);
-                CreateResourceNode(position, 2600 + i * 220, 2600 + i * 220, 0);
+                fieldNodes.Add(CreateResourceNode(position, 2600 + i * 220, 2600 + i * 220, 0));
             }
+
+            CreateResourceFieldMiner(center, fieldNodes);
         }
 
         private ResourceNode CreateResourceNode(Vector3 position, int maxAmount, int amount, int persistentId)
@@ -2065,6 +2096,42 @@ namespace QuestCommandRTS
             nextResourceNodeId = Mathf.Max(nextResourceNodeId, node.PersistentId + 1);
             resourceNodes.Add(node);
             return node;
+        }
+
+        private void CreateResourceFieldMinersForExistingNodes()
+        {
+            for (int i = 0; i < ResourceFieldCenters.Length; i++)
+            {
+                List<ResourceNode> fieldNodes = new List<ResourceNode>();
+                Vector3 center = ResourceFieldCenters[i];
+                for (int n = 0; n < resourceNodes.Count; n++)
+                {
+                    ResourceNode node = resourceNodes[n];
+                    if (node != null && PlanarDistance(center, node.transform.position) <= 10.5f)
+                    {
+                        fieldNodes.Add(node);
+                    }
+                }
+
+                if (fieldNodes.Count > 0)
+                {
+                    CreateResourceFieldMiner(center, fieldNodes);
+                }
+            }
+        }
+
+        private void CreateResourceFieldMiner(Vector3 center, List<ResourceNode> fieldNodes)
+        {
+            if (fieldNodes == null || fieldNodes.Count == 0)
+            {
+                return;
+            }
+
+            GameObject minerObject = new GameObject("Ore Field Miner");
+            minerObject.transform.SetParent(resourcesRoot, true);
+            minerObject.transform.position = ClampToGround(center);
+            ResourceFieldRegenerator regenerator = minerObject.AddComponent<ResourceFieldRegenerator>();
+            regenerator.Initialize(fieldNodes, resourceMaterial, depletedResourceMaterial, resourceGlowMaterial, resourceMinerMaterial);
         }
 
         private void SpawnStartingForces()
