@@ -45,12 +45,14 @@ namespace QuestCommandRTS
         private GUIStyle bannerSubStyle;
         private RectTransform mainMenuPanel;
         private RectTransform pauseMenuPanel;
+        private RtsSkirmishOptions menuOptions;
         private bool mainMenuVisible;
 
         public void Initialize(RtsGame owner)
         {
             game = owner;
             font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            menuOptions = game != null && game.SkirmishOptions != null ? game.SkirmishOptions.Clone() : RtsSkirmishOptions.CreateDefault();
             EnsureEventSystem(transform);
             BuildCanvas();
 
@@ -193,6 +195,12 @@ namespace QuestCommandRTS
                 "Desktop Skirmish",
                 new[]
                 {
+                    new MenuButtonSpec("Difficulty", () => CycleDifficulty(), () => true, () => "AI: " + menuOptions.difficulty),
+                    new MenuButtonSpec("Credits", () => CycleStartingCredits(), () => true, () => "Credits: " + menuOptions.StartingCreditsLabel),
+                    new MenuButtonSpec("Peace Time", () => CyclePeaceTime(), () => true, () => "Peace Time: " + menuOptions.PeaceTimeLabel),
+                    new MenuButtonSpec("Game Speed", () => CycleGameSpeed(), () => true, () => "Speed: " + menuOptions.GameSpeedLabel),
+                    new MenuButtonSpec("Fog", () => CycleFog(), () => true, () => "Fog: " + menuOptions.FogLabel),
+                    new MenuButtonSpec("Starting Forces", () => CycleStartingForces(), () => true, () => "Start: " + menuOptions.StartingForcesLabel),
                     new MenuButtonSpec("Start Skirmish", () => StartSkirmishFromMainMenu(), () => true, () => "Start Skirmish"),
                     new MenuButtonSpec("Load Game", () => LoadFromMainMenu(), () => game.CanLoadManualSave(), () => "Load Game  " + game.GetManualSaveSummary()),
                     new MenuButtonSpec("Quit", () => game.RequestQuit(), () => true, () => "Quit")
@@ -218,6 +226,7 @@ namespace QuestCommandRTS
         public void ShowMainMenu()
         {
             mainMenuVisible = true;
+            menuOptions = game != null && game.SkirmishOptions != null ? game.SkirmishOptions.Clone() : RtsSkirmishOptions.CreateDefault();
             if (game != null && !game.IsMatchOver)
             {
                 game.SetUserPaused(true);
@@ -244,11 +253,42 @@ namespace QuestCommandRTS
         {
             RefreshMenuPanels();
         }
+
+        public void CycleSkirmishDifficultyForTests()
+        {
+            CycleDifficulty();
+        }
+
+        public void CycleSkirmishCreditsForTests()
+        {
+            CycleStartingCredits();
+        }
+
+        public void CycleSkirmishPeaceTimeForTests()
+        {
+            CyclePeaceTime();
+        }
+
+        public void CycleSkirmishGameSpeedForTests()
+        {
+            CycleGameSpeed();
+        }
+
+        public void CycleSkirmishFogForTests()
+        {
+            CycleFog();
+        }
+
+        public void CycleSkirmishStartingForcesForTests()
+        {
+            CycleStartingForces();
+        }
 #endif
 
         private void StartSkirmishFromMainMenu()
         {
             mainMenuVisible = false;
+            game.SetSkirmishOptions(menuOptions);
             if (!game.TryRestartMatch())
             {
                 game.SetUserPaused(false);
@@ -266,6 +306,116 @@ namespace QuestCommandRTS
             }
 
             RefreshMenuPanels();
+        }
+
+        private void CycleDifficulty()
+        {
+            EnsureMenuOptions();
+            switch (menuOptions.difficulty)
+            {
+                case RtsAiDifficulty.Recruit:
+                    menuOptions.difficulty = RtsAiDifficulty.Standard;
+                    break;
+                case RtsAiDifficulty.Standard:
+                    menuOptions.difficulty = RtsAiDifficulty.Veteran;
+                    break;
+                case RtsAiDifficulty.Veteran:
+                    menuOptions.difficulty = RtsAiDifficulty.Brutal;
+                    break;
+                default:
+                    menuOptions.difficulty = RtsAiDifficulty.Recruit;
+                    break;
+            }
+        }
+
+        private void CycleStartingCredits()
+        {
+            EnsureMenuOptions();
+            switch (menuOptions.startingCredits)
+            {
+                case RtsStartingCreditsPreset.Low:
+                    menuOptions.startingCredits = RtsStartingCreditsPreset.Standard;
+                    break;
+                case RtsStartingCreditsPreset.Standard:
+                    menuOptions.startingCredits = RtsStartingCreditsPreset.High;
+                    break;
+                case RtsStartingCreditsPreset.High:
+                    menuOptions.startingCredits = RtsStartingCreditsPreset.Massive;
+                    break;
+                default:
+                    menuOptions.startingCredits = RtsStartingCreditsPreset.Low;
+                    break;
+            }
+        }
+
+        private void CyclePeaceTime()
+        {
+            EnsureMenuOptions();
+            switch (menuOptions.peaceTime)
+            {
+                case RtsPeaceTimePreset.None:
+                    menuOptions.peaceTime = RtsPeaceTimePreset.TwoMinutes;
+                    break;
+                case RtsPeaceTimePreset.TwoMinutes:
+                    menuOptions.peaceTime = RtsPeaceTimePreset.ThreeMinutes;
+                    break;
+                case RtsPeaceTimePreset.ThreeMinutes:
+                    menuOptions.peaceTime = RtsPeaceTimePreset.FiveMinutes;
+                    break;
+                default:
+                    menuOptions.peaceTime = RtsPeaceTimePreset.None;
+                    break;
+            }
+        }
+
+        private void CycleGameSpeed()
+        {
+            EnsureMenuOptions();
+            switch (menuOptions.gameSpeed)
+            {
+                case RtsGameSpeedPreset.Slow:
+                    menuOptions.gameSpeed = RtsGameSpeedPreset.Normal;
+                    break;
+                case RtsGameSpeedPreset.Normal:
+                    menuOptions.gameSpeed = RtsGameSpeedPreset.Fast;
+                    break;
+                default:
+                    menuOptions.gameSpeed = RtsGameSpeedPreset.Slow;
+                    break;
+            }
+        }
+
+        private void CycleFog()
+        {
+            EnsureMenuOptions();
+            menuOptions.fog = menuOptions.fog == RtsFogPreset.Enabled ? RtsFogPreset.Revealed : RtsFogPreset.Enabled;
+        }
+
+        private void CycleStartingForces()
+        {
+            EnsureMenuOptions();
+            switch (menuOptions.startingForces)
+            {
+                case RtsStartingForcesPreset.FabricationOnly:
+                    menuOptions.startingForces = RtsStartingForcesPreset.ScoutTeam;
+                    break;
+                case RtsStartingForcesPreset.ScoutTeam:
+                    menuOptions.startingForces = RtsStartingForcesPreset.StrikeTeam;
+                    break;
+                default:
+                    menuOptions.startingForces = RtsStartingForcesPreset.FabricationOnly;
+                    break;
+            }
+        }
+
+        private void EnsureMenuOptions()
+        {
+            if (menuOptions == null)
+            {
+                menuOptions = game != null && game.SkirmishOptions != null ? game.SkirmishOptions.Clone() : RtsSkirmishOptions.CreateDefault();
+            }
+
+            menuOptions.Normalize();
         }
 
         private void RefreshMenuPanels()
@@ -299,6 +449,8 @@ namespace QuestCommandRTS
 
         private RectTransform BuildMenuPanel(Transform parent, string name, string title, string subtitle, MenuButtonSpec[] specs)
         {
+            float panelHeight = Mathf.Clamp(170f + specs.Length * 54f, 420f, 720f);
+            float panelWidth = specs.Length > 6 ? 580f : 520f;
             RectTransform overlay = CreatePanel(
                 parent,
                 name,
@@ -316,7 +468,7 @@ namespace QuestCommandRTS
                 new Vector2(0.5f, 0.5f),
                 new Vector2(0.5f, 0.5f),
                 Vector2.zero,
-                new Vector2(520f, 420f),
+                new Vector2(panelWidth, panelHeight),
                 new Color(0.02f, 0.028f, 0.032f, 0.96f));
 
             Image panelImage = panel.GetComponent<Image>();
@@ -382,7 +534,7 @@ namespace QuestCommandRTS
             rect.anchorMax = new Vector2(0.5f, 1f);
             rect.pivot = new Vector2(0.5f, 1f);
             rect.anchoredPosition = new Vector2(0f, y);
-            rect.sizeDelta = new Vector2(340f, 42f);
+            rect.sizeDelta = new Vector2(420f, 42f);
 
             Image image = buttonObject.AddComponent<Image>();
             image.color = new Color(0.13f, 0.17f, 0.18f, 0.98f);

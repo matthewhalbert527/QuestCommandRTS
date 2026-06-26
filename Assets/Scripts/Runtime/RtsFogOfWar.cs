@@ -19,6 +19,9 @@ namespace QuestCommandRTS
         private Color[] fogPixels;
         private Material fogMaterial;
         private bool fogTextureDirty;
+        private bool isEnabled = true;
+
+        public bool IsEnabled => isEnabled;
 
         private sealed class FogCell
         {
@@ -37,6 +40,7 @@ namespace QuestCommandRTS
             fogRoot.SetParent(transform, false);
             BuildGrid();
             RefreshFog(true);
+            SetFogEnabled(game == null || game.SkirmishOptions == null || game.SkirmishOptions.FogOfWarEnabled);
         }
 
         private void OnDestroy()
@@ -47,7 +51,7 @@ namespace QuestCommandRTS
 
         private void Update()
         {
-            if (game == null || game.Clock.IsPaused || game.Clock.SimulationTime < nextUpdateTime)
+            if (!isEnabled || game == null || game.Clock.IsPaused || game.Clock.SimulationTime < nextUpdateTime)
             {
                 return;
             }
@@ -61,14 +65,41 @@ namespace QuestCommandRTS
 
         public bool IsVisible(Vector3 point)
         {
+            if (!isEnabled)
+            {
+                return true;
+            }
+
             FogCell cell = GetCell(point);
             return cell == null || cell.Visible;
         }
 
         public bool IsExplored(Vector3 point)
         {
+            if (!isEnabled)
+            {
+                return true;
+            }
+
             FogCell cell = GetCell(point);
             return cell == null || cell.Explored;
+        }
+
+        public void SetFogEnabled(bool enabled)
+        {
+            isEnabled = enabled;
+            if (fogRenderer != null)
+            {
+                fogRenderer.enabled = enabled;
+            }
+
+            if (!enabled)
+            {
+                RevealEntireMap();
+                return;
+            }
+
+            RefreshFog(true);
         }
 
         public RtsFogSaveData CaptureState()
@@ -178,6 +209,7 @@ namespace QuestCommandRTS
 
             ApplyFogTextureIfNeeded();
             RefreshFog(true);
+            SetFogEnabled(game == null || game.SkirmishOptions == null || game.SkirmishOptions.FogOfWarEnabled);
         }
 
 #if UNITY_EDITOR
@@ -258,6 +290,12 @@ namespace QuestCommandRTS
                 return;
             }
 
+            if (!isEnabled)
+            {
+                RevealEntireMap();
+                return;
+            }
+
             for (int x = 0; x < GridSize; x++)
             {
                 for (int z = 0; z < GridSize; z++)
@@ -283,6 +321,28 @@ namespace QuestCommandRTS
                 {
                     FogCell cell = cells[x, z];
                     cell.Explored = cell.Explored || cell.Visible;
+                    ApplyCellVisual(cell);
+                }
+            }
+
+            ApplyFogTextureIfNeeded();
+            ApplyEnemyVisibility();
+        }
+
+        private void RevealEntireMap()
+        {
+            if (cells == null)
+            {
+                return;
+            }
+
+            for (int x = 0; x < GridSize; x++)
+            {
+                for (int z = 0; z < GridSize; z++)
+                {
+                    FogCell cell = cells[x, z];
+                    cell.Visible = true;
+                    cell.Explored = true;
                     ApplyCellVisual(cell);
                 }
             }

@@ -31,6 +31,7 @@ namespace QuestCommandRTS
         public string statusMessage;
         public int nextEntityId;
         public int nextResourceNodeId;
+        public RtsSkirmishOptions skirmishOptions = RtsSkirmishOptions.CreateDefault();
         public RtsResourceBankSaveData resources = new RtsResourceBankSaveData();
         public List<RtsEntitySaveData> entities = new List<RtsEntitySaveData>();
         public List<RtsResourceNodeSaveData> resourceNodes = new List<RtsResourceNodeSaveData>();

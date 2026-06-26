@@ -6,6 +6,7 @@ namespace QuestCommandRTS
     {
         public float SimulationTime { get; private set; }
         public float DeltaTime { get; private set; }
+        public float TimeScale { get; private set; } = 1f;
         public RtsPauseReason PauseReasons { get; private set; }
         public bool IsPaused => PauseReasons != RtsPauseReason.None;
 
@@ -17,8 +18,13 @@ namespace QuestCommandRTS
                 return;
             }
 
-            DeltaTime = Mathf.Max(0f, unscaledDeltaTime);
+            DeltaTime = Mathf.Max(0f, unscaledDeltaTime) * TimeScale;
             SimulationTime += DeltaTime;
+        }
+
+        public void SetTimeScale(float timeScale)
+        {
+            TimeScale = Mathf.Clamp(timeScale, 0.5f, 2f);
         }
 
         public void SetPaused(RtsPauseReason reason, bool paused)

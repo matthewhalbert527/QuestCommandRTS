@@ -4,7 +4,6 @@ namespace QuestCommandRTS
 {
     public sealed class EnemyDirector : MonoBehaviour
     {
-        private const int StartingEnemyCredits = 2600;
         private const int MaximumEnemyCredits = 12000;
         private const int BaseIncome = 180;
         private const int RefineryIncomeBonus = 160;
@@ -12,9 +11,6 @@ namespace QuestCommandRTS
         private const float BuildInterval = 12f;
         private const float ProductionInterval = 8f;
         private const float IdleOrderInterval = 3.5f;
-        private const float OpeningAttackGraceSeconds = 180f;
-        private const float OpeningBuildDelaySeconds = 28f;
-        private const float OpeningProductionDelaySeconds = 70f;
 
         private RtsGame game;
         private float nextWaveTime;
@@ -53,13 +49,13 @@ namespace QuestCommandRTS
 
                 if (game.Clock.SimulationTime >= nextBuildTime)
                 {
-                    nextBuildTime = game.Clock.SimulationTime + BuildInterval;
+                    nextBuildTime = game.Clock.SimulationTime + GetBuildInterval();
                     TryBuildBaseStructure();
                 }
 
                 if (game.Clock.SimulationTime >= nextProductionTime)
                 {
-                    nextProductionTime = game.Clock.SimulationTime + ProductionInterval;
+                    nextProductionTime = game.Clock.SimulationTime + GetProductionInterval();
                     TryProduceUnit();
                 }
 
@@ -96,12 +92,12 @@ namespace QuestCommandRTS
 
             float now = game.Clock.SimulationTime;
             waveIndex = Mathf.Max(0, data.waveIndex);
-            enemyCredits = data.hasEconomyState ? Mathf.Clamp(data.enemyCredits, 0, MaximumEnemyCredits) : StartingEnemyCredits;
+            enemyCredits = data.hasEconomyState ? Mathf.Clamp(data.enemyCredits, 0, MaximumEnemyCredits) : GetOptions().EnemyStartingCredits;
             nextWaveTime = Mathf.Max(now + 1f, data.nextWaveTime);
             nextIdleOrderTime = Mathf.Max(now + 0.5f, data.nextIdleOrderTime);
             nextIncomeTime = data.hasEconomyState ? Mathf.Max(now + 0.5f, data.nextIncomeTime) : now + 5f;
-            nextBuildTime = data.hasEconomyState ? Mathf.Max(now + 0.5f, data.nextBuildTime) : now + OpeningBuildDelaySeconds;
-            nextProductionTime = data.hasEconomyState ? Mathf.Max(now + 0.5f, data.nextProductionTime) : now + OpeningProductionDelaySeconds;
+            nextBuildTime = data.hasEconomyState ? Mathf.Max(now + 0.5f, data.nextBuildTime) : now + GetOptions().EnemyBuildDelaySeconds;
+            nextProductionTime = data.hasEconomyState ? Mathf.Max(now + 0.5f, data.nextProductionTime) : now + GetOptions().EnemyProductionDelaySeconds;
         }
 
         public void ResetForNewMatch()
@@ -180,7 +176,7 @@ namespace QuestCommandRTS
             }
 
             waveIndex = nextWaveIndex;
-            nextWaveTime = game.Clock.SimulationTime + Mathf.Max(18f, 42f - waveIndex * 1.5f);
+            nextWaveTime = game.Clock.SimulationTime + Mathf.Max(18f, 42f - waveIndex * 1.5f) * GetOptions().EnemyWaveIntervalMultiplier;
             game.SpawnFloatingText("Enemy attack", enemyBase + Vector3.up * 3f, new Color(1f, 0.5f, 0.35f));
         }
 
@@ -204,13 +200,14 @@ namespace QuestCommandRTS
 
         private void ResetEconomy(float now)
         {
-            enemyCredits = StartingEnemyCredits;
+            RtsSkirmishOptions options = GetOptions();
+            enemyCredits = Mathf.Clamp(options.EnemyStartingCredits, 0, MaximumEnemyCredits);
             waveIndex = 0;
-            nextWaveTime = now + OpeningAttackGraceSeconds;
-            nextIdleOrderTime = now + OpeningAttackGraceSeconds;
+            nextWaveTime = now + options.OpeningAttackGraceSeconds;
+            nextIdleOrderTime = now + options.OpeningAttackGraceSeconds;
             nextIncomeTime = now + 5f;
-            nextBuildTime = now + OpeningBuildDelaySeconds;
-            nextProductionTime = now + OpeningProductionDelaySeconds;
+            nextBuildTime = now + options.EnemyBuildDelaySeconds;
+            nextProductionTime = now + options.EnemyProductionDelaySeconds;
         }
 
         private void GrantIncome()
@@ -220,7 +217,7 @@ namespace QuestCommandRTS
                 return;
             }
 
-            int income = BaseIncome + CountLivingEnemyStructures(StructureKind.Refinery) * RefineryIncomeBonus;
+            int income = Mathf.RoundToInt((BaseIncome + CountLivingEnemyStructures(StructureKind.Refinery) * RefineryIncomeBonus) * GetOptions().EnemyIncomeMultiplier);
             enemyCredits = Mathf.Clamp(enemyCredits + income, 0, MaximumEnemyCredits);
         }
 
@@ -433,7 +430,22 @@ namespace QuestCommandRTS
 
         private bool IsOpeningGraceActive()
         {
-            return game != null && game.Clock != null && game.Clock.SimulationTime < OpeningAttackGraceSeconds;
+            return game != null && game.Clock != null && game.Clock.SimulationTime < GetOptions().OpeningAttackGraceSeconds;
+        }
+
+        private float GetBuildInterval()
+        {
+            return BuildInterval * GetOptions().EnemyBuildIntervalMultiplier;
+        }
+
+        private float GetProductionInterval()
+        {
+            return ProductionInterval * GetOptions().EnemyProductionIntervalMultiplier;
+        }
+
+        private RtsSkirmishOptions GetOptions()
+        {
+            return game != null && game.SkirmishOptions != null ? game.SkirmishOptions : RtsSkirmishOptions.CreateDefault();
         }
 
         private int EnemyPowerProvided()

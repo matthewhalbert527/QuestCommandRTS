@@ -38,6 +38,7 @@ namespace QuestCommandRTS
         public RtsRuntimeMode RuntimeMode { get; private set; }
         public QuestTabletopRig QuestRig { get; private set; }
         public EnemyDirector EnemyDirector { get; private set; }
+        public RtsSkirmishOptions SkirmishOptions { get; private set; } = RtsSkirmishOptions.CreateDefault();
         public IReadOnlyList<RtsEntity> Entities => entities;
         public IReadOnlyList<RtsEntity> Selection => selection;
         public IReadOnlyList<ResourceNode> ResourceNodes => resourceNodes;
@@ -425,19 +426,37 @@ namespace QuestCommandRTS
             MatchState = RtsMatchState.Running;
             StatusMessage = "Destroy the enemy base.";
             Clock.SetSimulationTime(0f);
+            ApplySkirmishClockSettings();
             MatchTime = 0f;
-            Resources = new ResourceBank(6200);
+            Resources = new ResourceBank(SkirmishOptions.PlayerStartingCredits);
 
             CreateResourceFields();
             SpawnStartingForces();
             RecalculatePower();
             FogOfWar?.ResetExploration();
+            FogOfWar?.SetFogEnabled(SkirmishOptions.FogOfWarEnabled);
             EnemyDirector?.ResetForNewMatch();
             Lifecycle.SetMatchEnded(false);
             Physics.SyncTransforms();
             EvaluateMatchState();
             SpawnFloatingText("New match", GetPlayerBaseCenter() + Vector3.up * 3f, new Color(0.55f, 0.9f, 1f));
             return true;
+        }
+
+        public void SetSkirmishOptions(RtsSkirmishOptions options)
+        {
+            SkirmishOptions = options != null ? options.Clone() : RtsSkirmishOptions.CreateDefault();
+            SkirmishOptions.Normalize();
+            ApplySkirmishClockSettings();
+            FogOfWar?.SetFogEnabled(SkirmishOptions.FogOfWarEnabled);
+        }
+
+        private void ApplySkirmishClockSettings()
+        {
+            if (Clock != null && SkirmishOptions != null)
+            {
+                Clock.SetTimeScale(SkirmishOptions.GameSpeedMultiplier);
+            }
         }
 
         public void RequestQuit()
@@ -1302,6 +1321,8 @@ namespace QuestCommandRTS
 
             initialized = true;
             Clock = new RtsSimulationClock();
+            SkirmishOptions.Normalize();
+            ApplySkirmishClockSettings();
             if (ProfileSettings == null)
             {
                 ProfileSettings = RtsProfileSettings.CreateDefault();
@@ -1324,7 +1345,7 @@ namespace QuestCommandRTS
             PlayerCommands.Initialize(this);
             CommandDispatcher = new RtsCommandDispatcher();
             CommandDispatcher.Initialize(this);
-            Resources = new ResourceBank(6200);
+            Resources = new ResourceBank(SkirmishOptions.PlayerStartingCredits);
             CreateMaterials();
             CreateRoots();
             if (RuntimeMode == RtsRuntimeMode.Desktop)
@@ -1369,8 +1390,11 @@ namespace QuestCommandRTS
                     matchTime = MatchTime,
                     matchState = MatchState.ToString(),
                     statusMessage = StatusMessage,
+                    skirmishConfigId = SkirmishOptions != null ? SkirmishOptions.ConfigId : "default_skirmish_v1",
+                    difficultyId = SkirmishOptions != null ? SkirmishOptions.DifficultyId : "standard",
                     nextEntityId = nextEntityId,
                     nextResourceNodeId = nextResourceNodeId,
+                    skirmishOptions = SkirmishOptions != null ? SkirmishOptions.Clone() : RtsSkirmishOptions.CreateDefault(),
                     resources = new RtsResourceBankSaveData
                     {
                         credits = Resources != null ? Resources.Credits : 0,
@@ -1429,8 +1453,10 @@ namespace QuestCommandRTS
 
                 nextEntityId = 1;
                 nextResourceNodeId = 1;
+                SetSkirmishOptions(data.skirmishOptions);
                 Resources.SetCreditsForRestore(data.resources != null ? data.resources.credits : 0);
                 Clock.SetSimulationTime(data.matchTime);
+                ApplySkirmishClockSettings();
                 MatchTime = Clock.SimulationTime;
 
                 Dictionary<int, ResourceNode> resourceById = new Dictionary<int, ResourceNode>();
@@ -1543,6 +1569,7 @@ namespace QuestCommandRTS
                 if (FogOfWar != null)
                 {
                     FogOfWar.RestoreState(data.fog);
+                    FogOfWar.SetFogEnabled(SkirmishOptions.FogOfWarEnabled);
                 }
 
                 if (BuildManager != null)
@@ -2046,7 +2073,32 @@ namespace QuestCommandRTS
 
             CreateStructure(RtsTeam.Enemy, StructureKind.CommandCenter, new Vector3(86f, 0f, 78f));
 
+            SpawnPlayerStartingUnits();
+
             SelectEntity(command, false);
+        }
+
+        private void SpawnPlayerStartingUnits()
+        {
+            if (SkirmishOptions == null || SkirmishOptions.startingForces == RtsStartingForcesPreset.FabricationOnly)
+            {
+                return;
+            }
+
+            Vector3 rally = new Vector3(-76f, 0f, -70f);
+            RtsUnit first = CreateUnit(RtsTeam.Player, UnitKind.Rifleman, new Vector3(-80f, 0f, -72f));
+            first.IssueMove(rally + new Vector3(-2f, 0f, 0f));
+            RtsUnit second = CreateUnit(RtsTeam.Player, UnitKind.Rifleman, new Vector3(-78f, 0f, -75f));
+            second.IssueMove(rally + new Vector3(2f, 0f, 0f));
+
+            if (SkirmishOptions.startingForces != RtsStartingForcesPreset.StrikeTeam)
+            {
+                return;
+            }
+
+            CreateUnit(RtsTeam.Player, UnitKind.Grenadier, new Vector3(-82f, 0f, -68f)).IssueMove(rally + new Vector3(-3f, 0f, 3f));
+            CreateUnit(RtsTeam.Player, UnitKind.RocketSoldier, new Vector3(-76f, 0f, -76f)).IssueMove(rally + new Vector3(3f, 0f, 3f));
+            CreateUnit(RtsTeam.Player, UnitKind.LightTank, new Vector3(-72f, 0f, -74f)).IssueMove(rally + new Vector3(0f, 0f, 5f));
         }
 
         private ProductionStructure FindProducer(UnitKind kind, bool selectedOnly)

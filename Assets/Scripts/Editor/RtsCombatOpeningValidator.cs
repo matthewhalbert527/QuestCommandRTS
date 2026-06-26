@@ -41,6 +41,49 @@ namespace QuestCommandRTS.Editor
             }
         }
 
+        [MenuItem("Command RTS/Validate Skirmish Options Pass")]
+        public static void ValidateSkirmishOptionsPass()
+        {
+            RtsRuntimeModeResolver.ForceModeForTests(RtsRuntimeMode.Desktop);
+            GameObject root = new GameObject("Skirmish Options Validation");
+            try
+            {
+                RtsGame game = root.AddComponent<RtsGame>();
+                game.Initialize();
+                RtsHud hud = game.GetComponent<RtsHud>();
+                Require(hud != null, "Desktop HUD present", "Desktop skirmish setup should be driven through the HUD.");
+
+                hud.ShowMainMenuForTests();
+                hud.CycleSkirmishDifficultyForTests();
+                hud.CycleSkirmishCreditsForTests();
+                hud.CycleSkirmishPeaceTimeForTests();
+                hud.CycleSkirmishGameSpeedForTests();
+                hud.CycleSkirmishFogForTests();
+                hud.CycleSkirmishStartingForcesForTests();
+                hud.StartSkirmishFromMainMenuForTests();
+                Physics.SyncTransforms();
+
+                Require(game.SkirmishOptions.difficulty == RtsAiDifficulty.Veteran, "Difficulty option applied", "Cycling once should launch a Veteran AI skirmish.");
+                Require(game.SkirmishOptions.startingCredits == RtsStartingCreditsPreset.High && game.Resources.Credits == 10000, "Credit option applied", "High credits should start the player with 10,000 credits.");
+                Require(game.SkirmishOptions.peaceTime == RtsPeaceTimePreset.FiveMinutes, "Peace-time option applied", "Cycling once should select a five-minute opening peace window.");
+                Require(game.SkirmishOptions.gameSpeed == RtsGameSpeedPreset.Fast && Mathf.Abs(game.Clock.TimeScale - 1.2f) < 0.001f, "Speed option applied", "Fast speed should scale the simulation clock.");
+                Require(game.SkirmishOptions.fog == RtsFogPreset.Revealed && game.FogOfWar != null && !game.FogOfWar.IsEnabled, "Fog option applied", "Revealed fog should disable the fog overlay and enemy hiding.");
+                Require(game.SkirmishOptions.startingForces == RtsStartingForcesPreset.ScoutTeam && CountUnits(game, RtsTeam.Player) == 2, "Starting forces option applied", "Scout team should add two player infantry.");
+                Require(game.EnemyDirector != null && game.EnemyDirector.EnemyCreditsForTests == 3400, "AI economy option applied", "Veteran difficulty should set the enemy opening credits.");
+                Debug.Log("[Command RTS Skirmish] PASS - Desktop setup options change match rules, fog, speed, and starting forces.");
+            }
+            finally
+            {
+                RtsRuntimeModeResolver.ForceModeForTests(null);
+                Object.DestroyImmediate(root);
+                GameObject eventSystem = GameObject.Find("EventSystem");
+                if (eventSystem != null)
+                {
+                    Object.DestroyImmediate(eventSystem);
+                }
+            }
+        }
+
         private static void ValidateOpeningState(RtsGame game)
         {
             Require(CountStructures(game, RtsTeam.Player, StructureKind.CommandCenter) == 1, "Player fabrication start", "Player should start with one fabrication/command structure.");

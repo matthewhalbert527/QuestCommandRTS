@@ -52,6 +52,317 @@ namespace QuestCommandRTS
         DefenseShell
     }
 
+    public enum RtsAiDifficulty
+    {
+        Recruit,
+        Standard,
+        Veteran,
+        Brutal
+    }
+
+    public enum RtsStartingCreditsPreset
+    {
+        Low,
+        Standard,
+        High,
+        Massive
+    }
+
+    public enum RtsPeaceTimePreset
+    {
+        None,
+        TwoMinutes,
+        ThreeMinutes,
+        FiveMinutes
+    }
+
+    public enum RtsGameSpeedPreset
+    {
+        Slow,
+        Normal,
+        Fast
+    }
+
+    public enum RtsFogPreset
+    {
+        Enabled,
+        Revealed
+    }
+
+    public enum RtsStartingForcesPreset
+    {
+        FabricationOnly,
+        ScoutTeam,
+        StrikeTeam
+    }
+
+    [System.Serializable]
+    public sealed class RtsSkirmishOptions
+    {
+        public RtsAiDifficulty difficulty = RtsAiDifficulty.Standard;
+        public RtsStartingCreditsPreset startingCredits = RtsStartingCreditsPreset.Standard;
+        public RtsPeaceTimePreset peaceTime = RtsPeaceTimePreset.ThreeMinutes;
+        public RtsGameSpeedPreset gameSpeed = RtsGameSpeedPreset.Normal;
+        public RtsFogPreset fog = RtsFogPreset.Enabled;
+        public RtsStartingForcesPreset startingForces = RtsStartingForcesPreset.FabricationOnly;
+
+        public static RtsSkirmishOptions CreateDefault()
+        {
+            return new RtsSkirmishOptions();
+        }
+
+        public RtsSkirmishOptions Clone()
+        {
+            RtsSkirmishOptions clone = new RtsSkirmishOptions
+            {
+                difficulty = difficulty,
+                startingCredits = startingCredits,
+                peaceTime = peaceTime,
+                gameSpeed = gameSpeed,
+                fog = fog,
+                startingForces = startingForces
+            };
+            clone.Normalize();
+            return clone;
+        }
+
+        public void Normalize()
+        {
+            if (!System.Enum.IsDefined(typeof(RtsAiDifficulty), difficulty))
+            {
+                difficulty = RtsAiDifficulty.Standard;
+            }
+
+            if (!System.Enum.IsDefined(typeof(RtsStartingCreditsPreset), startingCredits))
+            {
+                startingCredits = RtsStartingCreditsPreset.Standard;
+            }
+
+            if (!System.Enum.IsDefined(typeof(RtsPeaceTimePreset), peaceTime))
+            {
+                peaceTime = RtsPeaceTimePreset.ThreeMinutes;
+            }
+
+            if (!System.Enum.IsDefined(typeof(RtsGameSpeedPreset), gameSpeed))
+            {
+                gameSpeed = RtsGameSpeedPreset.Normal;
+            }
+
+            if (!System.Enum.IsDefined(typeof(RtsFogPreset), fog))
+            {
+                fog = RtsFogPreset.Enabled;
+            }
+
+            if (!System.Enum.IsDefined(typeof(RtsStartingForcesPreset), startingForces))
+            {
+                startingForces = RtsStartingForcesPreset.FabricationOnly;
+            }
+        }
+
+        public int PlayerStartingCredits
+        {
+            get
+            {
+                switch (startingCredits)
+                {
+                    case RtsStartingCreditsPreset.Low:
+                        return 4000;
+                    case RtsStartingCreditsPreset.High:
+                        return 10000;
+                    case RtsStartingCreditsPreset.Massive:
+                        return 20000;
+                    default:
+                        return 6200;
+                }
+            }
+        }
+
+        public int EnemyStartingCredits
+        {
+            get
+            {
+                switch (difficulty)
+                {
+                    case RtsAiDifficulty.Recruit:
+                        return 1700;
+                    case RtsAiDifficulty.Veteran:
+                        return 3400;
+                    case RtsAiDifficulty.Brutal:
+                        return 4600;
+                    default:
+                        return 2600;
+                }
+            }
+        }
+
+        public float OpeningAttackGraceSeconds
+        {
+            get
+            {
+                switch (peaceTime)
+                {
+                    case RtsPeaceTimePreset.None:
+                        return 0f;
+                    case RtsPeaceTimePreset.TwoMinutes:
+                        return 120f;
+                    case RtsPeaceTimePreset.FiveMinutes:
+                        return 300f;
+                    default:
+                        return 180f;
+                }
+            }
+        }
+
+        public float EnemyBuildDelaySeconds
+        {
+            get
+            {
+                switch (difficulty)
+                {
+                    case RtsAiDifficulty.Recruit:
+                        return 45f;
+                    case RtsAiDifficulty.Veteran:
+                        return 22f;
+                    case RtsAiDifficulty.Brutal:
+                        return 16f;
+                    default:
+                        return 28f;
+                }
+            }
+        }
+
+        public float EnemyProductionDelaySeconds
+        {
+            get
+            {
+                switch (difficulty)
+                {
+                    case RtsAiDifficulty.Recruit:
+                        return 95f;
+                    case RtsAiDifficulty.Veteran:
+                        return 58f;
+                    case RtsAiDifficulty.Brutal:
+                        return 42f;
+                    default:
+                        return 70f;
+                }
+            }
+        }
+
+        public float EnemyIncomeMultiplier
+        {
+            get
+            {
+                switch (difficulty)
+                {
+                    case RtsAiDifficulty.Recruit:
+                        return 0.75f;
+                    case RtsAiDifficulty.Veteran:
+                        return 1.15f;
+                    case RtsAiDifficulty.Brutal:
+                        return 1.35f;
+                    default:
+                        return 1f;
+                }
+            }
+        }
+
+        public float EnemyBuildIntervalMultiplier
+        {
+            get
+            {
+                switch (difficulty)
+                {
+                    case RtsAiDifficulty.Recruit:
+                        return 1.35f;
+                    case RtsAiDifficulty.Veteran:
+                        return 0.85f;
+                    case RtsAiDifficulty.Brutal:
+                        return 0.68f;
+                    default:
+                        return 1f;
+                }
+            }
+        }
+
+        public float EnemyProductionIntervalMultiplier
+        {
+            get
+            {
+                switch (difficulty)
+                {
+                    case RtsAiDifficulty.Recruit:
+                        return 1.35f;
+                    case RtsAiDifficulty.Veteran:
+                        return 0.86f;
+                    case RtsAiDifficulty.Brutal:
+                        return 0.7f;
+                    default:
+                        return 1f;
+                }
+            }
+        }
+
+        public float EnemyWaveIntervalMultiplier
+        {
+            get
+            {
+                switch (difficulty)
+                {
+                    case RtsAiDifficulty.Recruit:
+                        return 1.25f;
+                    case RtsAiDifficulty.Veteran:
+                        return 0.9f;
+                    case RtsAiDifficulty.Brutal:
+                        return 0.78f;
+                    default:
+                        return 1f;
+                }
+            }
+        }
+
+        public float GameSpeedMultiplier
+        {
+            get
+            {
+                switch (gameSpeed)
+                {
+                    case RtsGameSpeedPreset.Slow:
+                        return 0.85f;
+                    case RtsGameSpeedPreset.Fast:
+                        return 1.2f;
+                    default:
+                        return 1f;
+                }
+            }
+        }
+
+        public bool FogOfWarEnabled => fog == RtsFogPreset.Enabled;
+        public string DifficultyId => difficulty.ToString().ToLowerInvariant();
+        public string ConfigId => "skirmish_" + DifficultyId + "_" + startingCredits.ToString().ToLowerInvariant() + "_" + peaceTime.ToString().ToLowerInvariant();
+
+        public string StartingCreditsLabel => PlayerStartingCredits.ToString("N0");
+        public string PeaceTimeLabel => peaceTime == RtsPeaceTimePreset.None ? "Off" : Mathf.RoundToInt(OpeningAttackGraceSeconds / 60f) + " min";
+        public string GameSpeedLabel => gameSpeed == RtsGameSpeedPreset.Slow ? "Slow" : gameSpeed == RtsGameSpeedPreset.Fast ? "Fast" : "Normal";
+        public string FogLabel => FogOfWarEnabled ? "On" : "Revealed";
+
+        public string StartingForcesLabel
+        {
+            get
+            {
+                switch (startingForces)
+                {
+                    case RtsStartingForcesPreset.ScoutTeam:
+                        return "Scout team";
+                    case RtsStartingForcesPreset.StrikeTeam:
+                        return "Strike team";
+                    default:
+                        return "Fabrication only";
+                }
+            }
+        }
+    }
+
     public struct UnitStats
     {
         public string Name;

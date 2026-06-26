@@ -140,6 +140,36 @@ namespace QuestCommandRTS.Editor
         }
 
         [Test]
+        public void DesktopHudSkirmishOptionsApplyToNewMatch()
+        {
+            RtsGame game = CreateInitializedGame(RtsRuntimeMode.Desktop);
+            RtsHud hud = game.GetComponent<RtsHud>();
+            Assert.IsNotNull(hud);
+
+            hud.ShowMainMenuForTests();
+            hud.CycleSkirmishDifficultyForTests();
+            hud.CycleSkirmishCreditsForTests();
+            hud.CycleSkirmishPeaceTimeForTests();
+            hud.CycleSkirmishGameSpeedForTests();
+            hud.CycleSkirmishFogForTests();
+            hud.CycleSkirmishStartingForcesForTests();
+
+            hud.StartSkirmishFromMainMenuForTests();
+
+            Assert.AreEqual(RtsAiDifficulty.Veteran, game.SkirmishOptions.difficulty);
+            Assert.AreEqual(RtsStartingCreditsPreset.High, game.SkirmishOptions.startingCredits);
+            Assert.AreEqual(RtsPeaceTimePreset.FiveMinutes, game.SkirmishOptions.peaceTime);
+            Assert.AreEqual(RtsGameSpeedPreset.Fast, game.SkirmishOptions.gameSpeed);
+            Assert.AreEqual(RtsFogPreset.Revealed, game.SkirmishOptions.fog);
+            Assert.AreEqual(RtsStartingForcesPreset.ScoutTeam, game.SkirmishOptions.startingForces);
+            Assert.AreEqual(10000, game.Resources.Credits);
+            Assert.AreEqual(3400, game.EnemyDirector.EnemyCreditsForTests);
+            Assert.AreEqual(1.2f, game.Clock.TimeScale, 0.001f);
+            Assert.IsFalse(game.FogOfWar.IsEnabled);
+            Assert.AreEqual(2, CountLivingPlayerUnits(game));
+        }
+
+        [Test]
         public void DesktopInitializationParentsGeneratedCameraLightAndEventSystemUnderRuntimeRoot()
         {
             RtsGame game = CreateInitializedGame(RtsRuntimeMode.Desktop);
@@ -2345,6 +2375,21 @@ namespace QuestCommandRTS.Editor
             }
 
             return false;
+        }
+
+        private static int CountLivingPlayerUnits(RtsGame game)
+        {
+            int count = 0;
+            for (int i = 0; i < game.Entities.Count; i++)
+            {
+                RtsUnit unit = game.Entities[i] as RtsUnit;
+                if (unit != null && unit.Team == RtsTeam.Player && unit.IsAlive)
+                {
+                    count++;
+                }
+            }
+
+            return count;
         }
 
         private static RtsUnit FindSecondPlayerUnit(RtsGame game, UnitKind kind, RtsUnit first)

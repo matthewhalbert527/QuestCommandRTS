@@ -22,6 +22,22 @@ namespace QuestCommandRTS
                 data.schemaVersion = 1;
             }
 
+            if (data.skirmishOptions == null)
+            {
+                data.skirmishOptions = RtsSkirmishOptions.CreateDefault();
+            }
+
+            data.skirmishOptions.Normalize();
+            if (string.IsNullOrEmpty(data.difficultyId))
+            {
+                data.difficultyId = data.skirmishOptions.DifficultyId;
+            }
+
+            if (string.IsNullOrEmpty(data.skirmishConfigId))
+            {
+                data.skirmishConfigId = data.skirmishOptions.ConfigId;
+            }
+
             return true;
         }
     }
