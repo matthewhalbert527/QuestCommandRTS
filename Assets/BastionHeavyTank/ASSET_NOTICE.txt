@@ -1,0 +1,5 @@
+Bastion HT-77 Mammoth asset notice
+
+This package contains original generated geometry, textures, and source code. No third-party game meshes, logos, faction marks, or copied textures are included. The vehicle uses general heavy-tank and classic RTS visual conventions rather than reproducing a specific copyrighted unit.
+
+No warranty is provided. Test shader compatibility, projectile alignment, collision behavior, performance, and platform compliance in your own Unity project before shipping.

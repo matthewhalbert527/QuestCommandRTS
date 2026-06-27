@@ -81,11 +81,18 @@ namespace QuestCommandRTS
             switch (kind)
             {
                 case UnitKind.Rifleman:
+                case UnitKind.RocketSoldier:
+                case UnitKind.Grenadier:
+                case UnitKind.FlameTrooper:
+                case UnitKind.Engineer:
                     return StructureKind == StructureKind.Barracks || StructureKind == StructureKind.CommandCenter;
                 case UnitKind.Harvester:
                     return StructureKind == StructureKind.Refinery || StructureKind == StructureKind.WarFactory || StructureKind == StructureKind.CommandCenter;
                 case UnitKind.Tank:
                     return StructureKind == StructureKind.WarFactory;
+                case UnitKind.Skyraider:
+                case UnitKind.OrcaLifter:
+                    return StructureKind == StructureKind.DualHelipad;
                 default:
                     return false;
             }
@@ -120,6 +127,32 @@ namespace QuestCommandRTS
             UnitStats stats = RtsBalance.GetUnit(activeKind.Value);
             float progress = activeDuration <= 0f ? 1f : 1f - Mathf.Clamp01(activeRemaining / activeDuration);
             return stats.Name + " " + Mathf.RoundToInt(progress * 100f) + "%";
+        }
+
+        public int GetQueuedCount(UnitKind kind)
+        {
+            int count = activeKind.HasValue && activeKind.Value == kind ? 1 : 0;
+            foreach (UnitKind queuedKind in queue)
+            {
+                if (queuedKind == kind)
+                {
+                    count++;
+                }
+            }
+
+            return count;
+        }
+
+        public bool TryGetActiveProgress(UnitKind kind, out float progress)
+        {
+            if (!activeKind.HasValue || activeKind.Value != kind)
+            {
+                progress = 0f;
+                return false;
+            }
+
+            progress = activeDuration <= 0f ? 1f : 1f - Mathf.Clamp01(activeRemaining / activeDuration);
+            return true;
         }
 
         private void StartNextItem()
@@ -174,7 +207,7 @@ namespace QuestCommandRTS
             }
 
             nextAttackTime = Time.time + AttackCooldown;
-            Vector3 aimPoint = target.GroundPosition + Vector3.up * 0.8f;
+            Vector3 aimPoint = target.AimPoint;
 
             if (head != null)
             {
@@ -186,7 +219,7 @@ namespace QuestCommandRTS
             }
 
             target.TakeDamage(Damage, this);
-            RtsGame.Instance.SpawnTracer(transform.position + Vector3.up * 1.4f, aimPoint, Team);
+            RtsGame.Instance.SpawnTracer(transform.position + Vector3.up * 1.4f, aimPoint, Team, UnitKind.Tank);
         }
     }
 }

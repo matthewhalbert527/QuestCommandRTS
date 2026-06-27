@@ -1,0 +1,5 @@
+Bastion Infantry Pack asset notice
+
+This package contains original geometry, textures, and source code generated for the recipient. No third-party game meshes, character models, logos, faction marks, copied textures, or animation files are included. The design uses broad classic RTS and military-science-fiction visual conventions rather than reproducing a specific copyrighted unit.
+
+The included health, aiming, cooldown, and procedural-motion scripts are integration scaffolding. Validate gameplay behavior, accessibility, shader compatibility, collision, animation quality, performance, networking, and platform compliance in your own project before shipping.

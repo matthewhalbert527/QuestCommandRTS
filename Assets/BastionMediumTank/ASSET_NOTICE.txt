@@ -1,0 +1,5 @@
+Bastion MT-12 Rider asset notice
+
+This package contains original geometry, textures, and source code generated for the recipient. No third-party game meshes, logos, faction marks, or copied textures are included. The design uses broad classic RTS and armored-vehicle visual conventions rather than reproducing a specific copyrighted unit.
+
+No warranty is provided. Test shader compatibility, rig alignment, interaction logic, collision behavior, performance, and platform compliance in your own Unity project before shipping.

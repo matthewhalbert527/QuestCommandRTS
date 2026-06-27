@@ -17,3 +17,14 @@ MemoryCaptures/
 sysinfo.txt
 .vs/
 .idea/
+
+# Local Unity Asset Store packages. Keep these out of the public repo unless the
+# repository is made private and the package licenses allow redistribution.
+Assets/Kevin Iglesias/
+Assets/Kevin Iglesias.meta
+Assets/LowPolyMiliteryVehicles/
+Assets/LowPolyMiliteryVehicles.meta
+Assets/ithappy/
+Assets/ithappy.meta
+Assets/Resources/AssetStore/
+Assets/Resources/AssetStore.meta

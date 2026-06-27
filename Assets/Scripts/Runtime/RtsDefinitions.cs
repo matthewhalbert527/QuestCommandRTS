@@ -12,8 +12,14 @@ namespace QuestCommandRTS
     public enum UnitKind
     {
         Rifleman,
+        RocketSoldier,
+        Grenadier,
+        FlameTrooper,
+        Engineer,
         Harvester,
-        Tank
+        Tank,
+        Skyraider,
+        OrcaLifter
     }
 
     public enum StructureKind
@@ -23,7 +29,8 @@ namespace QuestCommandRTS
         Barracks,
         WarFactory,
         PowerPlant,
-        Turret
+        Turret,
+        DualHelipad
     }
 
     public struct UnitStats
@@ -121,10 +128,22 @@ namespace QuestCommandRTS
         {
             switch (kind)
             {
+                case UnitKind.RocketSoldier:
+                    return new UnitStats("Rocket Soldier", 240, 3.4f, 72f, 4.2f, 8.8f, 24f, 1.35f);
+                case UnitKind.Grenadier:
+                    return new UnitStats("Grenadier", 190, 3f, 76f, 4.3f, 6.8f, 18f, 1.05f);
+                case UnitKind.FlameTrooper:
+                    return new UnitStats("Flame Trooper", 260, 3.8f, 92f, 4f, 4.6f, 17f, 0.58f);
+                case UnitKind.Engineer:
+                    return new UnitStats("Engineer", 300, 4f, 58f, 4.7f, 0f, 0f, 1f);
                 case UnitKind.Harvester:
                     return new UnitStats("Harvester", 900, 9f, 180f, 3.4f, 0f, 0f, 1f);
                 case UnitKind.Tank:
                     return new UnitStats("Battle Tank", 800, 7.5f, 230f, 3.0f, 9f, 32f, 1.1f);
+                case UnitKind.Skyraider:
+                    return new UnitStats("Skyraider", 1250, 10.5f, 170f, 6.2f, 8.8f, 24f, 0.7f);
+                case UnitKind.OrcaLifter:
+                    return new UnitStats("Orca Lifter", 1450, 12f, 280f, 4.5f, 7.2f, 18f, 0.9f);
                 default:
                     return new UnitStats("Rifleman", 120, 2.2f, 65f, 4.6f, 7f, 9f, 0.7f);
             }
@@ -144,6 +163,8 @@ namespace QuestCommandRTS
                     return new StructureStats("Power Plant", 300, 3f, 360f, 2.0f, 24, 0);
                 case StructureKind.Turret:
                     return new StructureStats("Guard Turret", 600, 4.5f, 320f, 1.5f, 0, 6);
+                case StructureKind.DualHelipad:
+                    return new StructureStats("Dual Helipad", 1800, 7.5f, 720f, 4.4f, 0, 9);
                 default:
                     return new StructureStats("Command Center", 2500, 0f, 1100f, 3.8f, 12, 0);
             }

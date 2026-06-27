@@ -3,6 +3,14 @@ using UnityEngine;
 
 namespace QuestCommandRTS
 {
+    public sealed class RtsFixedMaterial : MonoBehaviour
+    {
+    }
+
+    public sealed class RtsPreserveImportedMaterial : MonoBehaviour
+    {
+    }
+
     [DisallowMultipleComponent]
     public class RtsEntity : MonoBehaviour
     {
@@ -16,6 +24,7 @@ namespace QuestCommandRTS
         public bool IsSelected { get; private set; }
         public float HealthPercent => MaxHealth <= 0f ? 0f : Mathf.Clamp01(Health / MaxHealth);
         public Vector3 GroundPosition => new Vector3(transform.position.x, 0f, transform.position.z);
+        public virtual Vector3 AimPoint => GroundPosition + Vector3.up * 0.8f;
 
         public event Action<RtsEntity> Destroyed;
 
@@ -105,6 +114,11 @@ namespace QuestCommandRTS
         protected virtual void Die(RtsEntity attacker)
         {
             Destroyed?.Invoke(this);
+            if (RtsGame.HasInstance)
+            {
+                RtsGame.Instance.SpawnExplosion(GroundPosition + Vector3.up * 0.35f, SelectionRadius + 0.9f);
+            }
+
             CreateDeathMarker();
             Destroy(gameObject);
         }
@@ -169,7 +183,7 @@ namespace QuestCommandRTS
 
             foreach (Renderer renderer in renderers)
             {
-                if (renderer == selectionRing)
+                if (renderer == selectionRing || renderer.GetComponentInParent<RtsFixedMaterial>() != null)
                 {
                     continue;
                 }

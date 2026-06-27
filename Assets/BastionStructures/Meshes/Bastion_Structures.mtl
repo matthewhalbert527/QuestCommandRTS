@@ -1,0 +1,9 @@
+# Shared one-material palette for all Bastion base structures.
+newmtl BastionPalette
+Ka 0.120000 0.120000 0.120000
+Kd 1.000000 1.000000 1.000000
+Ks 0.120000 0.120000 0.120000
+Ns 30.000000
+d 1.000000
+illum 2
+map_Kd ../Textures/Bastion_Structures_Palette.png

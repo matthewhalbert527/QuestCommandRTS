@@ -1,0 +1,1 @@
+This pack contains original generated geometry, palette textures, and source code. It uses broad military RTS and industrial building conventions and does not reproduce a specific copyrighted game asset, logo, or faction mark. Test collision, balance values, shader compatibility, and target-device performance before shipping.

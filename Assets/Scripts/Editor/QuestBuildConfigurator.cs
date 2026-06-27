@@ -1,5 +1,8 @@
 #if UNITY_EDITOR
+using System.IO;
 using UnityEditor;
+using UnityEditor.Build;
+using UnityEditor.Build.Reporting;
 using UnityEditor.SceneManagement;
 using UnityEngine;
 
@@ -36,6 +39,49 @@ namespace QuestCommandRTS.Editor
 
             AssetDatabase.SaveAssets();
             Debug.Log("Quest RTS Android settings applied. Enable OpenXR for Android in Project Settings > XR Plug-in Management before building to a Quest headset.");
+        }
+
+        [MenuItem("Quest RTS/Build Windows Standalone")]
+        public static void BuildWindowsStandalone()
+        {
+            const string outputDirectory = "Builds/WindowsStandalone";
+            const string outputPath = outputDirectory + "/QuestCommandRTS.exe";
+
+            EditorUserBuildSettings.SwitchActiveBuildTarget(BuildTargetGroup.Standalone, BuildTarget.StandaloneWindows64);
+
+            PlayerSettings.companyName = "Codex Prototype";
+            PlayerSettings.productName = "Quest Command RTS";
+            PlayerSettings.SetApplicationIdentifier(BuildTargetGroup.Standalone, "com.codex.questcommandrts");
+            PlayerSettings.SetScriptingBackend(BuildTargetGroup.Standalone, ScriptingImplementation.Mono2x);
+            PlayerSettings.colorSpace = ColorSpace.Linear;
+
+            EditorBuildSettings.scenes = new[]
+            {
+                new EditorBuildSettingsScene(ScenePath, true)
+            };
+
+            if (Directory.Exists(outputDirectory))
+            {
+                Directory.Delete(outputDirectory, true);
+            }
+
+            Directory.CreateDirectory(outputDirectory);
+
+            BuildReport report = BuildPipeline.BuildPlayer(new BuildPlayerOptions
+            {
+                scenes = new[] { ScenePath },
+                locationPathName = outputPath,
+                target = BuildTarget.StandaloneWindows64,
+                targetGroup = BuildTargetGroup.Standalone,
+                options = BuildOptions.None
+            });
+
+            if (report.summary.result != BuildResult.Succeeded)
+            {
+                throw new BuildFailedException("Windows standalone build failed: " + report.summary.result);
+            }
+
+            Debug.Log("Quest RTS Windows standalone build written to " + outputPath);
         }
     }
 }

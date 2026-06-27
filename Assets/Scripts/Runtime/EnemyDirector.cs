@@ -60,6 +60,18 @@ namespace QuestCommandRTS
                 tank.IssueAttack(target);
             }
 
+            if (waveIndex % 3 == 0)
+            {
+                RtsUnit skyraider = game.CreateUnit(RtsTeam.Enemy, UnitKind.Skyraider, new Vector3(23f + Random.Range(-3f, 3f), 0f, 20f + Random.Range(-2f, 2f)));
+                skyraider.IssueAttack(target);
+            }
+
+            if (waveIndex % 5 == 0)
+            {
+                RtsUnit lifter = game.CreateUnit(RtsTeam.Enemy, UnitKind.OrcaLifter, new Vector3(27f + Random.Range(-2f, 2f), 0f, 20f + Random.Range(-2f, 2f)));
+                lifter.IssueAttack(target);
+            }
+
             game.SpawnFloatingText("Enemy wave", new Vector3(20f, 0f, 16f) + Vector3.up * 3f, new Color(1f, 0.5f, 0.35f));
         }
 

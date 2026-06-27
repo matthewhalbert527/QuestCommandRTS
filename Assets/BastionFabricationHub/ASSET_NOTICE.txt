@@ -1,0 +1,1 @@
+Original generated geometry and code. The asset uses broad military/industrial RTS conventions and does not reproduce a specific copyrighted building, logo, or faction mark. Validate gameplay scale, collision, materials, and target-device performance before shipping.

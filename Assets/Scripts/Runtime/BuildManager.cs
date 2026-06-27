@@ -5,10 +5,14 @@ namespace QuestCommandRTS
     public sealed class BuildManager : MonoBehaviour
     {
         public bool IsPlacing => preview != null;
+        public bool IsConstructing => activeKind.HasValue;
         public StructureKind PendingKind => pendingKind;
 
         private RtsGame game;
         private StructureKind pendingKind;
+        private StructureKind? activeKind;
+        private float activeRemaining;
+        private float activeDuration;
         private GameObject preview;
         private Vector3 placementPoint;
         private bool placementValid;
@@ -18,20 +22,66 @@ namespace QuestCommandRTS
             game = owner;
         }
 
+        private void Update()
+        {
+            if (game == null || !activeKind.HasValue)
+            {
+                return;
+            }
+
+            float powerMultiplier = game.Resources != null && game.Resources.HasLowPower ? 0.45f : 1f;
+            activeRemaining -= Time.deltaTime * powerMultiplier;
+            if (activeRemaining > 0f)
+            {
+                return;
+            }
+
+            StructureKind completed = activeKind.Value;
+            activeKind = null;
+            BeginReadyPlacement(completed);
+            StructureStats stats = RtsBalance.GetStructure(completed);
+            game.SpawnFloatingText(stats.Name + " ready", game.GetPlayerBaseCenter() + Vector3.up * 2f, Color.white);
+        }
+
         public bool BeginPlacement(StructureKind kind)
         {
+            return QueueStructure(kind);
+        }
+
+        public bool QueueStructure(StructureKind kind)
+        {
             StructureStats stats = RtsBalance.GetStructure(kind);
-            if (!game.Resources.CanAfford(stats.Cost))
+            if (IsPlacing)
+            {
+                game.SpawnFloatingText("Place current building", game.GetPlayerBaseCenter() + Vector3.up * 2f, Color.yellow);
+                return false;
+            }
+
+            if (activeKind.HasValue)
+            {
+                game.SpawnFloatingText("Construction busy", game.GetPlayerBaseCenter() + Vector3.up * 2f, Color.yellow);
+                return false;
+            }
+
+            if (!game.Resources.TrySpend(stats.Cost))
             {
                 game.SpawnFloatingText("Need credits", game.GetPlayerBaseCenter() + Vector3.up * 2f, Color.yellow);
                 return false;
             }
 
+            activeKind = kind;
+            activeDuration = Mathf.Max(0.1f, stats.BuildTime);
+            activeRemaining = activeDuration;
+            game.SpawnFloatingText(stats.Name, game.GetPlayerBaseCenter() + Vector3.up * 2f, Color.white);
+            return true;
+        }
+
+        private void BeginReadyPlacement(StructureKind kind)
+        {
             CancelPlacement();
             pendingKind = kind;
             preview = game.CreateStructurePreview(kind);
             placementValid = false;
-            return true;
         }
 
         public void CancelPlacement()
@@ -78,16 +128,44 @@ namespace QuestCommandRTS
                 return false;
             }
 
-            StructureStats stats = RtsBalance.GetStructure(pendingKind);
-            if (!game.Resources.TrySpend(stats.Cost))
-            {
-                game.SpawnFloatingText("Need credits", placementPoint + Vector3.up * 2f, Color.yellow);
-                return false;
-            }
-
             game.CreateStructure(RtsTeam.Player, pendingKind, placementPoint);
             CancelPlacement();
             return true;
+        }
+
+        public bool CanStartStructure(StructureKind kind)
+        {
+            if (game == null || game.Resources == null || IsPlacing || activeKind.HasValue)
+            {
+                return false;
+            }
+
+            return game.Resources.CanAfford(RtsBalance.GetStructure(kind).Cost);
+        }
+
+        public bool IsStructureBuilding(StructureKind kind)
+        {
+            return activeKind.HasValue && activeKind.Value == kind;
+        }
+
+        public bool IsPlacementReady(StructureKind kind)
+        {
+            return IsPlacing && pendingKind == kind;
+        }
+
+        public float GetStructureBuildProgress(StructureKind kind)
+        {
+            if (!IsStructureBuilding(kind))
+            {
+                return 0f;
+            }
+
+            return activeDuration <= 0f ? 1f : 1f - Mathf.Clamp01(activeRemaining / activeDuration);
+        }
+
+        public int GetStructureQueuedCount(StructureKind kind)
+        {
+            return IsStructureBuilding(kind) || IsPlacementReady(kind) ? 1 : 0;
         }
 
         private bool CanPlaceAt(Vector3 point, StructureKind kind)
