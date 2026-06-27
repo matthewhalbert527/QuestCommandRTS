@@ -632,6 +632,55 @@ namespace QuestCommandRTS.Editor
         }
 
         [Test]
+        public void UnitMovementSpeedReflectsLocomotionAndSize()
+        {
+            RtsGame game = CreateInitializedGame(RtsRuntimeMode.Desktop);
+            RtsUnit humvee = game.CreateUnit(RtsTeam.Player, UnitKind.Humvee, new Vector3(-96f, 0f, -96f));
+            RtsUnit apc = game.CreateUnit(RtsTeam.Player, UnitKind.Apc, new Vector3(-88f, 0f, -96f));
+            RtsUnit engineer = game.CreateUnit(RtsTeam.Player, UnitKind.Engineer, new Vector3(-80f, 0f, -96f));
+            RtsUnit rifleman = game.CreateUnit(RtsTeam.Player, UnitKind.Rifleman, new Vector3(-72f, 0f, -96f));
+            RtsUnit rocket = game.CreateUnit(RtsTeam.Player, UnitKind.RocketSoldier, new Vector3(-64f, 0f, -96f));
+            RtsUnit lightTank = game.CreateUnit(RtsTeam.Player, UnitKind.LightTank, new Vector3(-56f, 0f, -96f));
+            RtsUnit mediumTank = game.CreateUnit(RtsTeam.Player, UnitKind.MediumTank, new Vector3(-48f, 0f, -96f));
+            RtsUnit harvester = game.CreateUnit(RtsTeam.Player, UnitKind.Harvester, new Vector3(-40f, 0f, -96f));
+            RtsUnit heavyTank = game.CreateUnit(RtsTeam.Player, UnitKind.HeavyTank, new Vector3(-32f, 0f, -96f));
+
+            RtsUnit[] units = { humvee, apc, engineer, rifleman, rocket, lightTank, mediumTank, harvester, heavyTank };
+            Vector3[] starts = new Vector3[units.Length];
+            for (int i = 0; i < units.Length; i++)
+            {
+                starts[i] = units[i].transform.position;
+                units[i].IssueMove(starts[i] + Vector3.forward * 70f);
+            }
+
+            for (int tick = 0; tick < 50; tick++)
+            {
+                for (int i = 0; i < units.Length; i++)
+                {
+                    units[i].TickOrdersForTests(0.1f);
+                }
+            }
+
+            float humveeDistance = PlanarDistance(starts[0], humvee.transform.position);
+            float apcDistance = PlanarDistance(starts[1], apc.transform.position);
+            float engineerDistance = PlanarDistance(starts[2], engineer.transform.position);
+            float riflemanDistance = PlanarDistance(starts[3], rifleman.transform.position);
+            float rocketDistance = PlanarDistance(starts[4], rocket.transform.position);
+            float lightDistance = PlanarDistance(starts[5], lightTank.transform.position);
+            float mediumDistance = PlanarDistance(starts[6], mediumTank.transform.position);
+            float harvesterDistance = PlanarDistance(starts[7], harvester.transform.position);
+            float heavyDistance = PlanarDistance(starts[8], heavyTank.transform.position);
+
+            Assert.Greater(humveeDistance, apcDistance, "A light wheeled Humvee should cross the map faster than the larger APC.");
+            Assert.Greater(apcDistance, engineerDistance, "Wheeled vehicles should outrun foot infantry over open ground.");
+            Assert.Greater(engineerDistance, riflemanDistance, "The lightly equipped engineer should move faster than combat infantry.");
+            Assert.Greater(riflemanDistance, rocketDistance, "Heavy weapon infantry should trail riflemen.");
+            Assert.Greater(lightDistance, mediumDistance, "Light tanks should be faster than medium tanks.");
+            Assert.Greater(mediumDistance, harvesterDistance, "Combat tanks should outrun industrial harvesters.");
+            Assert.Greater(harvesterDistance, heavyDistance, "Harvesters should still edge out the heaviest armor in sustained movement.");
+        }
+
+        [Test]
         public void ImportedModelPalettesAreNotOverriddenByTeamTint()
         {
             RtsGame game = CreateInitializedGame(RtsRuntimeMode.Desktop);
@@ -946,6 +995,7 @@ namespace QuestCommandRTS.Editor
             AssertUnitCardTextureExists("RocketSoldier");
             AssertUnitCardTextureExists("FlameTrooper");
             AssertUnitCardTextureExists("Engineer");
+            AssertUnitCardTextureExists("Harvester");
             AssertUnitCardTextureExists("LightTank");
             AssertUnitCardTextureExists("MediumTank");
             AssertUnitCardTextureExists("HeavyTank");
@@ -962,7 +1012,86 @@ namespace QuestCommandRTS.Editor
                 }
             }
 
-            Assert.GreaterOrEqual(cardImageCount, 8, "The unit sidebar should use imported unit card art for the first artwork batch.");
+            Assert.GreaterOrEqual(cardImageCount, 9, "The unit sidebar should use imported unit card art for units that have supplied artwork.");
+        }
+
+        [Test]
+        public void DesktopBuildSidebarUsesImportedStructureCardArtwork()
+        {
+            CreateInitializedGame(RtsRuntimeMode.Desktop);
+
+            AssertStructureCardTextureExists("CommandCenter");
+            AssertStructureCardTextureExists("Barracks");
+            AssertStructureCardTextureExists("WarFactory");
+            AssertStructureCardTextureExists("Refinery");
+            AssertStructureCardTextureExists("PowerPlant");
+            AssertStructureCardTextureExists("Turret");
+            AssertStructureCardTextureExists("GunTower");
+            AssertStructureCardTextureExists("AdvancedGunTower");
+            AssertStructureCardTextureExists("LargePowerPlant");
+            AssertStructureCardTextureExists("CommCenter");
+            AssertStructureCardTextureExists("RepairBay");
+            AssertStructureCardTextureExists("Mash");
+            AssertStructureCardTextureExists("TechCenter");
+
+            Image[] images = Object.FindObjectsOfType<Image>(true);
+            int cardImageCount = 0;
+            for (int i = 0; i < images.Length; i++)
+            {
+                if (images[i] != null && images[i].name == "Structure Build Photo" && images[i].sprite != null)
+                {
+                    cardImageCount++;
+                }
+            }
+
+            Assert.GreaterOrEqual(cardImageCount, 7, "The build sidebar should use imported photos for every currently buildable structure tile.");
+        }
+
+        [Test]
+        public void DesktopProductionSidebarShowsClockProgressAndQueueCount()
+        {
+            RtsGame game = CreateInitializedGame(RtsRuntimeMode.Desktop);
+            EnsurePlayerStructure(game, StructureKind.Barracks, new Vector3(-68f, 0f, -68f));
+            ProductionStructure barracks = FindPlayerProduction(game, StructureKind.Barracks);
+            game.ClearSelection();
+            game.SelectEntity(barracks, false);
+
+            barracks.RestoreProductionState(new RtsProductionSaveData
+            {
+                hasActiveProduction = true,
+                activeKind = UnitKind.Rifleman.ToString(),
+                activeDuration = 4f,
+                activeRemaining = 2f
+            });
+
+            RtsHud hud = game.GetComponent<RtsHud>();
+            Assert.IsNotNull(hud);
+            hud.ShowUnitsTabForScreenshot();
+
+            Image[] images = Object.FindObjectsOfType<Image>(true);
+            bool foundClock = false;
+            for (int i = 0; i < images.Length; i++)
+            {
+                if (images[i] != null && images[i].name == "Production Clock Fill" && images[i].gameObject.activeInHierarchy && images[i].fillAmount > 0.45f)
+                {
+                    foundClock = true;
+                    break;
+                }
+            }
+
+            Text[] texts = Object.FindObjectsOfType<Text>(true);
+            bool foundQueueBadge = false;
+            for (int i = 0; i < texts.Length; i++)
+            {
+                if (texts[i] != null && texts[i].name == "Production Queue Badge Text" && texts[i].gameObject.activeInHierarchy && texts[i].text == "x1")
+                {
+                    foundQueueBadge = true;
+                    break;
+                }
+            }
+
+            Assert.IsTrue(foundClock, "The active production tile should show a radial clock-style progress overlay.");
+            Assert.IsTrue(foundQueueBadge, "The active production tile should show the count of queued/active copies.");
         }
 
         [Test]
@@ -1534,6 +1663,34 @@ namespace QuestCommandRTS.Editor
         }
 
         [Test]
+        public void NewRefinerySpawnsAssignedHarvesterThatMines()
+        {
+            RtsGame game = CreateInitializedGame(RtsRuntimeMode.Desktop);
+            ResourceNode resource = game.ResourceNodes[0];
+            Vector3 refineryPosition = resource.transform.position + new Vector3(7f, 0f, 0f);
+            int startingHarvesters = CountPlayerUnits(game, UnitKind.Harvester);
+            int startingOre = resource.Amount;
+
+            RefineryStructure refinery = game.CreateStructure(RtsTeam.Player, StructureKind.Refinery, refineryPosition) as RefineryStructure;
+            Physics.SyncTransforms();
+
+            Assert.IsNotNull(refinery);
+            Assert.AreEqual(startingHarvesters + 1, CountPlayerUnits(game, UnitKind.Harvester));
+            HarvesterUnit harvester = FindPlayerUnit(game, UnitKind.Harvester) as HarvesterUnit;
+            Assert.IsNotNull(harvester);
+            Assert.AreSame(refinery, harvester.HomeRefineryForTests);
+            Assert.AreSame(resource, harvester.TargetResourceNodeForTests);
+
+            for (int i = 0; i < 500 && harvester.Cargo <= 0; i++)
+            {
+                harvester.TickHarvesterForTests(0.1f);
+            }
+
+            Assert.Greater(harvester.Cargo, 0);
+            Assert.Less(resource.Amount, startingOre);
+        }
+
+        [Test]
         public void QuestControllerMapsTriggerSelectionAndAdditiveModifier()
         {
             RtsGame game = CreateInitializedGame(RtsRuntimeMode.QuestVr);
@@ -2019,6 +2176,9 @@ namespace QuestCommandRTS.Editor
             Assert.IsTrue(game.PlayerCommands.ConfirmConstructionPlacement());
 
             Assert.AreEqual(startingCredits - RtsBalance.GetStructure(StructureKind.PowerPlant).Cost, game.Resources.Credits);
+            Assert.AreEqual(startingPowerPlants, CountPlayerStructures(game, StructureKind.PowerPlant));
+            Assert.AreEqual(1, game.BuildManager.ActiveConstructionCount);
+            TickConstructionUntilComplete(game, RtsBalance.GetStructure(StructureKind.PowerPlant).BuildTime + 0.5f);
             Assert.AreEqual(startingPowerPlants + 1, CountPlayerStructures(game, StructureKind.PowerPlant));
 
             int creditsAfterConfirm = game.Resources.Credits;
@@ -2094,6 +2254,39 @@ namespace QuestCommandRTS.Editor
             Assert.IsTrue(game.PlayerCommands.CancelLastQueuedProduction());
             Assert.AreEqual(startingCredits, game.Resources.Credits);
             Assert.AreEqual(0, barracks.PendingQueueCount);
+        }
+
+        [Test]
+        public void ProductionQueuePreservesClickedOrderAndUsesCostScaledDurations()
+        {
+            RtsGame game = CreateInitializedGame(RtsRuntimeMode.Desktop);
+            EnsurePlayerStructure(game, StructureKind.Barracks, new Vector3(-68f, 0f, -68f));
+            ProductionStructure barracks = FindPlayerProduction(game, StructureKind.Barracks);
+            game.ClearSelection();
+            game.SelectEntity(barracks, false);
+
+            Assert.IsTrue(game.PlayerCommands.QueueProduction(UnitKind.Rifleman));
+            Assert.IsTrue(game.PlayerCommands.QueueProduction(UnitKind.Grenadier));
+            Assert.IsTrue(game.PlayerCommands.QueueProduction(UnitKind.Engineer));
+
+            UnitKind queuedKind;
+            Assert.IsTrue(barracks.TryGetQueuedUnit(0, out queuedKind));
+            Assert.AreEqual(UnitKind.Rifleman, queuedKind);
+            Assert.IsTrue(barracks.TryGetQueuedUnit(1, out queuedKind));
+            Assert.AreEqual(UnitKind.Grenadier, queuedKind);
+            Assert.IsTrue(barracks.TryGetQueuedUnit(2, out queuedKind));
+            Assert.AreEqual(UnitKind.Engineer, queuedKind);
+
+            barracks.StartNextProductionForTests();
+
+            Assert.AreEqual(UnitKind.Rifleman, barracks.ActiveProductionKind);
+            Assert.AreEqual(2, barracks.PendingQueueCount);
+            Assert.IsTrue(barracks.TryGetQueuedUnit(0, out queuedKind));
+            Assert.AreEqual(UnitKind.Grenadier, queuedKind);
+
+            Assert.Less(RtsBalance.GetUnitBuildTime(UnitKind.Rifleman), RtsBalance.GetUnitBuildTime(UnitKind.Grenadier));
+            Assert.Less(RtsBalance.GetUnitBuildTime(UnitKind.Grenadier), RtsBalance.GetUnitBuildTime(UnitKind.Engineer));
+            Assert.Less(RtsBalance.GetUnitBuildTime(UnitKind.LightTank), RtsBalance.GetUnitBuildTime(UnitKind.HeavyTank));
         }
 
         [Test]
@@ -2191,6 +2384,9 @@ namespace QuestCommandRTS.Editor
 
             Assert.IsFalse(game.BuildManager.IsPlacing);
             Assert.AreEqual(startingCredits - cost, game.Resources.Credits);
+            Assert.AreEqual(startingPowerPlants, CountPlayerStructures(game, StructureKind.PowerPlant));
+            Assert.AreEqual(1, game.BuildManager.ActiveConstructionCount);
+            TickConstructionUntilComplete(game, RtsBalance.GetStructure(StructureKind.PowerPlant).BuildTime + 0.5f);
             Assert.AreEqual(startingPowerPlants + 1, CountPlayerStructures(game, StructureKind.PowerPlant));
         }
 
@@ -2547,6 +2743,21 @@ namespace QuestCommandRTS.Editor
             Assert.AreEqual(512, texture.height, "Unit card artwork should be resized for HUD use.");
         }
 
+        private static void AssertStructureCardTextureExists(string resourceName)
+        {
+            Texture2D texture = Resources.Load<Texture2D>("HudArt/Structures/" + resourceName);
+            Assert.IsNotNull(texture, "Missing imported structure card artwork " + resourceName);
+            Assert.AreEqual(512, texture.width, "Structure card artwork should be resized for HUD use.");
+            Assert.AreEqual(512, texture.height, "Structure card artwork should be resized for HUD use.");
+        }
+
+        private static float PlanarDistance(Vector3 a, Vector3 b)
+        {
+            a.y = 0f;
+            b.y = 0f;
+            return Vector3.Distance(a, b);
+        }
+
         private static void AssertPbrPart(Transform root, string partName, string expectedTextureName, float minimumMetallic, float minimumSmoothness, bool requiresNormalMap)
         {
             Transform part = FindDescendant(root, partName);
@@ -2737,6 +2948,21 @@ namespace QuestCommandRTS.Editor
             return count;
         }
 
+        private static int CountPlayerUnits(RtsGame game, UnitKind kind)
+        {
+            int count = 0;
+            for (int i = 0; i < game.Entities.Count; i++)
+            {
+                RtsUnit unit = game.Entities[i] as RtsUnit;
+                if (unit != null && unit.Team == RtsTeam.Player && unit.IsAlive && unit.UnitKind == kind)
+                {
+                    count++;
+                }
+            }
+
+            return count;
+        }
+
         private static RtsUnit FindSecondPlayerUnit(RtsGame game, UnitKind kind, RtsUnit first)
         {
             for (int i = 0; i < game.Entities.Count; i++)
@@ -2834,6 +3060,17 @@ namespace QuestCommandRTS.Editor
                     projectiles[i].TickProjectileForTests(deltaTime);
                 }
             }
+        }
+
+        private static void TickConstructionUntilComplete(RtsGame game, float seconds)
+        {
+            int ticks = Mathf.CeilToInt(seconds / 0.1f);
+            for (int i = 0; i < ticks && game.BuildManager.ActiveConstructionCount > 0; i++)
+            {
+                game.BuildManager.TickConstructionsForTests(0.1f);
+            }
+
+            Physics.SyncTransforms();
         }
 
         private static RtsStructure EnsurePlayerStructure(RtsGame game, StructureKind kind, Vector3 position)

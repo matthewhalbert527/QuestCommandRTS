@@ -143,6 +143,17 @@ namespace QuestCommandRTS
         public string structureKind;
         public bool hasPlacementPoint;
         public Vector3Data placementPoint;
+        public List<RtsPendingConstructionSaveData> constructions = new List<RtsPendingConstructionSaveData>();
+    }
+
+    [Serializable]
+    public sealed class RtsPendingConstructionSaveData
+    {
+        public string team;
+        public string structureKind;
+        public Vector3Data position;
+        public float remaining;
+        public float duration;
     }
 
     [Serializable]

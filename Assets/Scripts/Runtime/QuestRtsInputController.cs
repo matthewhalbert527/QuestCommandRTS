@@ -51,6 +51,7 @@ namespace QuestCommandRTS
         private readonly Color moveColor = new Color(0.3f, 0.88f, 1f, 0.95f);
         private readonly Color attackColor = new Color(1f, 0.32f, 0.22f, 0.95f);
         private readonly Color harvestColor = new Color(0.25f, 1f, 0.48f, 0.95f);
+        private readonly Color guardColor = new Color(0.75f, 1f, 0.45f, 0.95f);
         private readonly Color rallyColor = new Color(0.55f, 0.95f, 1f, 0.95f);
         private readonly Color uiColor = new Color(0.72f, 0.92f, 1f, 0.95f);
         private readonly Color invalidColor = new Color(0.55f, 0.6f, 0.62f, 0.65f);
@@ -173,7 +174,7 @@ namespace QuestCommandRTS
                 {
                     RaycastHit hit;
                     bool hasHit = dispatcher.TryGetPointerHit(frame.PointerRay, settings.RayLengthSimulationUnits, out hit);
-                    UpdatePointer(frame.PointerRay, hasHit, hit);
+                    UpdatePointer(frame.PointerRay, hasHit, hit, frame.SecondaryButtonHeld);
                 }
             }
 
@@ -208,7 +209,7 @@ namespace QuestCommandRTS
                 return placementResult;
             }
 
-            if (secondaryDown)
+            if (secondaryDown && !frame.PrimaryButtonHeld)
             {
                 if (frame.LeftTriggerHeld)
                 {
@@ -230,7 +231,11 @@ namespace QuestCommandRTS
 
             if (primaryDown && !uiCaptured)
             {
-                if (frame.LeftTriggerHeld)
+                if (frame.SecondaryButtonHeld)
+                {
+                    result = dispatcher.GuardFromRay(frame.PointerRay, settings.RayLengthSimulationUnits);
+                }
+                else if (frame.LeftTriggerHeld)
                 {
                     result = dispatcher.AttackMoveFromRay(frame.PointerRay, settings.RayLengthSimulationUnits);
                 }
@@ -252,6 +257,11 @@ namespace QuestCommandRTS
         }
 
         private void UpdatePointer(Ray ray, bool hasHit, RaycastHit hit)
+        {
+            UpdatePointer(ray, hasHit, hit, false);
+        }
+
+        private void UpdatePointer(Ray ray, bool hasHit, RaycastHit hit, bool guardHeld)
         {
             if (pointerLine == null)
             {
@@ -281,7 +291,7 @@ namespace QuestCommandRTS
 
             reticle.position = hit.point;
             reticle.localScale = Vector3.one * settings.ReticleSizeMeters;
-            SetPointerColor(GetPointerColor(dispatcher.ResolveContextCommand(hit)));
+            SetPointerColor(guardHeld ? guardColor : GetPointerColor(dispatcher.ResolveContextCommand(hit)));
         }
 
         private void UpdatePointer(Ray ray, bool hasHit, Vector3 hitPoint, Color color)

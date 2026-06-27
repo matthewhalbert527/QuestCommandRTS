@@ -337,6 +337,16 @@ namespace QuestCommandRTS
                 {
                     return selectedProducer.CanTrain(kind) ? string.Empty : "Select War Factory";
                 }
+
+                if (RtsBalance.IsAircraft(kind))
+                {
+                    return selectedProducer.CanTrain(kind) ? string.Empty : "Select Helipad";
+                }
+            }
+
+            if (RtsBalance.IsAircraft(kind))
+            {
+                return HasAnyPlayerProducerFor(kind) ? "Select Helipad" : "Needs Helipad";
             }
 
             if (RtsBalance.IsVehicle(kind))

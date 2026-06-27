@@ -29,7 +29,9 @@ namespace QuestCommandRTS
         FlameTrooper,
         Engineer,
         Humvee,
-        Apc
+        Apc,
+        Skyraider,
+        OrcaLifter
     }
 
     public enum StructureKind
@@ -41,7 +43,8 @@ namespace QuestCommandRTS
         PowerPlant,
         Turret,
         GunTower,
-        AdvancedGunTower
+        AdvancedGunTower,
+        DualHelipad
     }
 
     public enum RtsProjectileKind
@@ -466,29 +469,74 @@ namespace QuestCommandRTS
             switch (kind)
             {
                 case UnitKind.Grenadier:
-                    return new UnitStats("Grenadier", 220, 3.6f, 72f, 4.15f, 6.5f, 20f, 1.35f);
+                    return new UnitStats("Grenadier", 220, 3.6f, 72f, GetUnitMoveSpeed(UnitKind.Grenadier), 6.5f, 20f, 1.35f);
                 case UnitKind.RocketSoldier:
-                    return new UnitStats("Rocket Soldier", 320, 4.8f, 76f, 3.9f, 11.5f, 34f, 1.75f);
+                    return new UnitStats("Rocket Soldier", 320, 4.8f, 76f, GetUnitMoveSpeed(UnitKind.RocketSoldier), 11.5f, 34f, 1.75f);
                 case UnitKind.FlameTrooper:
-                    return new UnitStats("Flame Trooper", 260, 4.0f, 86f, 3.75f, 4.2f, 12f, 0.5f);
+                    return new UnitStats("Flame Trooper", 260, 4.0f, 86f, GetUnitMoveSpeed(UnitKind.FlameTrooper), 4.2f, 12f, 0.5f);
                 case UnitKind.Engineer:
-                    return new UnitStats("Engineer", 300, 4.5f, 60f, 4.35f, 0f, 0f, 1f);
+                    return new UnitStats("Engineer", 300, 4.5f, 60f, GetUnitMoveSpeed(UnitKind.Engineer), 0f, 0f, 1f);
                 case UnitKind.Harvester:
-                    return new UnitStats("Harvester", 900, 9f, 180f, 3.4f, 0f, 0f, 1f);
+                    return new UnitStats("Harvester", 900, 9f, 180f, GetUnitMoveSpeed(UnitKind.Harvester), 0f, 0f, 1f);
                 case UnitKind.Humvee:
-                    return new UnitStats("Humvee", 520, 5.6f, 135f, 5.25f, 8.8f, 7f, 0.22f);
+                    return new UnitStats("Humvee", 520, 5.6f, 135f, GetUnitMoveSpeed(UnitKind.Humvee), 8.8f, 7f, 0.22f);
                 case UnitKind.Apc:
-                    return new UnitStats("APC", 720, 6.8f, 225f, 4.15f, 8.6f, 12f, 0.34f);
+                    return new UnitStats("APC", 720, 6.8f, 225f, GetUnitMoveSpeed(UnitKind.Apc), 8.6f, 12f, 0.34f);
                 case UnitKind.LightTank:
-                    return new UnitStats("Light Tank", 620, 6.2f, 170f, 3.75f, 8.4f, 22f, 0.85f);
+                    return new UnitStats("Light Tank", 620, 6.2f, 170f, GetUnitMoveSpeed(UnitKind.LightTank), 8.4f, 22f, 0.85f);
                 case UnitKind.MediumTank:
                 case UnitKind.Tank:
-                    return new UnitStats("Medium Tank", 860, 7.8f, 235f, 3.05f, 9.2f, 31f, 1.05f);
+                    return new UnitStats("Medium Tank", 860, 7.8f, 235f, GetUnitMoveSpeed(UnitKind.MediumTank), 9.2f, 31f, 1.05f);
                 case UnitKind.HeavyTank:
-                    return new UnitStats("Heavy Tank", 1250, 10.5f, 360f, 2.35f, 10.5f, 48f, 1.35f);
+                    return new UnitStats("Heavy Tank", 1250, 10.5f, 360f, GetUnitMoveSpeed(UnitKind.HeavyTank), 10.5f, 48f, 1.35f);
+                case UnitKind.Skyraider:
+                    return new UnitStats("Skyraider", 1250, 10.5f, 170f, GetUnitMoveSpeed(UnitKind.Skyraider), 8.8f, 24f, 0.7f);
+                case UnitKind.OrcaLifter:
+                    return new UnitStats("Orca Lifter", 1450, 12f, 280f, GetUnitMoveSpeed(UnitKind.OrcaLifter), 7.2f, 18f, 0.9f);
                 default:
-                    return new UnitStats("Gunner", 140, 2.4f, 68f, 4.6f, 7f, 8f, 0.45f);
+                    return new UnitStats("Gunner", 140, 2.4f, 68f, GetUnitMoveSpeed(UnitKind.Rifleman), 7f, 8f, 0.45f);
             }
+        }
+
+        public static float GetUnitMoveSpeed(UnitKind kind)
+        {
+            switch (NormalizeUnitKind(kind))
+            {
+                case UnitKind.Engineer:
+                    return 4.25f;
+                case UnitKind.Rifleman:
+                    return 4.05f;
+                case UnitKind.Grenadier:
+                    return 3.75f;
+                case UnitKind.RocketSoldier:
+                    return 3.45f;
+                case UnitKind.FlameTrooper:
+                    return 3.25f;
+                case UnitKind.Humvee:
+                    return 6.55f;
+                case UnitKind.Apc:
+                    return 4.85f;
+                case UnitKind.LightTank:
+                    return 3.8f;
+                case UnitKind.MediumTank:
+                    return 3.05f;
+                case UnitKind.HeavyTank:
+                    return 2.28f;
+                case UnitKind.Harvester:
+                    return 2.85f;
+                case UnitKind.Skyraider:
+                    return 6.2f;
+                case UnitKind.OrcaLifter:
+                    return 4.5f;
+                default:
+                    return 4.05f;
+            }
+        }
+
+        public static float GetUnitBuildTime(UnitKind kind)
+        {
+            UnitStats stats = GetUnit(kind);
+            return Mathf.Round(Mathf.Clamp(1.2f + stats.Cost / 135f, 2.2f, 11.5f) * 10f) / 10f;
         }
 
         public static UnitKind NormalizeUnitKind(UnitKind kind)
@@ -512,6 +560,12 @@ namespace QuestCommandRTS
         {
             UnitKind normalized = NormalizeUnitKind(kind);
             return normalized == UnitKind.Harvester || IsTank(normalized) || IsWheeledCombatVehicle(normalized);
+        }
+
+        public static bool IsAircraft(UnitKind kind)
+        {
+            UnitKind normalized = NormalizeUnitKind(kind);
+            return normalized == UnitKind.Skyraider || normalized == UnitKind.OrcaLifter;
         }
 
         public static bool HasTurretedWeapon(UnitKind kind)
@@ -557,6 +611,8 @@ namespace QuestCommandRTS
                     return new StructureStats("Gun Tower", 950, 6.5f, 460f, 1.9f, 0, 8);
                 case StructureKind.AdvancedGunTower:
                     return new StructureStats("Advanced Gun Tower", 1400, 8.5f, 620f, 2.35f, 0, 12);
+                case StructureKind.DualHelipad:
+                    return new StructureStats("Dual Helipad", 1800, 7.5f, 720f, 4.4f, 0, 9);
                 default:
                     return new StructureStats("Command Center", 2500, 0f, 1100f, 3.8f, 12, 0);
             }

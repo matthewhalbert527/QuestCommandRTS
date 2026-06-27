@@ -298,6 +298,11 @@ namespace QuestCommandRTS
                 return StructureKind.WarFactory;
             }
 
+            if (CountLivingEnemyStructures(StructureKind.DualHelipad) < 1)
+            {
+                return StructureKind.DualHelipad;
+            }
+
             if (CountLivingEnemyStructures(StructureKind.Turret) < 2)
             {
                 return StructureKind.Turret;
@@ -319,6 +324,17 @@ namespace QuestCommandRTS
         private UnitKind ChooseUnitToProduce()
         {
             bool hasWarFactory = HasLivingEnemyStructure(StructureKind.WarFactory);
+            bool hasHelipad = HasLivingEnemyStructure(StructureKind.DualHelipad);
+            if (hasHelipad && enemyCredits >= RtsBalance.GetUnit(UnitKind.Skyraider).Cost && CountLivingEnemyUnits(UnitKind.Skyraider) < 2)
+            {
+                return UnitKind.Skyraider;
+            }
+
+            if (hasHelipad && enemyCredits >= RtsBalance.GetUnit(UnitKind.OrcaLifter).Cost && CountLivingEnemyUnits(UnitKind.OrcaLifter) < 1)
+            {
+                return UnitKind.OrcaLifter;
+            }
+
             if (hasWarFactory && enemyCredits >= RtsBalance.GetUnit(UnitKind.HeavyTank).Cost && CountLivingEnemyUnits(UnitKind.HeavyTank) < 2)
             {
                 return UnitKind.HeavyTank;
@@ -502,6 +518,8 @@ namespace QuestCommandRTS
                     return new Vector3(82f, 0f, 96f);
                 case StructureKind.WarFactory:
                     return new Vector3(100f, 0f, 82f);
+                case StructureKind.DualHelipad:
+                    return new Vector3(94f, 0f, 96f);
                 case StructureKind.Turret:
                     return slotIndex == 0 ? new Vector3(66f, 0f, 84f) : new Vector3(96f, 0f, 48f);
                 case StructureKind.GunTower:

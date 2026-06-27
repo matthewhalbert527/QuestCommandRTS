@@ -1,0 +1,60 @@
+{
+  "asset": "Bastion War Factory Concept-Match V2",
+  "version": "Concept-Match V2 final build",
+  "unity_path": "Assets/BastionWarFactoryCMV2/Prefabs/Bastion_WarFactoryCMV2.prefab",
+  "coordinate_system": "Y-up, Z-forward, meters",
+  "triangle_counts": {
+    "BaseArmor": 8076,
+    "TeamColorPanels": 2076,
+    "Emissive": 2644,
+    "GlassLights": 168,
+    "SmokeStackFX": 144,
+    "AssemblyDoor": 168,
+    "Conveyor": 1020,
+    "GantryTrolley": 116,
+    "RoofFan": 200,
+    "RobotArmA": 460,
+    "RobotArmB": 460,
+    "BeaconSpin": 112,
+    "LOD1_BaseArmor": 792,
+    "LOD1_TeamColorPanels": 264,
+    "LOD1_Emissive": 252,
+    "LOD1_GlassLights": 24,
+    "LOD2_BaseArmor": 220,
+    "LOD2_TeamColorPanels": 48,
+    "StaticQuickImport": 17524
+  },
+  "materials": [
+    "BaseAtlas",
+    "TeamColor",
+    "EmissiveAtlas",
+    "GlassLights",
+    "SmokeFXMarkers"
+  ],
+  "team_color_surfaces": "Separate TeamColorPanels renderer plus LOD team panels; defaults to white.",
+  "animated_pieces": [
+    "AssemblyDoor",
+    "AssemblyConveyor",
+    "GantryTrolley",
+    "RoofFan_A/B/C",
+    "RobotArm_FrontLeft/FrontRight/RearLeft/RearRight",
+    "Beacons",
+    "ProceduralSmokeFX"
+  ],
+  "sockets": [
+    "SpawnPoint",
+    "RallyPoint",
+    "VehicleAssemblySocket",
+    "InteriorPoint",
+    "DoorSocket",
+    "ConveyorSocket",
+    "SmokeSocket_MainStack",
+    "SmokeSocket_MidStack",
+    "SmokeSocket_OuterStack",
+    "SmokeSocket_ServiceVent",
+    "LightSocket_LeftBay",
+    "LightSocket_RightBay",
+    "LightSocket_Interior"
+  ],
+  "preview_generation": "Software orthographic render from generated mesh; no image generation used for preview."
+}

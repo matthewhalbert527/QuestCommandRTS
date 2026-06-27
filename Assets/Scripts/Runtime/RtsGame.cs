@@ -31,6 +31,7 @@ namespace QuestCommandRTS
         public RtsFogOfWar FogOfWar { get; private set; }
         public RtsCommandDispatcher CommandDispatcher { get; private set; }
         public RtsPlayerCommandService PlayerCommands { get; private set; }
+        public RtsAudio Audio { get; private set; }
         public RtsSimulationClock Clock { get; private set; }
         public RtsLifecycleCoordinator Lifecycle { get; private set; }
         public RtsSaveService SaveService { get; private set; }
@@ -635,12 +636,18 @@ namespace QuestCommandRTS
             {
                 selection.Add(entity);
                 entity.SetSelected(true);
+                RtsUnit unit = entity as RtsUnit;
+                if (unit != null && Audio != null)
+                {
+                    Audio.PlayUnitSelected(unit.UnitKind);
+                }
             }
         }
 
         public void SelectCombatUnits()
         {
             ClearSelection();
+            RtsUnit firstSelected = null;
             for (int i = 0; i < entities.Count; i++)
             {
                 RtsUnit unit = entities[i] as RtsUnit;
@@ -648,7 +655,16 @@ namespace QuestCommandRTS
                 {
                     selection.Add(unit);
                     unit.SetSelected(true);
+                    if (firstSelected == null)
+                    {
+                        firstSelected = unit;
+                    }
                 }
+            }
+
+            if (firstSelected != null && Audio != null)
+            {
+                Audio.PlayUnitSelected(firstSelected.UnitKind);
             }
         }
 
@@ -930,6 +946,8 @@ namespace QuestCommandRTS
                     return HasPlayerStructure(StructureKind.WarFactory) && HasPlayerStructure(StructureKind.PowerPlant);
                 case StructureKind.AdvancedGunTower:
                     return HasPlayerStructure(StructureKind.WarFactory) && HasPlayerStructure(StructureKind.PowerPlant) && HasPlayerStructure(StructureKind.Refinery);
+                case StructureKind.DualHelipad:
+                    return HasPlayerStructure(StructureKind.WarFactory) && HasPlayerStructure(StructureKind.PowerPlant);
                 default:
                     return false;
             }
@@ -974,6 +992,13 @@ namespace QuestCommandRTS
                     if (!HasPlayerStructure(StructureKind.Refinery))
                     {
                         return "Needs Refinery";
+                    }
+
+                    return HasPlayerStructure(StructureKind.PowerPlant) ? string.Empty : "Needs Power Plant";
+                case StructureKind.DualHelipad:
+                    if (!HasPlayerStructure(StructureKind.WarFactory))
+                    {
+                        return "Needs War Factory";
                     }
 
                     return HasPlayerStructure(StructureKind.PowerPlant) ? string.Empty : "Needs Power Plant";
@@ -1113,6 +1138,11 @@ namespace QuestCommandRTS
 
         public RtsStructure CreateStructure(RtsTeam team, StructureKind kind, Vector3 position)
         {
+            return CreateStructure(team, kind, position, true);
+        }
+
+        public RtsStructure CreateStructure(RtsTeam team, StructureKind kind, Vector3 position, bool spawnRefineryHarvester)
+        {
             StructureStats stats = RtsBalance.GetStructure(kind);
             GameObject root = new GameObject(team + " " + stats.Name);
             root.transform.SetParent(structuresRoot, true);
@@ -1132,7 +1162,7 @@ namespace QuestCommandRTS
             {
                 structure = root.AddComponent<TurretStructure>();
             }
-            else if (kind == StructureKind.CommandCenter || kind == StructureKind.Barracks || kind == StructureKind.WarFactory)
+            else if (kind == StructureKind.CommandCenter || kind == StructureKind.Barracks || kind == StructureKind.WarFactory || kind == StructureKind.DualHelipad)
             {
                 structure = root.AddComponent<ProductionStructure>();
             }
@@ -1151,7 +1181,47 @@ namespace QuestCommandRTS
             structure.Initialize(team, kind);
             RegisterEntity(structure);
             RecalculatePower();
+            if (spawnRefineryHarvester && kind == StructureKind.Refinery)
+            {
+                SpawnRefineryHarvester(structure as RefineryStructure);
+            }
+
             return structure;
+        }
+
+        private void SpawnRefineryHarvester(RefineryStructure refinery)
+        {
+            if (refinery == null || !refinery.IsAlive)
+            {
+                return;
+            }
+
+            Vector3 forward = refinery.transform.forward.sqrMagnitude > 0.01f ? refinery.transform.forward.normalized : Vector3.forward;
+            Vector3 right = refinery.transform.right.sqrMagnitude > 0.01f ? refinery.transform.right.normalized : Vector3.right;
+            Vector3 spawnPoint = ClampWorldPoint(refinery.transform.position - forward * 0.85f + right * (refinery.FootprintRadius + 1.35f));
+            RtsUnit unit = CreateUnit(refinery.Team, UnitKind.Harvester, spawnPoint);
+            HarvesterUnit harvester = unit as HarvesterUnit;
+            if (harvester == null)
+            {
+                return;
+            }
+
+            harvester.transform.rotation = Quaternion.LookRotation(forward, Vector3.up);
+            Vector3 exitPoint = ClampWorldPoint(refinery.transform.position + forward * (refinery.FootprintRadius + 3.2f) + right * 0.45f);
+            ResourceNode resource = FindNearestResource(refinery.transform.position);
+            if (resource != null)
+            {
+                harvester.IssueHarvest(resource, refinery);
+            }
+            else
+            {
+                harvester.IssueMove(exitPoint);
+            }
+
+            if (refinery.Team == RtsTeam.Player)
+            {
+                SpawnFloatingText("Harvester ready", refinery.transform.position + Vector3.up * 2.4f, new Color(0.55f, 1f, 0.72f));
+            }
         }
 
         public GameObject CreateStructurePreview(StructureKind kind)
@@ -1447,8 +1517,15 @@ namespace QuestCommandRTS
                 renderer.sharedMaterial = CreateMaterial(GetProjectileColor(kind, team));
             }
 
+            ConfigureProjectileTrail(projectileObject, kind, team);
+            if (Audio != null)
+            {
+                Audio.PlayWeapon(from, kind);
+            }
+
             RtsProjectile projectile = projectileObject.AddComponent<RtsProjectile>();
             projectile.Initialize(
+                kind,
                 team,
                 attacker,
                 target,
@@ -1461,6 +1538,17 @@ namespace QuestCommandRTS
                 GetProjectileArcHeight(kind));
 
             return projectile;
+        }
+
+        private void ConfigureProjectileTrail(GameObject projectileObject, RtsProjectileKind kind, RtsTeam team)
+        {
+            if (projectileObject == null || kind == RtsProjectileKind.RifleRound)
+            {
+                return;
+            }
+
+            RtsProjectileTrailEmitter trail = projectileObject.AddComponent<RtsProjectileTrailEmitter>();
+            trail.Initialize(kind, team, effectsRoot);
         }
 
         public void SpawnImpactPulse(Vector3 position, RtsTeam team, float radius)
@@ -1568,6 +1656,11 @@ namespace QuestCommandRTS
             RtsUnit unit = entity as RtsUnit;
             if (unit != null)
             {
+                if (RtsBalance.IsAircraft(unit.UnitKind))
+                {
+                    return 1.45f;
+                }
+
                 return RtsBalance.IsVehicle(unit.UnitKind) ? 0.85f : 0.8f;
             }
 
@@ -1636,6 +1729,8 @@ namespace QuestCommandRTS
             Resources = new ResourceBank(SkirmishOptions.PlayerStartingCredits);
             CreateMaterials();
             CreateRoots();
+            Audio = gameObject.AddComponent<RtsAudio>();
+            Audio.Initialize();
             if (RuntimeMode == RtsRuntimeMode.Desktop)
             {
                 SetupDesktopCamera();
@@ -1778,7 +1873,7 @@ namespace QuestCommandRTS
                             continue;
                         }
 
-                        RtsStructure structure = CreateStructure(team, kind, entityData.position.ToVector3());
+                        RtsStructure structure = CreateStructure(team, kind, entityData.position.ToVector3(), false);
                         ApplyEntitySaveData(structure, entityData);
                         ProductionStructure production = structure as ProductionStructure;
                         if (production != null)
@@ -1952,6 +2047,7 @@ namespace QuestCommandRTS
             if (BuildManager != null)
             {
                 BuildManager.CancelPlacement();
+                BuildManager.ClearConstructions();
             }
 
             DestroyChildren(unitsRoot);
@@ -2084,6 +2180,7 @@ namespace QuestCommandRTS
             if (BuildManager != null)
             {
                 BuildManager.CancelPlacement();
+                BuildManager.ClearConstructions();
             }
 
             SpawnFloatingText(message, GetPlayerBaseCenter() + Vector3.up * 4f, state == RtsMatchState.Victory ? Color.cyan : Color.red);
@@ -2507,6 +2604,10 @@ namespace QuestCommandRTS
             CommandCamera.nearClipPlane = 0.05f;
             CommandCamera.farClipPlane = 250f;
             CommandCamera.fieldOfView = 60f;
+            if (CommandCamera.GetComponent<AudioListener>() == null)
+            {
+                CommandCamera.gameObject.AddComponent<AudioListener>();
+            }
         }
 
         private void SetupLight()
@@ -3183,6 +3284,14 @@ namespace QuestCommandRTS
         private void AddUnitCollider(GameObject root, UnitKind kind)
         {
             UnitKind normalized = RtsBalance.NormalizeUnitKind(kind);
+            if (RtsBalance.IsAircraft(normalized))
+            {
+                BoxCollider airBox = root.AddComponent<BoxCollider>();
+                airBox.center = new Vector3(0f, 1.55f, 0f);
+                airBox.size = normalized == UnitKind.Skyraider ? new Vector3(3.4f, 1.2f, 4.2f) : new Vector3(4.8f, 1.3f, 4.1f);
+                return;
+            }
+
             if (RtsBalance.IsVehicle(normalized))
             {
                 BoxCollider box = root.AddComponent<BoxCollider>();
@@ -3241,6 +3350,18 @@ namespace QuestCommandRTS
             kind = RtsBalance.NormalizeUnitKind(kind);
             Material teamMaterial = GetTeamMaterial(team);
 
+            if (kind == UnitKind.Skyraider)
+            {
+                BuildSkyraiderVisual(root, teamMaterial);
+                return;
+            }
+
+            if (kind == UnitKind.OrcaLifter)
+            {
+                BuildOrcaLifterVisual(root, teamMaterial);
+                return;
+            }
+
             if (RtsBalance.IsTank(kind))
             {
                 if (TryBuildImportedTankVisual(root, kind, teamMaterial))
@@ -3284,6 +3405,83 @@ namespace QuestCommandRTS
             }
 
             BuildFallbackInfantryVisual(root, kind, teamMaterial);
+        }
+
+        private void BuildSkyraiderVisual(Transform root, Material teamMaterial)
+        {
+            Transform frame = CreateVisualRoot(root, "Skyraider Airframe", new Vector3(0f, 1.35f, 0f));
+            RtsHoverBob hover = frame.gameObject.AddComponent<RtsHoverBob>();
+            hover.Amplitude = 0.1f;
+            hover.Frequency = 1.9f;
+
+            CreatePrimitive(PrimitiveType.Cube, frame, "Skyraider Armored Nose", new Vector3(0f, 0.02f, 1.15f), new Vector3(0.85f, 0.45f, 0.95f), vehicleDetailMaterial);
+            CreatePrimitive(PrimitiveType.Cube, frame, "Skyraider Fuselage", new Vector3(0f, 0f, -0.15f), new Vector3(1.15f, 0.62f, 2.25f), vehicleDetailMaterial);
+            CreatePrimitive(PrimitiveType.Cube, frame, "Skyraider Cockpit Glass", new Vector3(0f, 0.32f, 0.78f), new Vector3(0.78f, 0.28f, 0.52f), sensorGlassMaterial);
+            CreatePrimitive(PrimitiveType.Cube, frame, "Skyraider Main Wing", new Vector3(0f, -0.08f, -0.08f), new Vector3(3.4f, 0.12f, 0.72f), vehicleDetailMaterial);
+            CreatePrimitive(PrimitiveType.Cube, frame, "Skyraider Tail Boom", new Vector3(0f, 0.02f, -1.55f), new Vector3(0.58f, 0.42f, 1.15f), vehicleDetailMaterial);
+            CreatePrimitive(PrimitiveType.Cube, frame, "Skyraider Tail Fin", new Vector3(0f, 0.48f, -2.05f), new Vector3(0.16f, 0.88f, 0.62f), vehicleDetailMaterial);
+            CreatePrimitive(PrimitiveType.Cube, frame, "Skyraider Tail Stabilizer", new Vector3(0f, 0.24f, -1.95f), new Vector3(1.45f, 0.1f, 0.42f), vehicleDetailMaterial);
+            CreatePrimitive(PrimitiveType.Cube, frame, "Skyraider Team Stripe", new Vector3(0f, 0.36f, -0.22f), new Vector3(0.78f, 0.055f, 0.48f), teamMaterial);
+            CreatePrimitive(PrimitiveType.Cube, frame, "Skyraider Nose Armor Plate", new Vector3(0f, 0.31f, 1.18f), new Vector3(0.52f, 0.06f, 0.42f), edgeHighlightMaterial);
+            CreatePrimitive(PrimitiveType.Cube, frame, "Skyraider Left Wing Panel", new Vector3(-0.92f, 0.03f, -0.08f), new Vector3(0.62f, 0.045f, 0.42f), edgeHighlightMaterial);
+            CreatePrimitive(PrimitiveType.Cube, frame, "Skyraider Right Wing Panel", new Vector3(0.92f, 0.03f, -0.08f), new Vector3(0.62f, 0.045f, 0.42f), edgeHighlightMaterial);
+            CreatePrimitive(PrimitiveType.Cylinder, frame, "Skyraider Nose Cannon", new Vector3(0f, -0.18f, 1.78f), new Vector3(0.16f, 0.46f, 0.16f), weaponMetalMaterial).transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
+            CreatePrimitive(PrimitiveType.Cube, frame, "Skyraider Left Rocket Pod", new Vector3(-0.9f, -0.34f, 0.42f), new Vector3(0.32f, 0.24f, 0.86f), weaponMetalMaterial);
+            CreatePrimitive(PrimitiveType.Cube, frame, "Skyraider Right Rocket Pod", new Vector3(0.9f, -0.34f, 0.42f), new Vector3(0.32f, 0.24f, 0.86f), weaponMetalMaterial);
+            CreatePrimitive(PrimitiveType.Cube, frame, "Skyraider Nose Lamp", new Vector3(0f, -0.02f, 1.66f), new Vector3(0.26f, 0.14f, 0.08f), warningLightMaterial);
+
+            Transform rotor = CreateVisualRoot(frame, "Skyraider Rotor", new Vector3(0f, 0.55f, -0.2f));
+            RtsSpinner spinner = rotor.gameObject.AddComponent<RtsSpinner>();
+            spinner.DegreesPerSecond = 980f;
+            CreatePrimitive(PrimitiveType.Cylinder, rotor, "Skyraider Rotor Hub", Vector3.zero, new Vector3(0.28f, 0.14f, 0.28f), darkMaterial);
+            CreatePrimitive(PrimitiveType.Cube, rotor, "Skyraider Rotor Blade A", Vector3.zero, new Vector3(0.18f, 0.035f, 3.8f), darkMaterial);
+            CreatePrimitive(PrimitiveType.Cube, rotor, "Skyraider Rotor Blade B", Vector3.zero, new Vector3(3.8f, 0.035f, 0.18f), darkMaterial);
+        }
+
+        private void BuildOrcaLifterVisual(Transform root, Material teamMaterial)
+        {
+            Transform frame = CreateVisualRoot(root, "Orca Lifter Airframe", new Vector3(0f, 1.25f, 0f));
+            RtsHoverBob hover = frame.gameObject.AddComponent<RtsHoverBob>();
+            hover.Amplitude = 0.08f;
+            hover.Frequency = 1.45f;
+
+            CreatePrimitive(PrimitiveType.Cube, frame, "Orca Forward Hull", new Vector3(0f, 0f, 0.82f), new Vector3(1.35f, 0.58f, 1.45f), vehicleDetailMaterial);
+            CreatePrimitive(PrimitiveType.Cube, frame, "Orca Cargo Spine", new Vector3(0f, 0.05f, -0.35f), new Vector3(1.65f, 0.52f, 2.1f), vehicleDetailMaterial);
+            CreatePrimitive(PrimitiveType.Cube, frame, "Orca Cockpit Glass", new Vector3(0f, 0.28f, 1.45f), new Vector3(0.88f, 0.28f, 0.52f), sensorGlassMaterial);
+            CreatePrimitive(PrimitiveType.Cube, frame, "Orca Left Wing", new Vector3(-1.55f, -0.05f, 0.12f), new Vector3(2.05f, 0.16f, 0.56f), vehicleDetailMaterial);
+            CreatePrimitive(PrimitiveType.Cube, frame, "Orca Right Wing", new Vector3(1.55f, -0.05f, 0.12f), new Vector3(2.05f, 0.16f, 0.56f), vehicleDetailMaterial);
+            CreatePrimitive(PrimitiveType.Cube, frame, "Orca Tail Boom", new Vector3(0f, 0.03f, -1.75f), new Vector3(0.78f, 0.45f, 1.3f), vehicleDetailMaterial);
+            CreatePrimitive(PrimitiveType.Cube, frame, "Orca Left Tail Fin", new Vector3(-0.48f, 0.56f, -2.2f), new Vector3(0.22f, 1.05f, 0.48f), vehicleDetailMaterial);
+            CreatePrimitive(PrimitiveType.Cube, frame, "Orca Right Tail Fin", new Vector3(0.48f, 0.56f, -2.2f), new Vector3(0.22f, 1.05f, 0.48f), vehicleDetailMaterial);
+            CreatePrimitive(PrimitiveType.Cube, frame, "Orca Team Stripe", new Vector3(0f, 0.37f, 0.05f), new Vector3(1.08f, 0.06f, 0.58f), teamMaterial);
+            CreatePrimitive(PrimitiveType.Cube, frame, "Orca Cargo Roof Plate", new Vector3(0f, 0.36f, -0.58f), new Vector3(1.18f, 0.05f, 0.72f), edgeHighlightMaterial);
+            CreatePrimitive(PrimitiveType.Cylinder, frame, "Orca Left Nose Gun", new Vector3(-0.28f, -0.24f, 1.72f), new Vector3(0.11f, 0.42f, 0.11f), weaponMetalMaterial).transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
+            CreatePrimitive(PrimitiveType.Cylinder, frame, "Orca Right Nose Gun", new Vector3(0.28f, -0.24f, 1.72f), new Vector3(0.11f, 0.42f, 0.11f), weaponMetalMaterial).transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
+            CreatePrimitive(PrimitiveType.Cube, frame, "Orca Nose Lamp", new Vector3(0f, -0.08f, 1.58f), new Vector3(0.3f, 0.14f, 0.08f), warningLightMaterial);
+
+            BuildDuctedFan(frame, "Orca Left Duct Fan", new Vector3(-2.35f, 0f, 0.08f));
+            BuildDuctedFan(frame, "Orca Right Duct Fan", new Vector3(2.35f, 0f, 0.08f));
+        }
+
+        private void BuildDuctedFan(Transform parent, string name, Vector3 localPosition)
+        {
+            Transform fan = CreateVisualRoot(parent, name, localPosition);
+            CreatePrimitive(PrimitiveType.Cylinder, fan, name + " Ring", Vector3.zero, new Vector3(0.95f, 0.2f, 0.95f), darkMaterial);
+            CreatePrimitive(PrimitiveType.Cylinder, fan, name + " Glow", new Vector3(0f, 0.04f, 0f), new Vector3(0.62f, 0.04f, 0.62f), warningLightMaterial);
+
+            Transform blades = CreateVisualRoot(fan, name + " Blades", new Vector3(0f, 0.13f, 0f));
+            RtsSpinner spinner = blades.gameObject.AddComponent<RtsSpinner>();
+            spinner.DegreesPerSecond = 1180f;
+            CreatePrimitive(PrimitiveType.Cube, blades, name + " Blade A", Vector3.zero, new Vector3(0.15f, 0.035f, 1.42f), darkMaterial);
+            CreatePrimitive(PrimitiveType.Cube, blades, name + " Blade B", Vector3.zero, new Vector3(1.42f, 0.035f, 0.15f), darkMaterial);
+        }
+
+        private static Transform CreateVisualRoot(Transform parent, string name, Vector3 localPosition)
+        {
+            GameObject visualRoot = new GameObject(name);
+            visualRoot.transform.SetParent(parent, false);
+            visualRoot.transform.localPosition = localPosition;
+            return visualRoot.transform;
         }
 
         private bool TryBuildImportedInfantryVisual(Transform root, UnitKind kind, Material teamMaterial)
@@ -3994,6 +4192,9 @@ namespace QuestCommandRTS
                     CreatePrimitive(PrimitiveType.Cube, advancedHead.transform, "Missile Pod A", new Vector3(-0.46f, 0f, 0.72f), new Vector3(0.42f, 0.42f, 0.52f), weaponMetalMaterial);
                     CreatePrimitive(PrimitiveType.Cube, advancedHead.transform, "Missile Pod B", new Vector3(0.46f, 0f, 0.72f), new Vector3(0.42f, 0.42f, 0.52f), weaponMetalMaterial);
                     return advancedHead.transform;
+                case StructureKind.DualHelipad:
+                    BuildDualHelipadVisual(root, teamMaterial);
+                    break;
                 default:
                     CreatePrimitive(PrimitiveType.Cube, root, "Command Center", new Vector3(0f, 0.85f, 0f), new Vector3(stats.FootprintRadius * 1.65f, 1.7f, stats.FootprintRadius * 1.55f), teamMaterial);
                     CreatePrimitive(PrimitiveType.Cylinder, root, "Radar", new Vector3(0f, 2.25f, -0.2f), new Vector3(0.95f, 0.12f, 0.95f), neutralMaterial);
@@ -4001,6 +4202,48 @@ namespace QuestCommandRTS
             }
 
             return null;
+        }
+
+        private void BuildDualHelipadVisual(Transform root, Material teamMaterial)
+        {
+            Material markingMaterial = CreateMaterial(new Color(0.94f, 0.96f, 0.86f, 1f));
+
+            CreatePrimitive(PrimitiveType.Cube, root, "Dual Helipad Foundation", new Vector3(0f, 0.12f, 0f), new Vector3(6.9f, 0.24f, 4.65f), shadowPanelMaterial);
+            CreatePrimitive(PrimitiveType.Cube, root, "Dual Helipad Left Pad Base", new Vector3(-2.05f, 0.32f, 0.05f), new Vector3(3.15f, 0.26f, 3.15f), structureDetailMaterial);
+            CreatePrimitive(PrimitiveType.Cube, root, "Dual Helipad Right Pad Base", new Vector3(2.05f, 0.32f, 0.05f), new Vector3(3.15f, 0.26f, 3.15f), structureDetailMaterial);
+            CreatePrimitive(PrimitiveType.Cylinder, root, "Dual Helipad Left Landing Deck", new Vector3(-2.05f, 0.49f, 0.05f), new Vector3(1.34f, 0.045f, 1.34f), darkMaterial);
+            CreatePrimitive(PrimitiveType.Cylinder, root, "Dual Helipad Right Landing Deck", new Vector3(2.05f, 0.49f, 0.05f), new Vector3(1.34f, 0.045f, 1.34f), darkMaterial);
+            BuildHelipadMarking(root, new Vector3(-2.05f, 0.54f, 0.05f), markingMaterial);
+            BuildHelipadMarking(root, new Vector3(2.05f, 0.54f, 0.05f), markingMaterial);
+
+            CreatePrimitive(PrimitiveType.Cube, root, "Dual Helipad Central Hangar", new Vector3(0f, 0.72f, -0.05f), new Vector3(1.65f, 1.05f, 2.35f), structureDetailMaterial);
+            CreatePrimitive(PrimitiveType.Cube, root, "Dual Helipad Control Deck", new Vector3(0f, 1.45f, 0.15f), new Vector3(2.05f, 0.42f, 1.35f), structureDetailMaterial);
+            CreatePrimitive(PrimitiveType.Cube, root, "Dual Helipad Control Windows", new Vector3(0f, 1.48f, 0.85f), new Vector3(1.62f, 0.2f, 0.12f), sensorGlassMaterial);
+            CreatePrimitive(PrimitiveType.Cylinder, root, "Dual Helipad Radar Pedestal", new Vector3(0f, 1.84f, -0.12f), new Vector3(0.34f, 0.24f, 0.34f), darkMaterial);
+            CreatePrimitive(PrimitiveType.Cube, root, "Dual Helipad Radar Array", new Vector3(0f, 2.16f, -0.12f), new Vector3(1.05f, 0.18f, 0.58f), structureDetailMaterial);
+            CreatePrimitive(PrimitiveType.Cube, root, "Dual Helipad Hangar Team Panel", new Vector3(0f, 1.1f, 1.16f), new Vector3(1.1f, 0.12f, 0.08f), teamMaterial);
+            CreatePrimitive(PrimitiveType.Cube, root, "Dual Helipad Left Pad Armor Plate", new Vector3(-2.05f, 0.6f, -1.22f), new Vector3(1.28f, 0.06f, 0.24f), edgeHighlightMaterial);
+            CreatePrimitive(PrimitiveType.Cube, root, "Dual Helipad Right Pad Armor Plate", new Vector3(2.05f, 0.6f, -1.22f), new Vector3(1.28f, 0.06f, 0.24f), edgeHighlightMaterial);
+            CreatePrimitive(PrimitiveType.Cube, root, "Dual Helipad Left Ramp", new Vector3(-2.05f, 0.24f, 2.02f), new Vector3(1.5f, 0.16f, 0.74f), shadowPanelMaterial);
+            CreatePrimitive(PrimitiveType.Cube, root, "Dual Helipad Right Ramp", new Vector3(2.05f, 0.24f, 2.02f), new Vector3(1.5f, 0.16f, 0.74f), shadowPanelMaterial);
+            CreatePrimitive(PrimitiveType.Cylinder, root, "Dual Helipad Left Antenna", new Vector3(-2.95f, 1.12f, -1.62f), new Vector3(0.08f, 0.95f, 0.08f), darkMaterial);
+            CreatePrimitive(PrimitiveType.Cylinder, root, "Dual Helipad Right Antenna", new Vector3(2.95f, 1.12f, -1.62f), new Vector3(0.08f, 0.95f, 0.08f), darkMaterial);
+            CreatePrimitive(PrimitiveType.Sphere, root, "Dual Helipad Left Antenna Light", new Vector3(-2.95f, 2.08f, -1.62f), new Vector3(0.18f, 0.18f, 0.18f), warningLightMaterial);
+            CreatePrimitive(PrimitiveType.Sphere, root, "Dual Helipad Right Antenna Light", new Vector3(2.95f, 2.08f, -1.62f), new Vector3(0.18f, 0.18f, 0.18f), warningLightMaterial);
+
+            for (int i = 0; i < 4; i++)
+            {
+                float x = i < 2 ? -3.25f : 3.25f;
+                float z = i % 2 == 0 ? -1.85f : 1.85f;
+                CreatePrimitive(PrimitiveType.Cube, root, "Dual Helipad Pad Edge Light " + i, new Vector3(x, 0.58f, z), new Vector3(0.36f, 0.08f, 0.1f), warningLightMaterial);
+            }
+        }
+
+        private void BuildHelipadMarking(Transform root, Vector3 center, Material markingMaterial)
+        {
+            CreatePrimitive(PrimitiveType.Cube, root, "Helipad Mark Left", center + new Vector3(-0.36f, 0f, 0f), new Vector3(0.14f, 0.035f, 1.02f), markingMaterial);
+            CreatePrimitive(PrimitiveType.Cube, root, "Helipad Mark Right", center + new Vector3(0.36f, 0f, 0f), new Vector3(0.14f, 0.035f, 1.02f), markingMaterial);
+            CreatePrimitive(PrimitiveType.Cube, root, "Helipad Mark Center", center, new Vector3(0.72f, 0.035f, 0.14f), markingMaterial);
         }
 
         private Transform CreateDefenseTurretRig(Transform root, StructureKind kind, Material teamMaterial)
@@ -4266,7 +4509,7 @@ namespace QuestCommandRTS
                 case StructureKind.Barracks:
                     return "StructureModels/BastionStructures/Meshes/Bastion_Barracks_Static";
                 case StructureKind.WarFactory:
-                    return "StructureModels/BastionStructures/Meshes/Bastion_WarFactory_Static";
+                    return "StructureModels/BastionWarFactoryCMV2/Meshes/Bastion_WarFactoryCMV2_Static";
                 case StructureKind.PowerPlant:
                     return "StructureModels/BastionStructures/Meshes/Bastion_PowerPlant_Static";
                 case StructureKind.Turret:
@@ -4291,7 +4534,7 @@ namespace QuestCommandRTS
                 case StructureKind.Refinery:
                     return 0.68f;
                 case StructureKind.WarFactory:
-                    return 0.68f;
+                    return 0.41f;
                 case StructureKind.PowerPlant:
                     return 0.72f;
                 case StructureKind.Turret:

@@ -41,12 +41,15 @@ namespace QuestCommandRTS
 
         private readonly List<HudButton> buttons = new List<HudButton>();
         private readonly List<Image> minimapPips = new List<Image>();
+        private readonly List<ProductionTileMeter> productionTileMeters = new List<ProductionTileMeter>();
         private readonly Dictionary<UnitKind, Sprite> unitTileArtSprites = new Dictionary<UnitKind, Sprite>();
+        private readonly Dictionary<StructureKind, Sprite> structureTileArtSprites = new Dictionary<StructureKind, Sprite>();
         private const float SidebarWidth = 326f;
         private const float SidebarCollapsedWidth = 46f;
         private const float SidebarMargin = 12f;
         private const float SidebarMinimapSize = 252f;
         private const string UnitTileArtResourceRoot = "HudArt/Units/";
+        private const string StructureTileArtResourceRoot = "HudArt/Structures/";
 
         private RtsGame game;
         private Text resourcesText;
@@ -69,6 +72,14 @@ namespace QuestCommandRTS
         private SidebarTab activeSidebarTab = SidebarTab.Buildings;
         private bool mainMenuVisible;
         private bool sidebarCollapsed;
+        private Sprite hudFillSprite;
+
+        private sealed class ProductionTileMeter
+        {
+            public UnitKind Kind;
+            public Image ClockFill;
+            public Text QueueBadge;
+        }
 
         public void Initialize(RtsGame owner)
         {
@@ -158,6 +169,7 @@ namespace QuestCommandRTS
             AddBuildTile(buildingsTabContent, StructureKind.Turret, 4);
             AddBuildTile(buildingsTabContent, StructureKind.GunTower, 5);
             AddBuildTile(buildingsTabContent, StructureKind.AdvancedGunTower, 6);
+            AddBuildTile(buildingsTabContent, StructureKind.DualHelipad, 7);
 
             AddUnitTile(unitsTabContent, UnitKind.Rifleman, 0);
             AddUnitTile(unitsTabContent, UnitKind.Grenadier, 1);
@@ -170,6 +182,8 @@ namespace QuestCommandRTS
             AddUnitTile(unitsTabContent, UnitKind.LightTank, 8);
             AddUnitTile(unitsTabContent, UnitKind.MediumTank, 9);
             AddUnitTile(unitsTabContent, UnitKind.HeavyTank, 10);
+            AddUnitTile(unitsTabContent, UnitKind.Skyraider, 11);
+            AddUnitTile(unitsTabContent, UnitKind.OrcaLifter, 12);
 
             AddActionTile(commandsTabContent, "Army", "ARMY", "Select", 0, () => game.SelectCombatUnits(), () => game.AcceptsPlayerInput, () => "All combat");
             AddActionTile(commandsTabContent, "Stop", "STOP", "S", 1, () => game.CommandDispatcher.StopSelectedUnits(), () => game.AcceptsPlayerInput && game.HasSelectedControllableUnits(), () => "Stop selected");
@@ -314,6 +328,7 @@ namespace QuestCommandRTS
                 "\nTIME " + FormatTime(game.MatchTime) + "    " + status;
             selectionText.text = BuildSelectionText();
             RefreshProductionProgress();
+            RefreshProductionTileMeters();
             RefreshSidebarLayout();
             RefreshMinimap();
 
@@ -596,16 +611,16 @@ namespace QuestCommandRTS
         private void AddBuildTile(RectTransform parent, StructureKind kind, int index)
         {
             StructureStats stats = RtsBalance.GetStructure(kind);
-            RectTransform artRoot = AddSidebarTile(
+            RectTransform artRoot = AddBuildSidebarTile(
                 parent,
                 stats.Name,
-                "$" + stats.Cost.ToString("N0"),
+                stats,
+                kind,
                 index,
                 () => game.PlayerCommands.RequestConstruction(kind),
                 () => CanBuild(kind),
-                () => GetBuildTileStatus(kind, stats),
                 GetStructureAccent(kind));
-            CreateStructureTileArt(artRoot, kind, GetStructureAccent(kind));
+            CreateStructureBuildTileArt(artRoot, kind, GetStructureAccent(kind));
         }
 
         private void AddUnitTile(RectTransform parent, UnitKind kind, int index)
@@ -621,6 +636,7 @@ namespace QuestCommandRTS
                 () => GetUnitTileStatus(kind),
                 GetUnitAccent(kind));
             CreateUnitTileArt(artRoot, kind, GetUnitAccent(kind));
+            AddUnitProductionMeter(artRoot, kind, GetUnitAccent(kind));
         }
 
         private void AddActionTile(RectTransform parent, string name, string title, string costText, int index, UnityEngine.Events.UnityAction action, Func<bool> enabled, Func<string> status)
@@ -682,6 +698,75 @@ namespace QuestCommandRTS
             return artRoot;
         }
 
+        private RectTransform AddBuildSidebarTile(RectTransform parent, string title, StructureStats stats, StructureKind kind, int index, UnityEngine.Events.UnityAction action, Func<bool> enabled, Color accent)
+        {
+            const int columns = 3;
+            const float tileWidth = 298f / columns;
+            const float tileHeight = 104f;
+            const float photoHeight = 76f;
+
+            int column = index % columns;
+            int row = index / columns;
+            bool hovered = false;
+
+            GameObject buttonObject = new GameObject(title + " Build Tile");
+            buttonObject.transform.SetParent(parent, false);
+
+            RectTransform rect = buttonObject.AddComponent<RectTransform>();
+            rect.anchorMin = new Vector2(0f, 1f);
+            rect.anchorMax = new Vector2(0f, 1f);
+            rect.pivot = new Vector2(0f, 1f);
+            rect.anchoredPosition = new Vector2(column * tileWidth, -row * tileHeight);
+            rect.sizeDelta = new Vector2(tileWidth, tileHeight);
+
+            Image divider = buttonObject.AddComponent<Image>();
+            divider.color = new Color(0.64f, 0.7f, 0.7f, 0.82f);
+
+            Button button = buttonObject.AddComponent<Button>();
+            button.targetGraphic = divider;
+            button.onClick.AddListener(action);
+            AddHoverCallbacks(buttonObject, value => hovered = value);
+
+            RectTransform body = CreatePanel(rect, title + " Build Tile Body", Vector2.zero, Vector2.one, new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero, new Color(0.045f, 0.055f, 0.056f, 0.98f));
+            body.offsetMin = Vector2.one;
+            body.offsetMax = -Vector2.one;
+
+            RectTransform artRoot = CreatePanel(body, title + " Build Tile Photo", new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(0.5f, 1f), Vector2.zero, new Vector2(0f, photoHeight), new Color(0.008f, 0.012f, 0.013f, 1f));
+
+            Text titleLabel = CreateText(body, title + " Build Tile Title", title, 8, TextAnchor.MiddleCenter, new Vector2(0f, -photoHeight - 1f), new Vector2(-4f, 20f));
+            titleLabel.color = new Color(0.92f, 0.95f, 0.95f, 1f);
+
+            Text statusLabel = CreateText(body, title + " Build Tile Status", GetBuildGridTileStatus(kind, stats, false), 7, TextAnchor.MiddleCenter, new Vector2(0f, -photoHeight - 20f), new Vector2(-4f, 9f));
+            statusLabel.color = new Color(0.72f, 0.82f, 0.82f, 0.98f);
+
+            buttons.Add(new HudButton
+            {
+                Button = button,
+                Label = statusLabel,
+                IsEnabled = enabled,
+                GetText = () => GetBuildGridTileStatus(kind, stats, hovered)
+            });
+
+            return artRoot;
+        }
+
+        private void AddHoverCallbacks(GameObject target, Action<bool> onHoverChanged)
+        {
+            if (target == null || onHoverChanged == null)
+            {
+                return;
+            }
+
+            EventTrigger trigger = target.AddComponent<EventTrigger>();
+            EventTrigger.Entry enter = new EventTrigger.Entry { eventID = EventTriggerType.PointerEnter };
+            enter.callback.AddListener(_ => onHoverChanged(true));
+            trigger.triggers.Add(enter);
+
+            EventTrigger.Entry exit = new EventTrigger.Entry { eventID = EventTriggerType.PointerExit };
+            exit.callback.AddListener(_ => onHoverChanged(false));
+            trigger.triggers.Add(exit);
+        }
+
         private string GetBuildTileStatus(StructureKind kind, StructureStats stats)
         {
             if (!CanAfford(stats.Cost))
@@ -693,9 +778,45 @@ namespace QuestCommandRTS
             return string.IsNullOrEmpty(requirement) ? "Ready" : requirement;
         }
 
+        private string GetBuildGridTileStatus(StructureKind kind, StructureStats stats, bool hovered)
+        {
+            if (hovered)
+            {
+                string power = string.Empty;
+                if (stats.PowerProvided > 0)
+                {
+                    power = "  PWR +" + stats.PowerProvided;
+                }
+                else if (stats.PowerUsed > 0)
+                {
+                    power = "  PWR -" + stats.PowerUsed;
+                }
+
+                return "$" + stats.Cost.ToString("N0") + power;
+            }
+
+            string status = GetBuildTileStatus(kind, stats);
+            return status == "Ready" ? string.Empty : status;
+        }
+
         private string GetUnitTileStatus(UnitKind kind)
         {
             string reason = "Unavailable";
+            ProductionStructure producer = FindProducerForUnitHud(kind);
+            if (producer != null)
+            {
+                int count = producer.CountProductionItems(kind);
+                if (producer.IsActivelyProducing(kind))
+                {
+                    return "Building " + Mathf.RoundToInt(producer.ActiveProductionProgress * 100f) + "%";
+                }
+
+                if (count > 0)
+                {
+                    return "Queued x" + count;
+                }
+            }
+
             return game != null && game.PlayerCommands != null && game.PlayerCommands.CanQueueProduction(kind, out reason) ? "Queue" : reason;
         }
 
@@ -807,6 +928,8 @@ namespace QuestCommandRTS
                 case StructureKind.GunTower:
                 case StructureKind.AdvancedGunTower:
                     return new Color(0.95f, 0.28f, 0.2f, 1f);
+                case StructureKind.DualHelipad:
+                    return new Color(0.95f, 0.78f, 0.26f, 1f);
                 default:
                     return new Color(0.44f, 0.82f, 0.92f, 1f);
             }
@@ -829,11 +952,21 @@ namespace QuestCommandRTS
                 return new Color(0.86f, 0.62f, 0.32f, 1f);
             }
 
+            if (RtsBalance.IsAircraft(kind))
+            {
+                return new Color(0.95f, 0.8f, 0.28f, 1f);
+            }
+
             return new Color(0.78f, 0.88f, 0.92f, 1f);
         }
 
         private void CreateStructureTileArt(RectTransform root, StructureKind kind, Color accent)
         {
+            if (TryCreateStructureTileCardArt(root, kind, accent))
+            {
+                return;
+            }
+
             CreatePanel(root, "Structure Icon Base", new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(0f, 4f), new Vector2(48f, 8f), new Color(0.08f, 0.1f, 0.085f, 1f));
             CreatePanel(root, "Structure Icon Body", new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(0f, 10f), new Vector2(38f, 22f), new Color(0.22f, 0.28f, 0.21f, 1f));
             CreatePanel(root, "Structure Icon Highlight", new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(0f, 31f), new Vector2(42f, 4f), accent);
@@ -852,6 +985,73 @@ namespace QuestCommandRTS
             {
                 CreatePanel(root, "Structure Icon Door", new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(0f, 10f), new Vector2(13f, 16f), new Color(0.03f, 0.045f, 0.043f, 1f));
             }
+        }
+
+        private void CreateStructureBuildTileArt(RectTransform root, StructureKind kind, Color accent)
+        {
+            Sprite sprite = GetStructureTileArtSprite(kind);
+            if (sprite == null)
+            {
+                CreateStructureTileArt(root, kind, accent);
+                return;
+            }
+
+            Image rootImage = root.GetComponent<Image>();
+            if (rootImage != null)
+            {
+                rootImage.color = new Color(0.008f, 0.012f, 0.013f, 1f);
+            }
+
+            GameObject imageObject = new GameObject("Structure Build Photo");
+            imageObject.transform.SetParent(root, false);
+            RectTransform imageRect = imageObject.AddComponent<RectTransform>();
+            imageRect.anchorMin = Vector2.zero;
+            imageRect.anchorMax = Vector2.one;
+            imageRect.offsetMin = Vector2.zero;
+            imageRect.offsetMax = Vector2.zero;
+            Image image = imageObject.AddComponent<Image>();
+            image.sprite = sprite;
+            image.preserveAspect = false;
+            image.color = Color.white;
+
+            RectTransform wash = CreatePanel(root, "Structure Build Photo Wash", Vector2.zero, Vector2.one, new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero, new Color(accent.r, accent.g, accent.b, 0.06f));
+            wash.SetAsLastSibling();
+        }
+
+        private bool TryCreateStructureTileCardArt(RectTransform root, StructureKind kind, Color accent)
+        {
+            Sprite sprite = GetStructureTileArtSprite(kind);
+            if (sprite == null)
+            {
+                return false;
+            }
+
+            Image rootImage = root.GetComponent<Image>();
+            if (rootImage != null)
+            {
+                rootImage.color = new Color(0.01f, 0.014f, 0.01f, 0.94f);
+            }
+
+            RectTransform glow = CreatePanel(root, "Structure Card Glow", Vector2.zero, Vector2.one, new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero, new Color(accent.r, accent.g, accent.b, 0.16f));
+            glow.offsetMin = new Vector2(1f, 1f);
+            glow.offsetMax = new Vector2(-1f, -1f);
+
+            GameObject imageObject = new GameObject("Structure Card Art");
+            imageObject.transform.SetParent(root, false);
+            RectTransform imageRect = imageObject.AddComponent<RectTransform>();
+            imageRect.anchorMin = Vector2.zero;
+            imageRect.anchorMax = Vector2.one;
+            imageRect.offsetMin = new Vector2(2f, 2f);
+            imageRect.offsetMax = new Vector2(-2f, -2f);
+            Image image = imageObject.AddComponent<Image>();
+            image.sprite = sprite;
+            image.preserveAspect = true;
+            image.color = Color.white;
+
+            RectTransform trim = CreatePanel(root, "Structure Card Trim", new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(0.5f, 1f), Vector2.zero, new Vector2(0f, 3f), new Color(accent.r, accent.g, accent.b, 0.78f));
+            trim.offsetMin = new Vector2(2f, -3f);
+            trim.offsetMax = new Vector2(-2f, 0f);
+            return true;
         }
 
         private void CreateUnitTileArt(RectTransform root, UnitKind kind, Color accent)
@@ -915,6 +1115,38 @@ namespace QuestCommandRTS
             return true;
         }
 
+        private void AddUnitProductionMeter(RectTransform root, UnitKind kind, Color accent)
+        {
+            GameObject fillObject = new GameObject("Production Clock Fill");
+            fillObject.transform.SetParent(root, false);
+            RectTransform fillRect = fillObject.AddComponent<RectTransform>();
+            fillRect.anchorMin = Vector2.zero;
+            fillRect.anchorMax = Vector2.one;
+            fillRect.offsetMin = new Vector2(1f, 1f);
+            fillRect.offsetMax = new Vector2(-1f, -1f);
+            Image fill = fillObject.AddComponent<Image>();
+            fill.sprite = GetHudFillSprite();
+            fill.type = Image.Type.Filled;
+            fill.fillMethod = Image.FillMethod.Radial360;
+            fill.fillOrigin = (int)Image.Origin360.Top;
+            fill.fillClockwise = true;
+            fill.fillAmount = 0f;
+            fill.color = new Color(accent.r, accent.g, accent.b, 0.54f);
+            fill.gameObject.SetActive(false);
+
+            RectTransform badge = CreatePanel(root, "Production Queue Badge", new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(-2f, -2f), new Vector2(24f, 16f), new Color(0.005f, 0.01f, 0.012f, 0.92f));
+            Text badgeText = CreateText(badge, "Production Queue Badge Text", "", 9, TextAnchor.MiddleCenter);
+            badgeText.color = new Color(0.76f, 1f, 0.86f, 1f);
+            badge.gameObject.SetActive(false);
+
+            productionTileMeters.Add(new ProductionTileMeter
+            {
+                Kind = kind,
+                ClockFill = fill,
+                QueueBadge = badgeText
+            });
+        }
+
         private Sprite GetUnitTileArtSprite(UnitKind kind)
         {
             kind = RtsBalance.NormalizeUnitKind(kind);
@@ -943,6 +1175,44 @@ namespace QuestCommandRTS
             return sprite;
         }
 
+        private Sprite GetStructureTileArtSprite(StructureKind kind)
+        {
+            if (structureTileArtSprites.TryGetValue(kind, out Sprite existing))
+            {
+                return existing;
+            }
+
+            string resourceName = GetStructureTileArtResourceName(kind);
+            if (string.IsNullOrEmpty(resourceName))
+            {
+                structureTileArtSprites[kind] = null;
+                return null;
+            }
+
+            Texture2D texture = Resources.Load<Texture2D>(StructureTileArtResourceRoot + resourceName);
+            if (texture == null)
+            {
+                structureTileArtSprites[kind] = null;
+                return null;
+            }
+
+            Sprite sprite = Sprite.Create(texture, new Rect(0f, 0f, texture.width, texture.height), new Vector2(0.5f, 0.5f), 100f);
+            sprite.name = resourceName + " HUD Sprite";
+            structureTileArtSprites[kind] = sprite;
+            return sprite;
+        }
+
+        private Sprite GetHudFillSprite()
+        {
+            if (hudFillSprite == null)
+            {
+                hudFillSprite = Sprite.Create(Texture2D.whiteTexture, new Rect(0f, 0f, Texture2D.whiteTexture.width, Texture2D.whiteTexture.height), new Vector2(0.5f, 0.5f), 100f);
+                hudFillSprite.name = "HUD Radial Fill Sprite";
+            }
+
+            return hudFillSprite;
+        }
+
         private static string GetUnitTileArtResourceName(UnitKind kind)
         {
             switch (RtsBalance.NormalizeUnitKind(kind))
@@ -957,12 +1227,45 @@ namespace QuestCommandRTS
                     return "FlameTrooper";
                 case UnitKind.Engineer:
                     return "Engineer";
+                case UnitKind.Harvester:
+                    return "Harvester";
                 case UnitKind.LightTank:
                     return "LightTank";
                 case UnitKind.MediumTank:
                     return "MediumTank";
                 case UnitKind.HeavyTank:
                     return "HeavyTank";
+                case UnitKind.Skyraider:
+                    return "Skyraider";
+                case UnitKind.OrcaLifter:
+                    return "OrcaLifter";
+                default:
+                    return string.Empty;
+            }
+        }
+
+        private static string GetStructureTileArtResourceName(StructureKind kind)
+        {
+            switch (kind)
+            {
+                case StructureKind.CommandCenter:
+                    return "CommandCenter";
+                case StructureKind.Refinery:
+                    return "Refinery";
+                case StructureKind.Barracks:
+                    return "Barracks";
+                case StructureKind.WarFactory:
+                    return "WarFactory";
+                case StructureKind.PowerPlant:
+                    return "PowerPlant";
+                case StructureKind.Turret:
+                    return "Turret";
+                case StructureKind.GunTower:
+                    return "GunTower";
+                case StructureKind.AdvancedGunTower:
+                    return "AdvancedGunTower";
+                case StructureKind.DualHelipad:
+                    return "DualHelipad";
                 default:
                     return string.Empty;
             }
@@ -1190,15 +1493,82 @@ namespace QuestCommandRTS
                 progress = Mathf.Clamp01(producer.ActiveProductionProgress);
                 UnitStats stats = RtsBalance.GetUnit(producer.ActiveProductionKind);
                 label = "Building " + stats.Name + " " + Mathf.RoundToInt(progress * 100f) + "%";
+                string queuePreview = BuildProductionQueuePreview(producer);
+                if (!string.IsNullOrEmpty(queuePreview))
+                {
+                    label += "    Next: " + queuePreview;
+                }
             }
             else if (producer.PendingQueueCount > 0)
             {
-                label = "Queued " + producer.PendingQueueCount;
+                label = "Queued: " + BuildProductionQueuePreview(producer);
             }
 
             productionProgressFill.anchorMax = new Vector2(progress, 1f);
             productionProgressFill.gameObject.SetActive(progress > 0.001f);
             productionProgressText.text = label;
+        }
+
+        private void RefreshProductionTileMeters()
+        {
+            for (int i = 0; i < productionTileMeters.Count; i++)
+            {
+                ProductionTileMeter meter = productionTileMeters[i];
+                if (meter == null)
+                {
+                    continue;
+                }
+
+                ProductionStructure producer = FindProducerForUnitHud(meter.Kind);
+                int count = producer != null ? producer.CountProductionItems(meter.Kind) : 0;
+                float progress = producer != null && producer.IsActivelyProducing(meter.Kind) ? Mathf.Clamp01(producer.ActiveProductionProgress) : 0f;
+
+                if (meter.ClockFill != null)
+                {
+                    meter.ClockFill.fillAmount = progress;
+                    meter.ClockFill.gameObject.SetActive(progress > 0.001f);
+                }
+
+                if (meter.QueueBadge != null)
+                {
+                    meter.QueueBadge.text = count > 0 ? "x" + count : string.Empty;
+                    meter.QueueBadge.transform.parent.gameObject.SetActive(count > 0);
+                }
+            }
+        }
+
+        private string BuildProductionQueuePreview(ProductionStructure producer)
+        {
+            if (producer == null || producer.PendingQueueCount <= 0)
+            {
+                return string.Empty;
+            }
+
+            string preview = string.Empty;
+            int displayCount = Mathf.Min(3, producer.PendingQueueCount);
+            for (int i = 0; i < displayCount; i++)
+            {
+                UnitKind queuedKind;
+                if (!producer.TryGetQueuedUnit(i, out queuedKind))
+                {
+                    continue;
+                }
+
+                if (!string.IsNullOrEmpty(preview))
+                {
+                    preview += ", ";
+                }
+
+                preview += RtsBalance.GetUnit(queuedKind).Name;
+            }
+
+            int remaining = producer.PendingQueueCount - displayCount;
+            if (remaining > 0)
+            {
+                preview += " +" + remaining;
+            }
+
+            return preview;
         }
 
         private ProductionStructure FindProductionForHud()
@@ -1224,6 +1594,42 @@ namespace QuestCommandRTS
                 }
 
                 if (producer.QueueCount > 0)
+                {
+                    return producer;
+                }
+
+                if (fallback == null)
+                {
+                    fallback = producer;
+                }
+            }
+
+            return fallback;
+        }
+
+        private ProductionStructure FindProducerForUnitHud(UnitKind kind)
+        {
+            if (game == null)
+            {
+                return null;
+            }
+
+            ProductionStructure selected = game.PlayerCommands != null ? game.PlayerCommands.FindSelectedProductionStructure() : null;
+            if (selected != null && selected.CanTrain(kind))
+            {
+                return selected;
+            }
+
+            ProductionStructure fallback = null;
+            for (int i = 0; i < game.Entities.Count; i++)
+            {
+                ProductionStructure producer = game.Entities[i] as ProductionStructure;
+                if (producer == null || producer.Team != RtsTeam.Player || !producer.IsAlive || !producer.CanTrain(kind))
+                {
+                    continue;
+                }
+
+                if (producer.CountProductionItems(kind) > 0)
                 {
                     return producer;
                 }

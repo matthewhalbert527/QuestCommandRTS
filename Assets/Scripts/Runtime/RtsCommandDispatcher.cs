@@ -16,6 +16,7 @@ namespace QuestCommandRTS
         RepairIssued,
         RallyPointSet,
         BoardIssued,
+        GuardIssued,
         PlacementUpdated,
         PlacementConfirmed,
         PlacementCanceled
@@ -263,6 +264,23 @@ namespace QuestCommandRTS
             return AttackMoveToPoint(GetGroundPoint(hit));
         }
 
+        public RtsCommandResult GuardFromRay(Ray ray, float maxDistance)
+        {
+            if (game == null || !game.AcceptsPlayerInput)
+            {
+                return RtsCommandResult.None;
+            }
+
+            RaycastHit hit;
+            if (!Physics.Raycast(ray, out hit, maxDistance))
+            {
+                return RtsCommandResult.None;
+            }
+
+            RtsEntity entity = hit.collider != null ? hit.collider.GetComponentInParent<RtsEntity>() : null;
+            return IssueGuard(GetGroundPoint(hit), entity);
+        }
+
         public RtsCommandResult AttackMoveToPoint(Vector3 point)
         {
             if (game == null || !game.AcceptsPlayerInput)
@@ -283,6 +301,7 @@ namespace QuestCommandRTS
             }
 
             game.SpawnFloatingText("Attack move", point + Vector3.up * 1.5f, new Color(1f, 0.55f, 0.32f));
+            game.Audio?.PlayOrder(RtsVoiceOrder.Attack);
             return RtsCommandResult.AttackMoveIssued;
         }
 
@@ -346,6 +365,11 @@ namespace QuestCommandRTS
             {
                 commandUnits[i].IssueAttack(target);
             }
+
+            if (commandUnits.Count > 0)
+            {
+                game.Audio?.PlayOrder(RtsVoiceOrder.Attack);
+            }
         }
 
         private void IssueHarvest(ResourceNode resource)
@@ -372,7 +396,10 @@ namespace QuestCommandRTS
             if (!assigned)
             {
                 game.SpawnFloatingText("Select harvester", resource.transform.position + Vector3.up * 2f, Color.yellow);
+                return;
             }
+
+            game.Audio?.PlayOrder(RtsVoiceOrder.Harvest);
         }
 
         private RtsCommandResult IssueBoard(MediumTankUnit target)
@@ -430,7 +457,29 @@ namespace QuestCommandRTS
             }
 
             game.SpawnFloatingText("Repair target", target.GroundPosition + Vector3.up * 2.2f, new Color(0.5f, 1f, 0.78f));
+            game.Audio?.PlayOrder(RtsVoiceOrder.Move);
             return RtsCommandResult.RepairIssued;
+        }
+
+        private RtsCommandResult IssueGuard(Vector3 point, RtsEntity target)
+        {
+            GatherSelectedControllableUnits(commandUnits);
+            int count = commandUnits.Count;
+            if (count <= 0)
+            {
+                return RtsCommandResult.None;
+            }
+
+            RtsEntity guardTarget = target != null && target.Team == RtsTeam.Player && target.IsAlive ? target : null;
+            for (int i = 0; i < count; i++)
+            {
+                commandUnits[i].IssueGuard(point + FormationOffset(i, count), guardTarget);
+            }
+
+            Vector3 labelPoint = guardTarget != null ? guardTarget.GroundPosition : point;
+            game.SpawnFloatingText(guardTarget != null ? "Guarding" : "Guard area", labelPoint + Vector3.up * 2f, new Color(0.75f, 1f, 0.45f));
+            game.Audio?.PlayOrder(RtsVoiceOrder.Guard);
+            return RtsCommandResult.GuardIssued;
         }
 
         private void IssueMove(Vector3 point)
@@ -441,6 +490,11 @@ namespace QuestCommandRTS
             for (int i = 0; i < count; i++)
             {
                 commandUnits[i].IssueMove(point + FormationOffset(i, count));
+            }
+
+            if (count > 0)
+            {
+                game.Audio?.PlayOrder(RtsVoiceOrder.Move);
             }
         }
 

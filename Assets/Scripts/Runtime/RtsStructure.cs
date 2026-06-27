@@ -109,6 +109,11 @@ namespace QuestCommandRTS
                 return StructureKind == StructureKind.Barracks;
             }
 
+            if (RtsBalance.IsAircraft(kind))
+            {
+                return StructureKind == StructureKind.DualHelipad;
+            }
+
             return RtsBalance.IsVehicle(kind) && StructureKind == StructureKind.WarFactory;
         }
 
@@ -189,6 +194,26 @@ namespace QuestCommandRTS
 
             kind = UnitKind.Rifleman;
             return false;
+        }
+
+        public int CountProductionItems(UnitKind kind)
+        {
+            UnitKind normalized = RtsBalance.NormalizeUnitKind(kind);
+            int count = activeKind.HasValue && RtsBalance.NormalizeUnitKind(activeKind.Value) == normalized ? 1 : 0;
+            for (int i = 0; i < queue.Count; i++)
+            {
+                if (RtsBalance.NormalizeUnitKind(queue[i]) == normalized)
+                {
+                    count++;
+                }
+            }
+
+            return count;
+        }
+
+        public bool IsActivelyProducing(UnitKind kind)
+        {
+            return activeKind.HasValue && RtsBalance.NormalizeUnitKind(activeKind.Value) == RtsBalance.NormalizeUnitKind(kind);
         }
 
 #if UNITY_EDITOR
@@ -359,8 +384,7 @@ namespace QuestCommandRTS
 
             activeKind = queue[0];
             queue.RemoveAt(0);
-            UnitStats stats = RtsBalance.GetUnit(activeKind.Value);
-            activeDuration = Mathf.Max(0.1f, stats.BuildTime);
+            activeDuration = Mathf.Max(0.1f, RtsBalance.GetUnitBuildTime(activeKind.Value));
             activeRemaining = activeDuration;
         }
 

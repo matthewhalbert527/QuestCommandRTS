@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace QuestCommandRTS
@@ -24,6 +25,7 @@ namespace QuestCommandRTS
         public bool HasPlacementPoint => hasPlacementPoint;
         public Vector3 PlacementPoint => placementPoint;
         public BuildPlacementFailureReason LastFailureReason => lastFailureReason;
+        public int ActiveConstructionCount => constructions.Count;
 
         private RtsGame game;
         private StructureKind pendingKind;
@@ -33,10 +35,31 @@ namespace QuestCommandRTS
         private bool hasPlacementPoint;
         private BuildPlacementFailureReason lastFailureReason = BuildPlacementFailureReason.None;
         private bool placementSuspended;
+        private readonly List<ActiveConstruction> constructions = new List<ActiveConstruction>();
+
+        private sealed class ActiveConstruction
+        {
+            public RtsTeam Team;
+            public StructureKind Kind;
+            public Vector3 Position;
+            public float Remaining;
+            public float Duration;
+            public GameObject Site;
+        }
 
         public void Initialize(RtsGame owner)
         {
             game = owner;
+        }
+
+        private void Update()
+        {
+            if (game == null || game.IsMatchOver || game.Clock == null || game.Clock.IsPaused)
+            {
+                return;
+            }
+
+            TickConstructions(game.Clock.DeltaTime);
         }
 
         public bool BeginPlacement(StructureKind kind)
@@ -76,14 +99,7 @@ namespace QuestCommandRTS
         {
             if (preview != null)
             {
-                if (Application.isPlaying)
-                {
-                    Destroy(preview);
-                }
-                else
-                {
-                    DestroyImmediate(preview);
-                }
+                DestroyObject(preview);
             }
 
             preview = null;
@@ -152,8 +168,8 @@ namespace QuestCommandRTS
                 return false;
             }
 
-            game.CreateStructure(RtsTeam.Player, pendingKind, placementPoint);
-            game.SpawnFloatingText(stats.Name + " built", placementPoint + Vector3.up * 2f, new Color(0.55f, 1f, 0.65f));
+            StartConstruction(RtsTeam.Player, pendingKind, placementPoint, Mathf.Max(0f, stats.BuildTime), Mathf.Max(0f, stats.BuildTime));
+            game.SpawnFloatingText(stats.Name + " constructing", placementPoint + Vector3.up * 2f, new Color(0.75f, 0.95f, 1f));
             CancelPlacement();
             return true;
         }
@@ -170,20 +186,42 @@ namespace QuestCommandRTS
 
         public RtsBuildPlacementSaveData CapturePlacementState()
         {
-            return new RtsBuildPlacementSaveData
+            RtsBuildPlacementSaveData data = new RtsBuildPlacementSaveData
             {
                 isPlacing = preview != null,
                 structureKind = preview != null ? pendingKind.ToString() : string.Empty,
                 hasPlacementPoint = hasPlacementPoint,
                 placementPoint = new Vector3Data(placementPoint)
             };
+
+            for (int i = 0; i < constructions.Count; i++)
+            {
+                ActiveConstruction construction = constructions[i];
+                if (construction == null)
+                {
+                    continue;
+                }
+
+                data.constructions.Add(new RtsPendingConstructionSaveData
+                {
+                    team = construction.Team.ToString(),
+                    structureKind = construction.Kind.ToString(),
+                    position = new Vector3Data(construction.Position),
+                    remaining = construction.Remaining,
+                    duration = construction.Duration
+                });
+            }
+
+            return data;
         }
 
         public void RestorePlacementState(RtsBuildPlacementSaveData data)
         {
             CancelPlacement();
+            ClearConstructions();
             if (data == null || !data.isPlacing || !System.Enum.TryParse(data.structureKind, out StructureKind kind))
             {
+                RestoreConstructions(data);
                 return;
             }
 
@@ -201,6 +239,8 @@ namespace QuestCommandRTS
                 placementValid = false;
                 lastFailureReason = BuildPlacementFailureReason.NoGroundHit;
             }
+
+            RestoreConstructions(data);
         }
 
         public void SetPlacementSuspended(bool suspended)
@@ -244,6 +284,22 @@ namespace QuestCommandRTS
             {
                 reason = BuildPlacementFailureReason.OutsideBuildRadius;
                 return false;
+            }
+
+            for (int i = 0; i < constructions.Count; i++)
+            {
+                ActiveConstruction construction = constructions[i];
+                if (construction == null)
+                {
+                    continue;
+                }
+
+                float constructionFootprint = RtsBalance.GetStructure(construction.Kind).FootprintRadius;
+                if (PlanarDistance(point, construction.Position) < footprint + constructionFootprint)
+                {
+                    reason = BuildPlacementFailureReason.BlockedFootprint;
+                    return false;
+                }
             }
 
             Collider[] hits = Physics.OverlapSphere(point + Vector3.up * 0.8f, footprint * 0.92f);
@@ -297,6 +353,175 @@ namespace QuestCommandRTS
             }
 
             return game.GetPlayerBaseCenter() + Vector3.up * 2f;
+        }
+
+        public void ClearConstructions()
+        {
+            for (int i = 0; i < constructions.Count; i++)
+            {
+                if (constructions[i] != null && constructions[i].Site != null)
+                {
+                    DestroyObject(constructions[i].Site);
+                }
+            }
+
+            constructions.Clear();
+        }
+
+#if UNITY_EDITOR
+        public void TickConstructionsForTests(float deltaTime)
+        {
+            TickConstructions(deltaTime);
+        }
+
+        public float GetConstructionProgressForTests(int index)
+        {
+            if (index < 0 || index >= constructions.Count)
+            {
+                return 0f;
+            }
+
+            ActiveConstruction construction = constructions[index];
+            return construction.Duration <= 0f ? 1f : 1f - Mathf.Clamp01(construction.Remaining / construction.Duration);
+        }
+#endif
+
+        private void TickConstructions(float deltaTime)
+        {
+            if (constructions.Count <= 0)
+            {
+                return;
+            }
+
+            float powerMultiplier = game.Resources != null && game.Resources.HasLowPower ? 0.45f : 1f;
+            for (int i = constructions.Count - 1; i >= 0; i--)
+            {
+                ActiveConstruction construction = constructions[i];
+                if (construction == null)
+                {
+                    constructions.RemoveAt(i);
+                    continue;
+                }
+
+                construction.Remaining -= Mathf.Max(0f, deltaTime) * powerMultiplier;
+                RefreshConstructionVisual(construction);
+                if (construction.Remaining > 0f)
+                {
+                    continue;
+                }
+
+                CompleteConstruction(construction);
+                constructions.RemoveAt(i);
+            }
+        }
+
+        private void StartConstruction(RtsTeam team, StructureKind kind, Vector3 position, float remaining, float duration)
+        {
+            StructureStats stats = RtsBalance.GetStructure(kind);
+            float safeDuration = Mathf.Max(0.01f, duration);
+            float safeRemaining = Mathf.Clamp(remaining, 0f, safeDuration);
+            if (safeRemaining <= 0.001f)
+            {
+                game.CreateStructure(team, kind, position);
+                return;
+            }
+
+            ActiveConstruction construction = new ActiveConstruction
+            {
+                Team = team,
+                Kind = kind,
+                Position = Snap(position),
+                Remaining = safeRemaining,
+                Duration = safeDuration,
+                Site = game.CreateStructurePreview(kind)
+            };
+
+            construction.Site.name = "Construction " + stats.Name;
+            construction.Site.transform.position = construction.Position;
+            constructions.Add(construction);
+            RefreshConstructionVisual(construction);
+        }
+
+        private void RestoreConstructions(RtsBuildPlacementSaveData data)
+        {
+            if (data == null || data.constructions == null)
+            {
+                return;
+            }
+
+            for (int i = 0; i < data.constructions.Count; i++)
+            {
+                RtsPendingConstructionSaveData saved = data.constructions[i];
+                if (saved == null ||
+                    !System.Enum.TryParse(saved.team, out RtsTeam team) ||
+                    !System.Enum.TryParse(saved.structureKind, out StructureKind kind))
+                {
+                    continue;
+                }
+
+                StartConstruction(team, kind, saved.position.ToVector3(), saved.remaining, saved.duration);
+            }
+        }
+
+        private void CompleteConstruction(ActiveConstruction construction)
+        {
+            if (construction.Site != null)
+            {
+                DestroyObject(construction.Site);
+                construction.Site = null;
+            }
+
+            RtsStructure structure = game.CreateStructure(construction.Team, construction.Kind, construction.Position);
+            if (structure != null)
+            {
+                StructureStats stats = RtsBalance.GetStructure(construction.Kind);
+                game.SpawnFloatingText(stats.Name + " complete", construction.Position + Vector3.up * 2.2f, new Color(0.55f, 1f, 0.65f));
+            }
+
+            Physics.SyncTransforms();
+        }
+
+        private static void RefreshConstructionVisual(ActiveConstruction construction)
+        {
+            if (construction == null || construction.Site == null)
+            {
+                return;
+            }
+
+            float progress = construction.Duration <= 0f ? 1f : 1f - Mathf.Clamp01(construction.Remaining / construction.Duration);
+            float scale = Mathf.Lerp(0.42f, 1f, Mathf.SmoothStep(0f, 1f, progress));
+            construction.Site.transform.localScale = new Vector3(scale, Mathf.Lerp(0.28f, 1f, progress), scale);
+            Color color = Color.Lerp(new Color(1f, 0.78f, 0.18f, 0.48f), new Color(0.35f, 1f, 0.55f, 0.58f), progress);
+            Renderer[] renderers = construction.Site.GetComponentsInChildren<Renderer>();
+            for (int i = 0; i < renderers.Length; i++)
+            {
+                Material material = renderers[i].sharedMaterial;
+                if (material == null)
+                {
+                    continue;
+                }
+
+                material.color = color;
+                material.SetColor("_Color", color);
+                material.SetColor("_BaseColor", color);
+            }
+        }
+
+        private static void DestroyObject(Object target)
+        {
+            if (target == null)
+            {
+                return;
+            }
+
+            if (Application.isPlaying)
+            {
+                Destroy(target);
+            }
+            else
+            {
+                DestroyImmediate(target);
+            }
         }
 
         private static bool TryProjectToGround(Ray ray, float maxDistance, out Vector3 point)

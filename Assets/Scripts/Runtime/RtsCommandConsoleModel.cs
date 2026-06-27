@@ -148,7 +148,7 @@ namespace QuestCommandRTS
                 Kind = kind,
                 Name = stats.Name,
                 Cost = stats.Cost,
-                BuildTime = stats.BuildTime,
+                BuildTime = RtsBalance.GetUnitBuildTime(kind),
                 HasProducerSelected = hasProducer,
                 ProducerCanTrain = producerCanTrain,
                 CanAfford = canAfford,

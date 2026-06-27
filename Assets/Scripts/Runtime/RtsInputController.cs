@@ -68,7 +68,7 @@ namespace QuestCommandRTS
             HandleControlGroups();
 
             Ray ray = GetPointerRay();
-            ReadButtons(out bool selectDown, out bool commandDown, out bool cancelDown);
+            ReadButtons(out bool selectDown, out bool commandDown, out bool cancelDown, out bool guardHeld);
 
             if (Input.GetKeyDown(KeyCode.Escape))
             {
@@ -127,7 +127,7 @@ namespace QuestCommandRTS
 
             if (commandDown && !IsPointerOverUi())
             {
-                CommandFromRay(ray);
+                CommandFromRay(ray, guardHeld);
             }
         }
 
@@ -202,8 +202,14 @@ namespace QuestCommandRTS
             dispatcher.SelectFromRay(ray, additive, PointerRayDistance);
         }
 
-        private void CommandFromRay(Ray ray)
+        private void CommandFromRay(Ray ray, bool guardHeld)
         {
+            if (guardHeld)
+            {
+                dispatcher.GuardFromRay(ray, PointerRayDistance);
+                return;
+            }
+
             dispatcher.CommandFromRay(ray, PointerRayDistance);
         }
 
@@ -262,6 +268,14 @@ namespace QuestCommandRTS
             {
                 game.PlayerCommands.QueueProduction(UnitKind.HeavyTank);
             }
+            else if (Input.GetKeyDown(KeyCode.Alpha8))
+            {
+                game.PlayerCommands.QueueProduction(UnitKind.Skyraider);
+            }
+            else if (Input.GetKeyDown(KeyCode.Alpha9))
+            {
+                game.PlayerCommands.QueueProduction(UnitKind.OrcaLifter);
+            }
             else if (Input.GetKeyDown(KeyCode.Q))
             {
                 game.PlayerCommands.RequestConstruction(StructureKind.PowerPlant);
@@ -281,6 +295,10 @@ namespace QuestCommandRTS
             else if (Input.GetKeyDown(KeyCode.T))
             {
                 game.PlayerCommands.RequestConstruction(StructureKind.Turret);
+            }
+            else if (Input.GetKeyDown(KeyCode.Y))
+            {
+                game.PlayerCommands.RequestConstruction(StructureKind.DualHelipad);
             }
             else if (Input.GetKeyDown(KeyCode.Z))
             {
@@ -501,7 +519,7 @@ namespace QuestCommandRTS
             return game.CommandCamera.ScreenPointToRay(Input.mousePosition);
         }
 
-        private void ReadButtons(out bool selectDown, out bool commandDown, out bool cancelDown)
+        private void ReadButtons(out bool selectDown, out bool commandDown, out bool cancelDown, out bool guardHeld)
         {
             selectDown = Input.GetMouseButtonDown(0);
             commandDown = Input.GetMouseButtonUp(1) && !suppressRightClickCommand;
@@ -511,6 +529,7 @@ namespace QuestCommandRTS
             }
 
             cancelDown = Input.GetMouseButtonDown(2);
+            guardHeld = Input.GetKey(KeyCode.G) || Input.GetKey(KeyCode.LeftAlt) || Input.GetKey(KeyCode.RightAlt);
         }
 
         private static Rect GetScreenRect(Vector2 start, Vector2 end)

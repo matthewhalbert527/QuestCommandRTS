@@ -16,9 +16,13 @@ namespace QuestCommandRTS
 
         protected Vector3 destination;
         protected Vector3 attackMoveDestination;
+        protected Vector3 guardPosition;
+        protected Vector3 guardOffset;
         protected bool hasDestination;
         protected bool hasAttackMoveDestination;
+        protected bool hasGuardOrder;
         protected RtsEntity attackTarget;
+        protected RtsEntity guardTarget;
         protected MediumTankUnit boardingTarget;
         protected RtsEntity repairTarget;
         public RtsEntity CurrentAttackTargetForVisuals => attackTarget != null && attackTarget.IsAlive ? attackTarget : null;
@@ -29,7 +33,9 @@ namespace QuestCommandRTS
         private float currentMoveSpeed;
         private float nextAttackTime;
         private float nextAwarenessScanTime;
+        private float nextGuardScanTime;
         private const float AwarenessScanInterval = 0.35f;
+        private const float GuardScanInterval = 0.45f;
         private const float VehicleMoveAlignmentStart = 0.18f;
         private const float VehicleMoveAlignmentFull = 0.88f;
         private const float VehicleReverseAngleDegrees = 112f;
@@ -55,7 +61,7 @@ namespace QuestCommandRTS
         {
             UnitKind = RtsBalance.NormalizeUnitKind(kind);
             UnitStats stats = RtsBalance.GetUnit(kind);
-            MoveSpeed = stats.MoveSpeed;
+            MoveSpeed = RtsBalance.GetUnitMoveSpeed(UnitKind);
             TurnSpeed = GetTurnSpeed(UnitKind);
             AttackRange = stats.AttackRange;
             Damage = stats.Damage;
@@ -70,6 +76,7 @@ namespace QuestCommandRTS
         public virtual void IssueMove(Vector3 worldPosition)
         {
             ClearMovePath();
+            ClearGuardOrder();
             repairTarget = null;
             boardingTarget = null;
             if (!CanMoveWhileAttacking())
@@ -86,6 +93,7 @@ namespace QuestCommandRTS
         public virtual void IssueMovePath(IList<Vector3> worldPositions)
         {
             ClearMovePath();
+            ClearGuardOrder();
             repairTarget = null;
             boardingTarget = null;
             if (!CanMoveWhileAttacking())
@@ -121,6 +129,7 @@ namespace QuestCommandRTS
             repairTarget = null;
             boardingTarget = null;
             ClearMovePath();
+            ClearGuardOrder();
             attackTarget = target;
             hasDestination = false;
             hasAttackMoveDestination = false;
@@ -131,11 +140,46 @@ namespace QuestCommandRTS
             repairTarget = null;
             boardingTarget = null;
             ClearMovePath();
+            ClearGuardOrder();
             attackTarget = null;
             hasDestination = false;
             hasAttackMoveDestination = true;
             PrepareTrackedVehicleForNewDestination(worldPosition);
             attackMoveDestination = ClampToMap(worldPosition);
+        }
+
+        public virtual void IssueGuard(Vector3 worldPosition, RtsEntity target)
+        {
+            repairTarget = null;
+            boardingTarget = null;
+            ClearMovePath();
+            attackTarget = null;
+            hasAttackMoveDestination = false;
+            hasGuardOrder = true;
+            guardTarget = target != null && target.IsAlive && target.Team == Team ? target : null;
+            guardPosition = ClampToMap(worldPosition);
+            guardOffset = guardTarget != null ? guardPosition - guardTarget.GroundPosition : Vector3.zero;
+            guardOffset.y = 0f;
+            if (guardTarget != null)
+            {
+                float minimumOffset = Mathf.Max(1.5f, guardTarget.SelectionRadius + SelectionRadius + 0.75f);
+                if (guardOffset.magnitude < minimumOffset)
+                {
+                    guardOffset = transform.position - guardTarget.GroundPosition;
+                    guardOffset.y = 0f;
+                    if (guardOffset.sqrMagnitude < 0.001f)
+                    {
+                        guardOffset = Vector3.back;
+                    }
+
+                    guardOffset = guardOffset.normalized * minimumOffset;
+                    guardPosition = ClampToMap(guardTarget.GroundPosition + guardOffset);
+                }
+            }
+
+            destination = guardPosition;
+            hasDestination = true;
+            nextGuardScanTime = 0f;
         }
 
         public virtual bool CanBoardMediumTank(MediumTankUnit target)
@@ -153,6 +197,7 @@ namespace QuestCommandRTS
             boardingTarget = target;
             repairTarget = null;
             ClearMovePath();
+            ClearGuardOrder();
             attackTarget = null;
             hasDestination = false;
             hasAttackMoveDestination = false;
@@ -173,6 +218,7 @@ namespace QuestCommandRTS
             repairTarget = target;
             boardingTarget = null;
             ClearMovePath();
+            ClearGuardOrder();
             attackTarget = null;
             hasDestination = false;
             hasAttackMoveDestination = false;
@@ -183,6 +229,7 @@ namespace QuestCommandRTS
             repairTarget = null;
             boardingTarget = null;
             ClearMovePath();
+            ClearGuardOrder();
             attackTarget = null;
             hasDestination = false;
             hasAttackMoveDestination = false;
@@ -193,7 +240,7 @@ namespace QuestCommandRTS
 
         public bool IsIdle()
         {
-            return !hasDestination && !hasAttackMoveDestination && attackTarget == null;
+            return !hasDestination && !hasAttackMoveDestination && attackTarget == null && !hasGuardOrder;
         }
 
 #if UNITY_EDITOR
@@ -238,6 +285,18 @@ namespace QuestCommandRTS
                 return data;
             }
 
+            if (hasGuardOrder)
+            {
+                data.orderType = "Guard";
+                data.destination = new Vector3Data(GetGuardAnchorPosition());
+                if (guardTarget != null && guardTarget.IsAlive)
+                {
+                    data.targetEntityId = guardTarget.PersistentId;
+                }
+
+                return data;
+            }
+
             if (hasDestination)
             {
                 data.orderType = "Move";
@@ -257,8 +316,10 @@ namespace QuestCommandRTS
             attackTarget = null;
             boardingTarget = null;
             repairTarget = null;
+            guardTarget = null;
             hasDestination = false;
             hasAttackMoveDestination = false;
+            hasGuardOrder = false;
             ClearMovePath();
 
             if (data == null)
@@ -302,6 +363,18 @@ namespace QuestCommandRTS
                 return;
             }
 
+            if (data.orderType == "Guard")
+            {
+                RtsEntity restoredGuardTarget = null;
+                if (entityById != null)
+                {
+                    entityById.TryGetValue(data.targetEntityId, out restoredGuardTarget);
+                }
+
+                IssueGuard(destination, restoredGuardTarget);
+                return;
+            }
+
             if (data.orderType == "Attack" && entityById != null && entityById.TryGetValue(data.targetEntityId, out RtsEntity target))
             {
                 IssueAttack(target);
@@ -327,6 +400,11 @@ namespace QuestCommandRTS
                 return;
             }
 
+            if (attackTarget != null && hasGuardOrder && PlanarDistance(attackTarget.transform.position, GetGuardAnchorPosition()) > GetGuardScanRange() + 2f)
+            {
+                attackTarget = null;
+            }
+
             if (attackTarget != null)
             {
                 if (CanMoveWhileAttacking() && (hasDestination || hasAttackMoveDestination))
@@ -345,6 +423,12 @@ namespace QuestCommandRTS
                 }
 
                 TickAttackOrder(deltaTime, false);
+                return;
+            }
+
+            if (hasGuardOrder)
+            {
+                TickGuardOrder(deltaTime);
                 return;
             }
 
@@ -408,6 +492,75 @@ namespace QuestCommandRTS
         private void ClearMovePath()
         {
             queuedMoveWaypoints.Clear();
+        }
+
+        private void TickGuardOrder(float deltaTime)
+        {
+            Vector3 anchor = GetGuardAnchorPosition();
+            float currentTime = GetSimulationTime();
+            if (currentTime >= nextGuardScanTime)
+            {
+                nextGuardScanTime = currentTime + GuardScanInterval;
+                RtsEntity threat = FindGuardThreat(anchor);
+                if (threat != null)
+                {
+                    attackTarget = threat;
+                    return;
+                }
+            }
+
+            if (PlanarDistance(transform.position, anchor) > StopDistance + 0.45f)
+            {
+                MoveToward(anchor, deltaTime, StopDistance);
+                return;
+            }
+
+            hasDestination = false;
+            currentMoveSpeed = 0f;
+            if (guardTarget != null && guardTarget.IsAlive)
+            {
+                FacePoint(guardTarget.GroundPosition, deltaTime);
+            }
+        }
+
+        private RtsEntity FindGuardThreat(Vector3 anchor)
+        {
+            if (!CanAutoEngage())
+            {
+                return null;
+            }
+
+            return RtsGame.Instance.FindClosestEnemy(Team, anchor, GetGuardScanRange());
+        }
+
+        private Vector3 GetGuardAnchorPosition()
+        {
+            if (guardTarget != null && guardTarget.IsAlive)
+            {
+                Vector3 offset = guardOffset;
+                float maxOffset = GetGuardScanRange() * 0.65f;
+                if (offset.magnitude > maxOffset)
+                {
+                    offset = offset.normalized * maxOffset;
+                }
+
+                guardPosition = ClampToMap(guardTarget.GroundPosition + offset);
+                return guardPosition;
+            }
+
+            guardTarget = null;
+            return guardPosition;
+        }
+
+        private float GetGuardScanRange()
+        {
+            return Mathf.Max(Mathf.Max(SightRange, AttackRange * 1.35f), 7f);
+        }
+
+        protected void ClearGuardOrder()
+        {
+            guardTarget = null;
+            hasGuardOrder = false;
         }
 
         protected override void OnDamaged(float amount, RtsEntity attacker)
@@ -857,6 +1010,10 @@ namespace QuestCommandRTS
                     return transform.TransformPoint(new Vector3(0.38f, 1.18f, 0.58f));
                 case UnitKind.FlameTrooper:
                     return transform.TransformPoint(new Vector3(0.36f, 1.02f, 0.46f));
+                case UnitKind.Skyraider:
+                    return transform.TransformPoint(new Vector3(0f, 1.16f, 1.78f));
+                case UnitKind.OrcaLifter:
+                    return transform.TransformPoint(new Vector3(0f, 1.05f, 1.72f));
                 default:
                     return transform.TransformPoint(new Vector3(0.34f, 1.05f, 0.48f));
             }
@@ -872,6 +1029,10 @@ namespace QuestCommandRTS
                     return RtsProjectileKind.Rocket;
                 case UnitKind.FlameTrooper:
                     return RtsProjectileKind.FlameBolt;
+                case UnitKind.Skyraider:
+                    return RtsProjectileKind.Rocket;
+                case UnitKind.OrcaLifter:
+                    return RtsProjectileKind.TankShell;
                 case UnitKind.Humvee:
                 case UnitKind.Apc:
                     return RtsProjectileKind.RifleRound;
@@ -903,6 +1064,8 @@ namespace QuestCommandRTS
                     return 2.35f;
                 case UnitKind.FlameTrooper:
                     return 1.8f;
+                case UnitKind.Skyraider:
+                    return 1.5f;
                 default:
                     return 0f;
             }
@@ -916,6 +1079,8 @@ namespace QuestCommandRTS
                     return Damage * 0.55f;
                 case UnitKind.FlameTrooper:
                     return Damage * 0.45f;
+                case UnitKind.Skyraider:
+                    return Damage * 0.4f;
                 default:
                     return 0f;
             }
@@ -974,6 +1139,10 @@ namespace QuestCommandRTS
                     return 1.18f;
                 case UnitKind.HeavyTank:
                     return 1.45f;
+                case UnitKind.Skyraider:
+                    return 2.1f;
+                case UnitKind.OrcaLifter:
+                    return 2.6f;
                 default:
                     return 0.72f;
             }
@@ -1000,6 +1169,10 @@ namespace QuestCommandRTS
                     return 220f;
                 case UnitKind.Harvester:
                     return 235f;
+                case UnitKind.OrcaLifter:
+                    return 430f;
+                case UnitKind.Skyraider:
+                    return 620f;
                 default:
                     return 620f;
             }
@@ -1044,7 +1217,7 @@ namespace QuestCommandRTS
                 case UnitKind.HeavyTank:
                     return 0.42f;
                 case UnitKind.Harvester:
-                    return 0.45f;
+                    return 0.72f;
                 default:
                     return 0.5f;
             }
@@ -1066,6 +1239,10 @@ namespace QuestCommandRTS
                     return 1.28f;
                 case UnitKind.Harvester:
                     return 1.08f;
+                case UnitKind.Skyraider:
+                    return 1.45f;
+                case UnitKind.OrcaLifter:
+                    return 1.7f;
                 default:
                     return 0.54f;
             }
@@ -1093,6 +1270,10 @@ namespace QuestCommandRTS
                     return Mathf.Max(12f, attackRange * 1.45f);
                 case UnitKind.LightTank:
                     return Mathf.Max(12f, attackRange * 1.45f);
+                case UnitKind.Skyraider:
+                    return Mathf.Max(13f, attackRange * 1.45f);
+                case UnitKind.OrcaLifter:
+                    return Mathf.Max(12f, attackRange * 1.35f);
                 default:
                     return Mathf.Max(10f, attackRange * 1.45f);
             }
@@ -1101,7 +1282,7 @@ namespace QuestCommandRTS
         private static bool IsArmoredTarget(RtsEntity target)
         {
             RtsUnit unit = target as RtsUnit;
-            return unit != null && (RtsBalance.IsTank(unit.UnitKind) || unit.UnitKind == UnitKind.Apc);
+            return unit != null && (RtsBalance.IsTank(unit.UnitKind) || unit.UnitKind == UnitKind.Apc || RtsBalance.IsAircraft(unit.UnitKind));
         }
     }
 
@@ -1353,7 +1534,9 @@ namespace QuestCommandRTS
         {
             state = HarvestState.Idle;
             targetNode = null;
+            homeRefinery = null;
             productionExitPoint = transform.position;
+            harvestAccumulator = 0f;
             base.IssueMove(worldPosition);
         }
 
@@ -1538,13 +1721,25 @@ namespace QuestCommandRTS
 
         private void TickMovingToResource(float deltaTime)
         {
-            if (targetNode == null || targetNode.IsDepleted)
+            if (targetNode == null)
             {
                 state = HarvestState.Idle;
                 return;
             }
 
-            if (MoveToward(targetNode.transform.position, deltaTime, 1.6f))
+            if (targetNode.IsDepleted)
+            {
+                targetNode = RtsGame.HasInstance ? RtsGame.Instance.FindNearestResource(transform.position) : null;
+                if (targetNode == null)
+                {
+                    state = HarvestState.Idle;
+                    return;
+                }
+            }
+
+            float harvestRange = GetHarvestRange();
+            if (PlanarDistance(transform.position, targetNode.transform.position) <= harvestRange ||
+                MoveToward(targetNode.transform.position, deltaTime, harvestRange))
             {
                 harvestAccumulator = 0f;
                 state = HarvestState.Harvesting;
@@ -1609,6 +1804,22 @@ namespace QuestCommandRTS
             {
                 state = HarvestState.Idle;
             }
+        }
+
+        private float GetHarvestRange()
+        {
+            float resourceRadius = 2.2f;
+            if (targetNode != null)
+            {
+                SphereCollider collider = targetNode.GetComponent<SphereCollider>();
+                if (collider != null)
+                {
+                    Vector3 scale = targetNode.transform.lossyScale;
+                    resourceRadius = Mathf.Max(resourceRadius, collider.radius * Mathf.Max(Mathf.Abs(scale.x), Mathf.Abs(scale.z)));
+                }
+            }
+
+            return Mathf.Max(2.35f, resourceRadius + BlockingRadius + 0.25f);
         }
     }
 }
