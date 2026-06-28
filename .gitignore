@@ -29,3 +29,9 @@ sysinfo.txt
 *.bak
 Thumbs.db
 Desktop.ini
+
+# Reference-only source material must never be imported, packaged, or committed.
+/ReferenceOnly/
+/ExternalReference/
+**/CnC_Red_Alert*/
+**/RedAlertReference*/

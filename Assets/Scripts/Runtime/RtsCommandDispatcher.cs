@@ -36,6 +36,7 @@ namespace QuestCommandRTS
     public sealed class RtsCommandDispatcher
     {
         private readonly List<RtsUnit> commandUnits = new List<RtsUnit>();
+        private readonly RtsContextCommandResolver contextResolver = new RtsContextCommandResolver();
         private RtsGame game;
 
         public void Initialize(RtsGame owner)
@@ -199,37 +200,37 @@ namespace QuestCommandRTS
 
         public RtsContextCommandKind ResolveContextCommand(RtsEntity entity, ResourceNode resource, Vector3 point)
         {
+            return ResolveCommand(entity, resource, point, false, false, false, false, true).ContextKind;
+        }
+
+        public RtsCommandResolution ResolveCommand(
+            RtsEntity entity,
+            ResourceNode resource,
+            Vector3 point,
+            bool additiveSelection,
+            bool attackMoveModifier,
+            bool guardModifier,
+            bool stopRequested,
+            bool allowTargetHintsWithoutCapability)
+        {
             if (game == null)
             {
-                return RtsContextCommandKind.None;
+                return RtsCommandResolution.Invalid("Dispatcher is not initialized.");
             }
 
-            if (entity != null && entity.Team == RtsTeam.Enemy && game.IsEntityVisible(entity))
-            {
-                return RtsContextCommandKind.Attack;
-            }
+            RtsCommandTarget target = BuildCommandTarget(entity, resource, point);
+            RtsCommandRequest request = new RtsCommandRequest(
+                game.Selection,
+                target,
+                RtsTeam.Player,
+                additiveSelection,
+                attackMoveModifier,
+                guardModifier,
+                stopRequested,
+                game.AcceptsPlayerInput,
+                allowTargetHintsWithoutCapability);
 
-            if (resource != null)
-            {
-                return RtsContextCommandKind.Harvest;
-            }
-
-            if (CanRepairEntity(entity))
-            {
-                return RtsContextCommandKind.Repair;
-            }
-
-            if (CanBoardMediumTank(entity))
-            {
-                return RtsContextCommandKind.Board;
-            }
-
-            if (CanSetRallyPoint(point))
-            {
-                return RtsContextCommandKind.Rally;
-            }
-
-            return RtsContextCommandKind.Move;
+            return contextResolver.Resolve(request);
         }
 
         public RtsCommandResult CommandFromRay(Ray ray, float maxDistance)
@@ -312,22 +313,24 @@ namespace QuestCommandRTS
                 return RtsCommandResult.None;
             }
 
-            RtsContextCommandKind command = ResolveContextCommand(hit);
-            switch (command)
+            RtsEntity entity = hit.collider.GetComponentInParent<RtsEntity>();
+            ResourceNode resource = hit.collider.GetComponentInParent<ResourceNode>();
+            RtsCommandResolution command = ResolveCommand(entity, resource, GetGroundPoint(hit), false, false, false, false, true);
+            switch (command.Kind)
             {
-                case RtsContextCommandKind.Attack:
-                    IssueAttack(hit.collider.GetComponentInParent<RtsEntity>());
+                case RtsCommandKind.Attack:
+                    IssueAttack(entity);
                     return RtsCommandResult.AttackIssued;
-                case RtsContextCommandKind.Harvest:
-                    IssueHarvest(hit.collider.GetComponentInParent<ResourceNode>());
+                case RtsCommandKind.Harvest:
+                    IssueHarvest(resource);
                     return RtsCommandResult.HarvestIssued;
-                case RtsContextCommandKind.Repair:
-                    return IssueRepair(hit.collider.GetComponentInParent<RtsEntity>());
-                case RtsContextCommandKind.Board:
-                    return IssueBoard(hit.collider.GetComponentInParent<MediumTankUnit>());
-                case RtsContextCommandKind.Rally:
+                case RtsCommandKind.Repair:
+                    return IssueRepair(entity);
+                case RtsCommandKind.Board:
+                    return IssueBoard(entity as MediumTankUnit);
+                case RtsCommandKind.SetRallyPoint:
                     return game.PlayerCommands != null && game.PlayerCommands.SetSelectedRallyPoint(GetGroundPoint(hit)) ? RtsCommandResult.RallyPointSet : RtsCommandResult.None;
-                case RtsContextCommandKind.Move:
+                case RtsCommandKind.Move:
                     IssueMove(GetGroundPoint(hit));
                     return RtsCommandResult.MoveIssued;
                 default:
@@ -498,69 +501,41 @@ namespace QuestCommandRTS
             }
         }
 
-        private bool CanSetRallyPoint(Vector3 point)
+        private RtsCommandTarget BuildCommandTarget(RtsEntity entity, ResourceNode resource, Vector3 point)
         {
-            if (game == null || game.Selection.Count == 0)
+            if (entity != null)
             {
-                return false;
+                Vector3 position = entity.GroundPosition;
+                return ApplyCell(RtsCommandTarget.EntityTarget(entity, position, game.IsEntityVisible(entity), IsInsideMap(position)));
             }
 
-            bool hasProducer = false;
-            for (int i = 0; i < game.Selection.Count; i++)
+            if (resource != null)
             {
-                RtsEntity entity = game.Selection[i];
-                if (entity is RtsUnit && entity.Team == RtsTeam.Player)
-                {
-                    return false;
-                }
-
-                ProductionStructure producer = entity as ProductionStructure;
-                if (producer != null && producer.Team == RtsTeam.Player)
-                {
-                    hasProducer = true;
-                }
+                Vector3 position = resource.transform.position;
+                return ApplyCell(RtsCommandTarget.ResourceTarget(resource, position, game.IsWorldVisible(position), IsInsideMap(position)));
             }
 
-            return hasProducer;
+            return ApplyCell(RtsCommandTarget.Terrain(point, game.IsWorldVisible(point), IsInsideMap(point)));
         }
 
-        private bool CanBoardMediumTank(RtsEntity entity)
+        private RtsCommandTarget ApplyCell(RtsCommandTarget target)
         {
-            MediumTankUnit mediumTank = entity as MediumTankUnit;
-            if (mediumTank == null || mediumTank.Team != RtsTeam.Player || !mediumTank.IsAlive)
+            if (game == null || game.LogicalGrid == null)
             {
-                return false;
+                return target;
             }
 
-            for (int i = 0; i < game.Selection.Count; i++)
-            {
-                RtsUnit unit = game.Selection[i] as RtsUnit;
-                if (unit != null && unit.Team == RtsTeam.Player && unit.IsAlive && unit.CanBoardMediumTank(mediumTank))
-                {
-                    return true;
-                }
-            }
-
-            return false;
+            return target.WithCell(game.LogicalGrid.WorldToCell(target.WorldPosition));
         }
 
-        private bool CanRepairEntity(RtsEntity entity)
+        private bool IsInsideMap(Vector3 point)
         {
-            if (entity == null || entity.Team != RtsTeam.Player || !entity.IsAlive || entity.Health >= entity.MaxHealth - 0.01f)
+            if (game != null && game.LogicalGrid != null)
             {
-                return false;
+                return game.LogicalGrid.IsWorldInsideMap(point);
             }
 
-            for (int i = 0; i < game.Selection.Count; i++)
-            {
-                RtsUnit unit = game.Selection[i] as RtsUnit;
-                if (unit != null && unit.Team == RtsTeam.Player && unit.IsAlive && unit.CanRepairTarget(entity))
-                {
-                    return true;
-                }
-            }
-
-            return false;
+            return Mathf.Abs(point.x) <= RtsBalance.MapHalfSize && Mathf.Abs(point.z) <= RtsBalance.MapHalfSize;
         }
 
         private static Vector3 GetGroundPoint(RaycastHit hit)

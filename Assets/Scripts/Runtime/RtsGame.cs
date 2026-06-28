@@ -29,6 +29,7 @@ namespace QuestCommandRTS
         public Camera CommandCamera { get; private set; }
         public BuildManager BuildManager { get; private set; }
         public RtsFogOfWar FogOfWar { get; private set; }
+        public RtsGridService LogicalGrid { get; private set; }
         public RtsCommandDispatcher CommandDispatcher { get; private set; }
         public RtsPlayerCommandService PlayerCommands { get; private set; }
         public RtsAudio Audio { get; private set; }
@@ -1738,6 +1739,7 @@ namespace QuestCommandRTS
 
             SetupLight();
             CreateGround();
+            LogicalGrid = RtsGridService.CreateCentered(RtsBalance.MapHalfSize, 4f);
             CreateResourceFields();
             SpawnStartingForces();
 
@@ -2057,6 +2059,7 @@ namespace QuestCommandRTS
             entities.Clear();
             selection.Clear();
             resourceNodes.Clear();
+            LogicalGrid?.ClearDynamicState();
         }
 
         private static void DestroyChildren(Transform root)
@@ -3192,6 +3195,7 @@ namespace QuestCommandRTS
             node.AssignPersistentId(persistentId > 0 ? persistentId : AllocateResourceNodeId());
             nextResourceNodeId = Mathf.Max(nextResourceNodeId, node.PersistentId + 1);
             resourceNodes.Add(node);
+            LogicalGrid?.RegisterResourceNode(node);
             return node;
         }
 
